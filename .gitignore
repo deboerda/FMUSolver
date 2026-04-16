@@ -1,8 +1,5 @@
 # Ignore compiled files
-*.exe
-*.dll
-*.lib
-*.obj
+
 
 # Ignore FMU files
 *.fmu
@@ -40,4 +37,3 @@ __pycache__/
 
 # Ignore output files
 *.txt
-*.json
