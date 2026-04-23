@@ -1,0 +1,44 @@
+# Ignore compiled files
+
+
+# Ignore FMU files
+*.fmu
+
+# Ignore extracted FMU directories
+__extracted_*.fmu__
+
+# Ignore system files
+Thumbs.db
+.DS_Store
+
+# Ignore temporary files
+*.tmp
+*.temp
+
+# Ignore build directories
+build/
+dist/
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+
+# Ignore IDE files
+.vs/
+.vscode/
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+
+# Ignore log files
+*.log
+
+# Ignore output files
+*.txt
+
+# Ignore large archive files
+*.7z
+*.zip
+*.rar
