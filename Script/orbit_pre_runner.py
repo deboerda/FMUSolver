@@ -16,12 +16,63 @@ import time
 import math
 import zipfile
 import shutil
+import tempfile
+import uuid
 import fmpy
 from fmpy import instantiate_fmu, read_model_description
 
 
 def log(msg):
     print(msg, flush=True)
+
+
+def _path_is_safe(path):
+    """Check if a path is safe for legacy C++ file I/O (ASCII-only, no spaces, no parens)."""
+    import re
+    return bool(re.match(r'^[A-Za-z]:\\[A-Za-z0-9_\\]*$', path))
+
+
+def get_safe_windows_path(path):
+    norm_path = os.path.normpath(path)
+    if os.name != 'nt' or not os.path.exists(norm_path):
+        return norm_path
+
+    try:
+        import ctypes
+        buffer_size = 4096
+        output = ctypes.create_unicode_buffer(buffer_size)
+        result = ctypes.windll.kernel32.GetShortPathNameW(norm_path, output, buffer_size)
+        if result and output.value != norm_path:
+            # Short path successfully obtained and is different from long path
+            return output.value
+    except Exception:
+        pass
+
+    return norm_path
+
+
+def get_guaranteed_safe_workspace(app_dir):
+    """
+    Returns a workspace root that is guaranteed to be safe for FMU C++ file I/O.
+    Strategy:
+      1. Try app_dir/fmu_orbit_work and short-path it -> OK if result is safe
+      2. Fallback: use <drive>:\FmuWork (e.g. D:\FmuWork)
+    This handles cases where 8.3 short names are disabled (enterprise systems).
+    """
+    # First attempt: app_dir based path
+    candidate = os.path.join(app_dir, "fmu_orbit_work")
+    os.makedirs(candidate, exist_ok=True)
+    short = get_safe_windows_path(candidate)
+    if _path_is_safe(short):
+        log(f"[*] Workspace root (short path): {short}")
+        return short
+
+    # Short path failed or 8.3 names disabled - fallback to drive root
+    drive = os.path.splitdrive(app_dir)[0] or 'C:'
+    fallback = os.path.join(drive + os.sep, 'FmuWork')
+    os.makedirs(fallback, exist_ok=True)
+    log(f"[!] Short path unavailable for app_dir. Using fallback workspace: {fallback}")
+    return fallback
 
 
 def get_vr(model_desc, name):
@@ -46,13 +97,17 @@ def date_to_jd(year, mon, day, hour, minute, sec):
 
 
 def generate_seed_orbit_txt(path, jd, a, e, i, omega_big, omega_small, f):
-    """Write minimal Orbit_Pre.txt seed: 1 row of initial conditions."""
-    with open(path, 'w') as fp:
+    """Write minimal Orbit_Pre.txt seed: 2 rows of initial conditions to prevent interpolator crashes."""
+    with open(path, 'w', encoding='ascii') as fp:
         fp.write("#1\n")
-        fp.write("double table(1,7)\n")
+        fp.write("double table(2,7)\n")
+        # Row 1: Initial epoch
         fp.write(f"{jd:.5f}\t{a:.5f}\t{e:.5f}\t{i:.5f}\t"
                  f"{omega_big:.5f}\t{omega_small:.5f}\t{f:.5f}\n")
-    log(f"[OK] Seed file: JD={jd:.5f}")
+        # Row 2: JD + 1 to satisfy algorithms requiring >= 2 points
+        fp.write(f"{jd+1.0:.5f}\t{a:.5f}\t{e:.5f}\t{i:.5f}\t"
+                 f"{omega_big:.5f}\t{omega_small:.5f}\t{f:.5f}\n")
+    log(f"[OK] Seed file: JD={jd:.5f} (2 rows generated)")
 
 
 def check_dll_arch(filepath):
@@ -90,6 +145,7 @@ if __name__ == "__main__":
     parser.add_argument("--step_size",   type=float, default=10.0)
     parser.add_argument("--sample_freq", type=float, default=0.1)
     parser.add_argument("--sim_rate",    type=float, default=0.0)
+    parser.add_argument("--seed_path",   default=None, help="Optional external Orbit_Pre.txt to use as seed")
     args = parser.parse_args()
 
     user_params     = json.loads(args.params)
@@ -133,40 +189,61 @@ if __name__ == "__main__":
         f" → JD={jd_seed:.5f}")
 
     # ─── 1. Extract FMU ───
-    extract_dir = os.path.join(app_dir, "fmu_orbit_work")
+    # get_guaranteed_safe_workspace() handles:
+    #   - Chinese/special chars in user profile (e.g. C:\Users\木木)
+    #   - Spaces/parentheses in paths (e.g. Program Files (x86))
+    #   - Systems with 8.3 short names disabled (enterprise/corporate PCs)
+    workspace_root = get_guaranteed_safe_workspace(app_dir)
+
+    # Create a unique per-run job directory within the safe workspace
+    job_id = f"job_{uuid.uuid4().hex[:8]}"
+    extract_dir = os.path.join(workspace_root, job_id)
     os.makedirs(extract_dir, exist_ok=True)
+    log(f"[*] Runtime workspace = {extract_dir}")
     log("[*] Extracting FMU...")
     with zipfile.ZipFile(args.fmu_path, 'r') as z:
         z.extractall(extract_dir)
 
-    # ─── 2. Patch DLLs only (NOT existing Orbit_Pre.txt) ───
+    # ─── 2. Patch Environment (Synchronize all data/DLL files) ───
     arch    = "win32"
     bin_dir = os.path.join(extract_dir, "binaries", arch)
     os.makedirs(bin_dir, exist_ok=True)
 
     protected = {'kernel32.dll', 'user32.dll', 'ntdll.dll', 'advapi32.dll'}
+    log(f"[*] Synchronizing dependencies from {app_dir}...")
     for fname in os.listdir(app_dir):
-        if fname.lower().endswith('.dll') and fname.lower() not in protected:
+        # Synchronize DLLs and critical data files (txt, dat, xml)
+        ext = fname.lower().split('.')[-1] if '.' in fname else ''
+        if ext in ['dll', 'txt', 'dat', 'xml', 'ini', 'json'] and fname.lower() not in protected:
             src_file = os.path.join(app_dir, fname)
-            f_arch = check_dll_arch(src_file)
-            if f_arch and f_arch != arch:
-                continue
+            # Arch check only for DLLs
+            if ext == 'dll':
+                f_arch = check_dll_arch(src_file)
+                if f_arch and f_arch != arch:
+                    continue
+            
             dst = os.path.join(bin_dir, fname)
             if not os.path.exists(dst):
-                log(f"[*] Patching {fname}")
                 shutil.copy2(src_file, dst)
+    log("[OK] Environment patched.")
 
-    # ─── 3. Generate seed Orbit_Pre.txt in bin_dir ───
+    # ─── 3. Prepare Orbit_Pre.txt seed ───
     seed_path = os.path.join(bin_dir, "Orbit_Pre.txt")
-    generate_seed_orbit_txt(seed_path, jd_seed, a_mt, e_mt, i_mt, omega_mt, omega_s_mt, f_mt)
+    if args.seed_path and os.path.exists(args.seed_path):
+        log(f"[*] Using external seed file: {args.seed_path}")
+        shutil.copy2(args.seed_path, seed_path)
+    else:
+        log("[*] Generating seed file from parameters...")
+        generate_seed_orbit_txt(seed_path, jd_seed, a_mt, e_mt, i_mt, omega_mt, omega_s_mt, f_mt)
 
     # ─── 4. DLL paths & CWD ───
+    safe_bin_dir = get_safe_windows_path(bin_dir)
     if hasattr(os, 'add_dll_directory'):
         os.add_dll_directory(app_dir)
-        os.add_dll_directory(bin_dir)
-    os.environ['PATH'] = bin_dir + os.pathsep + app_dir + os.pathsep + os.environ.get('PATH', '')
-    os.chdir(bin_dir)
-    log(f"[*] CWD = {bin_dir}")
+        os.add_dll_directory(safe_bin_dir)
+    os.environ['PATH'] = safe_bin_dir + os.pathsep + app_dir + os.pathsep + os.environ.get('PATH', '')
+    os.chdir(safe_bin_dir)
+    log(f"[*] CWD = {safe_bin_dir}")
 
     # ── Pre-load all companion DLLs from bin_dir into process space ──
     import ctypes
@@ -181,9 +258,12 @@ if __name__ == "__main__":
             except Exception as e:
                 load_fail.append(f"{fname}: {e}")
     log(f"[*] Pre-loaded {len(loaded_ok)} DLLs. Failures: {len(load_fail)}")
+    for err in load_fail:
+        log(f"[!] Pre-load FAIL: {err}")
     # ────────────────────────────────────────────────────────────────
 
-    orbit_txt_abs = seed_path.replace('\\', '/')
+    # Use simple filename for the FMU internal reader (we are already in bin_dir)
+    orbit_txt_abs = "Orbit_Pre.txt"
 
     output_var_names = [
         'uTCG.JD_Out',
@@ -227,10 +307,12 @@ if __name__ == "__main__":
                     log(f"[!] Cannot set {k}: {e}")
 
         # ─── Initialize ───
-        log("[*] Entering initialization...")
+        log("[*] enterInitializationMode...")
         fmu_inst.enterInitializationMode()
+        log("[*] exitInitializationMode (This may take a while)...")
         fmu_inst.exitInitializationMode()
         log("[OK] Initialization complete.")
+        init_ok = True
 
         # Build VR list
         output_vrs = []

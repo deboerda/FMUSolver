@@ -8,6 +8,34 @@ import zipfile
 import shutil
 import sys
 import xml.etree.ElementTree as ET
+import builtins
+
+
+def _configure_unbuffered_output():
+    try:
+        stdout = getattr(sys, 'stdout', None)
+        if stdout and hasattr(stdout, 'reconfigure'):
+            stdout.reconfigure(line_buffering=True, write_through=True)
+    except Exception:
+        pass
+
+    try:
+        stderr = getattr(sys, 'stderr', None)
+        if stderr and hasattr(stderr, 'reconfigure'):
+            stderr.reconfigure(line_buffering=True, write_through=True)
+    except Exception:
+        pass
+
+    old_print = builtins.print
+
+    def flushed_print(*args, **kwargs):
+        kwargs.setdefault('flush', True)
+        return old_print(*args, **kwargs)
+
+    builtins.print = flushed_print
+
+
+_configure_unbuffered_output()
 
 # 依赖库检测与提示
 try:
@@ -41,10 +69,51 @@ def check_dll_arch(filepath):
     except: pass
     return None
 
+def _path_is_safe(path):
+    """Check if path is safe for legacy C++ file I/O: ASCII-only, no spaces, no parens."""
+    import re
+    return bool(re.match(r'^[A-Za-z]:\\[A-Za-z0-9_\\]*$', path))
+
+
+def _get_safe_short_path(path):
+    """Attempt to get Windows 8.3 short path; returns original if unavailable."""
+    norm_path = os.path.normpath(path)
+    if os.name != 'nt' or not os.path.exists(norm_path):
+        return norm_path
+    try:
+        import ctypes
+        buf = ctypes.create_unicode_buffer(4096)
+        result = ctypes.windll.kernel32.GetShortPathNameW(norm_path, buf, 4096)
+        if result and buf.value != norm_path:
+            return buf.value
+    except Exception:
+        pass
+    return norm_path
+
+
+def _get_guaranteed_safe_workspace(label, root_dir):
+    """
+    Returns a workspace path guaranteed to be safe for FMU C++ file I/O.
+    Tries short-path first; falls back to <drive>:\\FmuWork_<label> if 8.3 names disabled.
+    """
+    candidate = os.path.join(root_dir, f"fmu_work_{label}")
+    os.makedirs(candidate, exist_ok=True)
+    short = _get_safe_short_path(candidate)
+    if _path_is_safe(short):
+        return short
+    # Fallback: use drive root to avoid spaces/special chars
+    drive = os.path.splitdrive(root_dir)[0] or 'C:'
+    fallback = os.path.join(drive + os.sep, f'FmuWork{label}')
+    os.makedirs(fallback, exist_ok=True)
+    print(f"[!] Path unsafe, using fallback workspace: {fallback}")
+    return fallback
+
+
 class FMUProcessor:
     def __init__(self, fmu_path):
         self.fmu_path = fmu_path
-        self.temp_dir = os.path.abspath("./fmu_work_worker2")
+        root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
+        self.temp_dir = _get_guaranteed_safe_workspace("worker2", root_dir)
         self.model_desc = None
         self.arch_matched = False
 
@@ -110,7 +179,7 @@ class FMUProcessor:
 # 2. UDP + ddm.proto 通信模块 (重点: 发送)
 # --------------------------------------------------------------------------------
 class DDMCommManager:
-    def __init__(self, remote_ip="127.0.0.1", remote_port=8889, listen_port=8888):
+    def __init__(self, remote_ip="127.0.0.1", remote_port=8889, listen_port=8898):
         self.target_addr = (remote_ip, remote_port)
         self.listen_addr = ("0.0.0.0", listen_port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -198,9 +267,9 @@ class DDMCommManager:
 # 3. 仿真主循环 (Driver)
 # --------------------------------------------------------------------------------
 class FMUPlayer:
-    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sync_vars_file=None):
+    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sync_vars_file=None, control_port=8898):
         self.processor = FMUProcessor(fmu_path)
-        self.comm = DDMCommManager(remote_ip=remote_ip, remote_port=remote_port)
+        self.comm = DDMCommManager(remote_ip=remote_ip, remote_port=remote_port, listen_port=control_port)
         self.model = None
         self.sync_vars_file = sync_vars_file
 
@@ -271,19 +340,18 @@ class FMUPlayer:
             
             fmu_instance.setupExperiment(startTime=0.0)
 
-            # ── Override hardcoded absolute file paths in String parameters ──
-            # Handles any absolute path (D:/ or C:\) pointing to a .txt data file (e.g. Orbit_Pre.txt)
+            # Override hardcoded absolute file paths in String parameters.
+            # Pass only the bare filename (e.g. 'Orbit_Pre.txt') since we already CWD'd
+            # into bin_dir. Absolute paths with spaces/parens cause FMU init hangs.
             for v in getattr(self.model, 'modelVariables', []) + getattr(self.model, 'scalarVariables', []):
                 if getattr(v, 'type', None) == 'String' or getattr(v, 'typeName', None) == 'String':
                     start_val = getattr(v, 'start', '') or ''
-                    has_abs_path = start_val and (':/' in start_val or ':\\' in start_val or ':/' in start_val)
+                    has_abs_path = start_val and (':/' in start_val or ':\\' in start_val)
                     has_txt_file = start_val.lower().endswith('.txt')
                     if has_abs_path and has_txt_file:
-                        # Get just the filename and resolve it relative to CWD (= bin_dir)
                         txt_filename = os.path.basename(start_val.replace('\\', '/'))
-                        local_path = os.path.abspath(txt_filename).replace('\\', '/')
-                        print(f"[*] Overriding filepath: {v.name}: .../{txt_filename} → {local_path}")
-                        fmu_instance.setString([v.valueReference], [local_path])
+                        print(f"[*] Overriding filepath: {v.name}: .../{txt_filename} -> {txt_filename}")
+                        fmu_instance.setString([v.valueReference], [txt_filename])
             
             # ── Inject custom Initialization Parameters ──
             if init_params:

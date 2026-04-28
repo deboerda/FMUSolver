@@ -14,7 +14,7 @@ except ImportError:
     from yaocetest.packet_parser import PacketParser, InfoTransPkg
     from yaocetest.config_manager import ConfigManager
 
-# 动态寻找 ddm 协议库（向下或同级搜索，适配独立 exe 和原始工作区）
+# 动态寻找 ddm 协议库
 ddm_path = ""
 app_dir = os.path.dirname(os.path.abspath(__file__))
 while app_dir and app_dir.strip("\\") != "" and not app_dir.endswith(":\\"):
@@ -40,8 +40,9 @@ class YaoCeLinkLayerApp:
         self.config_mgr = ConfigManager(root_dir)
         self.data_queue = queue.Queue()
         self.running = False
-        self.reported_matches = set() # 记录已匹配过的参数名，减少日志重复
+        self.reported_matches = set() # 记录已匹配过的参数名
         self.packet_count = 0
+        self.reported_warnings = set()
         
     def start(self):
         self.config_mgr.load_config()
@@ -64,17 +65,14 @@ class YaoCeLinkLayerApp:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         
         self.last_recv_time = time.time()
-        
-        # 创建原始数据记录文件
         record_file = os.path.join(self.config_mgr.root_dir, f"raw_record_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
         print(f"[*] Raw hex records will be saved to: {record_file}")
         
-        # 增加一个心跳监视线程，如果长时间未收到数据，打印提醒
         def monitor_heartbeat():
             while self.running:
                 time.sleep(5)
                 if time.time() - self.last_recv_time > 10.0:
-                    print(f"[-] Still listening on UDP {recv_port}, but no data received for over 10s. Please check sender IP/Port.")
+                    print(f"[-] Still listening on UDP {recv_port}, but no data received for over 10s.")
         
         threading.Thread(target=monitor_heartbeat, daemon=True).start()
         
@@ -84,20 +82,15 @@ class YaoCeLinkLayerApp:
             
             with open(record_file, "a", encoding="utf-8") as f_rec:
                 f_rec.write(f"--- YaoCe UDP Raw Record Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
-                
                 while self.running:
                     data, addr = sock.recvfrom(65535)
                     self.last_recv_time = time.time()
-                    
-                    # 写入记录文件
                     try:
                         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
                         hex_str = data.hex(' ').upper()
                         f_rec.write(f"[{ts}] RX {len(data)} bytes from {addr[0]}:{addr[1]}\n{hex_str}\n\n")
-                        f_rec.flush() # 强制刷入磁盘，防崩溃丢失
-                    except Exception as e:
-                        print(f"[!] Write record error: {e}")
-                        
+                        f_rec.flush()
+                    except: pass
                     self.data_queue.put(data)
         except Exception as e:
             print(f"[!] Receiver error: {e}")
@@ -113,64 +106,50 @@ class YaoCeLinkLayerApp:
                 try:
                     mark = self.config_mgr.config.get('EndianMark', '<')
                     pkg = PacketParser.parse_datagram(raw_data, endian_mark=mark)
-                except ValueError as ve:
-                    print(f"[WARN] Packet parse rejected: {ve}")
-                    continue
-                except Exception as ex:
-                    print(f"[!] Packet parse fatal error: {ex}")
-                    continue
+                except: continue
                     
-                if not pkg: 
-                    continue
+                if not pkg: continue
                 
-                try:
-                    ddm_msg = self.generate_ddm_protobuf(pkg)
-                except Exception as ex:
-                    print(f"[!] Protobuf generation failed: {ex}")
-                    continue
-                    
+                ddm_msg = self.generate_ddm_protobuf(pkg)
                 if ddm_msg:
                     try:
                         raw_bytes = ddm_msg.SerializeToString()
-                        b64_str = base64.b64encode(raw_bytes).decode('ascii')
-                    except Exception as ex:
-                        print(f"[!] Serialization to base64 failed: {ex}")
-                        continue
-                        
-                    for target_ip, target_port in self.config_mgr.targets:
-                        try:
-                            send_sock.sendto(b64_str.encode('ascii'), (target_ip, target_port))
-                            if self.packet_count % 10 == 0: 
-                                print(f"[SEND] Packet #{self.packet_count}: Forwarded {len(ddm_msg.sim_vars)} vars -> {target_ip}:{target_port}")
-                        except Exception as e:
-                            print(f"[!] Send to {target_ip}:{target_port} error: {e}")
+                        payload = base64.b64encode(raw_bytes)
+                        for target_ip, target_port in self.config_mgr.targets:
+                            send_sock.sendto(payload, (target_ip, target_port))
+                        if self.packet_count % 10 == 0: 
+                            print(f"[SEND] Packet #{self.packet_count}: Forwarded {len(ddm_msg.sim_vars)} vars.")
+                    except Exception as e:
+                        print(f"[!] Send error: {e}")
                 else:
                     if self.packet_count % 100 == 0:
-                        print(f"[-] Packet #{self.packet_count}: 0 variables matched whitelist in this batch.")
-                    
+                        print(f"[-] Packet #{self.packet_count}: 0 variables matched whitelist.")
             except queue.Empty: continue
             except Exception as e:
                 print(f"[!] Processor error: {e}")
 
     def generate_ddm_protobuf(self, pkg: InfoTransPkg):
         if ddm_pb2 is None: return None
-            
         msg = ddm_pb2.DDMData()
         msg.machine_time = time.time()
-        
         try:
             dt = datetime.strptime(pkg.recv_time, "%Y-%m-%d %H:%M:%S")
             msg.sim_time = dt.timestamp()
-        except Exception as e:
-            msg.sim_time = 0.0
+        except: msg.sim_time = 0.0
 
         is_any_field_added = False
+        clock_codes = {"S0067", "DCSM34"}
 
         def add_to_sim_vars(name, val_str):
             svar = msg.sim_vars.add()
             svar.name = name
             svar.type = ddm_pb2.DDMData.SimVar.Double
-            clean_val = val_str.strip()
+
+            if isinstance(val_str, (int, float)):
+                svar.double_value = float(val_str)
+                return
+
+            clean_val = str(val_str).strip()
             if not clean_val:
                 svar.double_value = 0.0
                 return
@@ -180,16 +159,42 @@ class YaoCeLinkLayerApp:
                 try:
                     svar.double_value = float(int(clean_val, 16))
                 except Exception:
-                    if name not in self.reported_matches:
-                        print(f"[DEBUG] Field '{name}' value '{clean_val}' is not numeric/hex, setting to 0.0")
                     svar.double_value = 0.0
-            except Exception as e:
+            except Exception:
                 svar.double_value = 0.0
+
+        def parse_clock_value(clock_str):
+            parts = [p.strip() for p in clock_str.split(":")]
+            if len(parts) < 5:
+                return None
+            try:
+                day = int(parts[0])
+                hour = int(parts[1])
+                minute = int(parts[2])
+                second = int(parts[3])
+                millisecond = int(parts[4])
+            except ValueError:
+                return None
+
+            total_seconds = (
+                day * 86400.0 +
+                hour * 3600.0 +
+                minute * 60.0 +
+                second +
+                millisecond / 1000.0
+            )
+            return {
+                "A024": day,
+                "A025": hour,
+                "A026": minute,
+                "A027": second,
+                "A028": millisecond,
+                "total": total_seconds,
+            }
 
         for item in pkg.info_body_vct:
             allowed, mapped_name = self.config_mgr.is_param_allowed(item.sys_ident)
-            if not allowed:
-                continue
+            if not allowed: continue
             
             if mapped_name not in self.reported_matches:
                 print(f"[DEBUG] First match for parameter: Original='{item.sys_ident}', Mapped='{mapped_name}', Value='{item.value}'")
@@ -197,18 +202,29 @@ class YaoCeLinkLayerApp:
                 
             is_any_field_added = True
 
-            # 增强的时钟识别：无论前缀是 S 还是 N，只要编号是 0067 就触发拆分
-            is_clock = item.sys_ident.endswith("0067") or mapped_name.endswith("0067")
-            
             try:
-                if is_clock:
-                    parts = item.value.split(":")
-                    if len(parts) >= 5:
-                        mapping = [("A024", 0), ("A025", 1), ("A026", 2), ("A027", 3), ("A028", 4)]
-                        for code, idx in mapping:
-                            add_to_sim_vars(code, parts[idx])
+                # 现场日志中真正的绝对时间码是冒号分隔格式，例如 1138:22:45:54:278。
+                # 对 S0067/DCSM34 仅在收到该格式时才做时间码拆分，避免 T0067 等普通测点因后缀相同被误映射。
+                if mapped_name in clock_codes:
+                    parsed_clock = parse_clock_value(item.value)
+                    if parsed_clock is not None:
+                        add_to_sim_vars(mapped_name, parsed_clock["total"])
+                        add_to_sim_vars("A024", parsed_clock["A024"])
+                        add_to_sim_vars("A025", parsed_clock["A025"])
+                        add_to_sim_vars("A026", parsed_clock["A026"])
+                        add_to_sim_vars("A027", parsed_clock["A027"])
+                        add_to_sim_vars("A028", parsed_clock["A028"])
+                    elif item.sys_ident == mapped_name:
+                        warn_key = (mapped_name, "clock_fallback")
+                        if warn_key not in self.reported_warnings:
+                            print(f"[WARN] Clock field '{mapped_name}' has non-clock payload '{item.value}', forwarded as raw numeric fallback.")
+                            self.reported_warnings.add(warn_key)
+                        add_to_sim_vars(mapped_name, item.value)
                     else:
-                        print(f"[WARN] Clock format error: {item.value}")
+                        warn_key = (item.sys_ident, mapped_name, "clock_collision")
+                        if warn_key not in self.reported_warnings:
+                            print(f"[WARN] Ignored suffix-based remap '{item.sys_ident}' -> '{mapped_name}' because payload '{item.value}' is not a clock string.")
+                            self.reported_warnings.add(warn_key)
                 else:
                     add_to_sim_vars(mapped_name, item.value)
             except Exception as e:

@@ -15,6 +15,9 @@ if getattr(sys, 'frozen', False):
 else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
 
+CONTROL_PORT = 8898
+GUI_CONFIG_PATH = os.path.join(APP_DIR, "gui_config.json")
+
 def get_fmu_arch(fmu_path):
     """快速检测 FMU 架构"""
     try:
@@ -24,6 +27,72 @@ def get_fmu_arch(fmu_path):
             if any(n.startswith('binaries/win32/') for n in names): return 32
     except: pass
     return None
+
+
+def _norm_existing(path):
+    if path and os.path.exists(path):
+        return os.path.normpath(path)
+    return None
+
+
+def _find_file_by_names(search_roots, names):
+    for root in search_roots:
+        if not os.path.isdir(root):
+            continue
+        for name in names:
+            direct = os.path.join(root, name)
+            if os.path.exists(direct):
+                return os.path.normpath(direct)
+        for current_root, _, files in os.walk(root):
+            file_map = {f.lower(): f for f in files}
+            for name in names:
+                hit = file_map.get(name.lower())
+                if hit:
+                    return os.path.normpath(os.path.join(current_root, hit))
+    return None
+
+
+def _find_file_by_keywords(search_roots, keywords, suffix=""):
+    lower_keywords = [k.lower() for k in keywords]
+    for root in search_roots:
+        if not os.path.isdir(root):
+            continue
+        for current_root, _, files in os.walk(root):
+            for file_name in files:
+                lower_name = file_name.lower()
+                if suffix and not lower_name.endswith(suffix.lower()):
+                    continue
+                if all(k in lower_name for k in lower_keywords):
+                    return os.path.normpath(os.path.join(current_root, file_name))
+    return None
+
+
+def auto_find_fmu(preferred_names, keywords):
+    search_roots = [os.path.join(APP_DIR, "FMU"), APP_DIR]
+    return (
+        _find_file_by_names(search_roots, preferred_names)
+        or _find_file_by_keywords(search_roots, keywords, suffix=".fmu")
+    )
+
+
+def auto_find_yaoce_dir():
+    candidates = [
+        os.path.join(APP_DIR, "yaocetest"),
+        os.path.join(APP_DIR, "dist", "yaocetest"),
+    ]
+    for candidate in candidates:
+        if os.path.exists(os.path.join(candidate, "config.ini")):
+            return os.path.normpath(candidate)
+
+    for current_root, dirs, _ in os.walk(APP_DIR):
+        for dir_name in dirs:
+            if dir_name.lower() != "yaocetest":
+                continue
+            candidate = os.path.join(current_root, dir_name)
+            if os.path.exists(os.path.join(candidate, "config.ini")):
+                return os.path.normpath(candidate)
+
+    return os.path.normpath(os.path.join(APP_DIR, "yaocetest"))
 
 class FmuSolverGUI:
     def __init__(self, root):
@@ -40,9 +109,75 @@ class FmuSolverGUI:
         self.worker_process = None
         self.log_thread = None
         self.current_arch = struct.calcsize('P') * 8
-        self.orbit_data = [] 
+        self.orbit_data = []
+        self.gui_config_path = GUI_CONFIG_PATH
+        self.gui_config = self._load_gui_config()
+        self.default_sim_fmu = self._resolve_sim_fmu_path()
+        self.default_orbit_fmu = self._resolve_orbit_fmu_path()
+        self.yaoce_dir = self._resolve_yaoce_dir()
+        self.default_ip = str(self.gui_config.get("ip", "127.0.0.1"))
+        try:
+            self.default_port = int(self.gui_config.get("port", 8889))
+        except Exception:
+            self.default_port = 8889
         
         self.create_widgets()
+
+    def _load_gui_config(self):
+        if os.path.exists(self.gui_config_path):
+            try:
+                with open(self.gui_config_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                if isinstance(data, dict):
+                    return data
+            except Exception:
+                pass
+        return {}
+
+    def _resolve_sim_fmu_path(self):
+        auto_path = auto_find_fmu(
+            ["MTLibrary_System_EPS_PD_EPS_CJ.fmu", "FMU_Model1.fmu", "TestFmu.fmu"],
+            ["eps", "cj"],
+        )
+        return auto_path or _norm_existing(self.gui_config.get("sim_fmu")) or ""
+
+    def _resolve_orbit_fmu_path(self):
+        auto_path = auto_find_fmu(
+            ["MTLibrary_System_EPS_PD_Orbit_Pre.fmu"],
+            ["orbit", "pre"],
+        )
+        return auto_path or _norm_existing(self.gui_config.get("orbit_fmu")) or ""
+
+    def _resolve_yaoce_dir(self):
+        auto_path = auto_find_yaoce_dir()
+        return auto_path or _norm_existing(self.gui_config.get("yaoce_dir")) or os.path.normpath(os.path.join(APP_DIR, "yaocetest"))
+
+    def _child_env(self):
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        env["PYTHONIOENCODING"] = "utf-8"
+        return env
+
+    def _save_gui_config(self):
+        data = {
+            "sim_fmu": self.fmu_path_var.get().strip() if hasattr(self, "fmu_path_var") else self.default_sim_fmu,
+            "orbit_fmu": self.orbit_fmu_path_var.get().strip() if hasattr(self, "orbit_fmu_path_var") else self.default_orbit_fmu,
+            "yaoce_dir": os.path.normpath(self.yaoce_dir) if getattr(self, "yaoce_dir", "") else "",
+            "ip": self.ip_var.get().strip() if hasattr(self, "ip_var") else self.default_ip,
+            "port": int(self.port_var.get()) if hasattr(self, "port_var") else self.default_port,
+        }
+        try:
+            with open(self.gui_config_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
+    def _browse_orbit_file(self):
+        initial_dir = os.path.dirname(self.orbit_fmu_path_var.get().strip()) or os.path.join(APP_DIR, "FMU")
+        f = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("FMU", "*.fmu")])
+        if f:
+            self.orbit_fmu_path_var.set(os.path.normpath(f))
+            self._save_gui_config()
 
     def create_widgets(self):
         self.notebook = ttk.Notebook(self.root)
@@ -71,8 +206,6 @@ class FmuSolverGUI:
         frame_cfg = ttk.LabelFrame(self.tab_yaoce, text="1. 配置文件与过滤白名单检查 (支持进厂断网环境查验)")
         frame_cfg.pack(fill=tk.X, padx=10, pady=5)
         
-        self.yaoce_dir = os.path.join(APP_DIR, "yaocetest")
-        
         dir_frame = tk.Frame(frame_cfg)
         dir_frame.pack(fill=tk.X, padx=5, pady=2)
         
@@ -84,6 +217,7 @@ class FmuSolverGUI:
             if d:
                 self.yaoce_dir = os.path.normpath(d)
                 self.lbl_yaoce_dir.config(text=f"当前配置读取目录: {self.yaoce_dir}")
+                self._save_gui_config()
                 
         tk.Button(dir_frame, text="更改目录...", command=choose_dir, bg="#e0e0e0").pack(side=tk.RIGHT, padx=5)
         
@@ -138,7 +272,6 @@ class FmuSolverGUI:
         self.ylog("===========================================", "sys")
         self.ylog(f"[*] 启动底层遥测子进程... CMD={worker_cmd}", "sys")
         
-        # UI端主动清空老日志，避免被旧数据污染或截断判定干扰
         log_file = os.path.join(APP_DIR, "yaoce_run.log")
         try:
             with open(log_file, "w", encoding="utf-8") as f: f.write("")
@@ -146,7 +279,7 @@ class FmuSolverGUI:
 
         self._yaoce_log_pos = 0
         try:
-            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=APP_DIR)
+            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env())
             
             def poll_log():
                 if not hasattr(self, 'yaoce_proc') or not self.yaoce_proc: return
@@ -272,7 +405,6 @@ class FmuSolverGUI:
             for line in lines:
                 line = line.strip()
                 if not line: continue
-                # 兼容 Modelica 和 普通名字
                 m = re.search(r'(?:output\s+)?(?:(Real|Integer|Boolean|String)\s+)?([a-zA-Z0-9_\.]+)(?:\[(\d+)\])?(.*)', line)
                 if m:
                     var_type = m.group(1) or 'Real'
@@ -283,7 +415,6 @@ class FmuSolverGUI:
                     
                     for i in range(1, size + 1):
                         name = f"{base_name}[{i}]" if size > 1 else base_name
-                        # 检查去重
                         exists = False
                         for child in self.tree.get_children():
                             if self.tree.item(child, 'values')[0] == name:
@@ -324,26 +455,23 @@ class FmuSolverGUI:
             except: pass
 
     def _setup_sim_tab(self):
-        # --- 模型选择 ---
         frame_file = ttk.LabelFrame(self.tab_sim, text="1. 模型与路径配置")
         frame_file.pack(fill=tk.X, padx=10, pady=5)
         
-        self.fmu_path_var = tk.StringVar(value=r"C:\Spaceship\FmuSolver_Package\FMU\MTLibrary_System_EPS_PD_EPS_CJ.fmu")
+        self.fmu_path_var = tk.StringVar(value=self.default_sim_fmu)
         tk.Entry(frame_file, textvariable=self.fmu_path_var, width=80).pack(side=tk.LEFT, padx=5, pady=5)
         ttk.Button(frame_file, text="浏览...", command=self.browse_file).pack(side=tk.LEFT, padx=5, pady=5)
         
-        # --- 通信配置 ---
         frame_comm = ttk.LabelFrame(self.tab_sim, text="2. 通信网络设置")
         frame_comm.pack(fill=tk.X, padx=10, pady=5)
         
         tk.Label(frame_comm, text="远程地址 (IP):").grid(row=0, column=0, padx=5, pady=5)
-        self.ip_var = tk.StringVar(value="127.0.0.1")
+        self.ip_var = tk.StringVar(value=self.default_ip)
         tk.Entry(frame_comm, textvariable=self.ip_var, width=15).grid(row=0, column=1, padx=5, pady=5)
         tk.Label(frame_comm, text="端口:").grid(row=0, column=2, padx=5, pady=5)
-        self.port_var = tk.IntVar(value=8889)
+        self.port_var = tk.IntVar(value=self.default_port)
         tk.Entry(frame_comm, textvariable=self.port_var, width=8).grid(row=0, column=3, padx=5, pady=5)
         
-        # --- 初值设置 ---
         frame_init = ttk.LabelFrame(self.tab_sim, text="3. 初值与参数定义 (EPS_CJ)")
         frame_init.pack(fill=tk.X, padx=10, pady=5)
         
@@ -372,7 +500,6 @@ class FmuSolverGUI:
         tk.Label(frame_init, text="Table_Att:").grid(row=5, column=0, sticky=tk.E, pady=2)
         tk.Entry(frame_init, textvariable=self.cj_table_att, width=50).grid(row=5, column=1, columnspan=5, sticky=tk.W)
 
-        # --- 策略参数 ---
         frame_params = ttk.LabelFrame(self.tab_sim, text="4. 仿真策略配置")
         frame_params.pack(fill=tk.X, padx=10, pady=5)
         
@@ -389,7 +516,6 @@ class FmuSolverGUI:
             tk.Label(frame_params, text=label).grid(row=r, column=c, padx=5, pady=5, sticky=tk.E)
             tk.Entry(frame_params, textvariable=var, width=12).grid(row=r, column=c+1, padx=5, pady=5, sticky=tk.W)
 
-        # --- 控制按钮 ---
         frame_btn = tk.Frame(self.tab_sim)
         frame_btn.pack(fill=tk.X, padx=10, pady=10)
         self.btn_start = tk.Button(frame_btn, text="▶ 启动实时仿真", command=self.start_sim, bg="#e1f5fe", font=("微软雅黑", 10, "bold"), padx=15)
@@ -407,7 +533,6 @@ class FmuSolverGUI:
         self.status_var = tk.StringVar(value="OS Ready")
         tk.Label(frame_btn, textvariable=self.status_var, fg="#666").pack(side=tk.RIGHT, padx=10)
 
-        # --- 日志面板 ---
         frame_log = ttk.LabelFrame(self.tab_sim, text="实时日志")
         frame_log.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.txt_log = scrolledtext.ScrolledText(frame_log, wrap=tk.WORD, height=12, font=("Consolas", 9))
@@ -415,25 +540,30 @@ class FmuSolverGUI:
         self.txt_log.tag_config("info", foreground="#1b5e20"); self.txt_log.tag_config("error", foreground="#b71c1c"); self.txt_log.tag_config("sys", foreground="#455a64")
 
     def _setup_orbit_tab(self):
-        # 独立FMU路径选择
         frame_orbit_fmu = ttk.LabelFrame(self.tab_orbit, text="0. 轨道预示 FMU 模型")
         frame_orbit_fmu.pack(fill=tk.X, padx=10, pady=5)
-        self.orbit_fmu_path_var = tk.StringVar(value=r"C:\Spaceship\FmuSolver_Package\FMU\MTLibrary_System_EPS_PD_Orbit_Pre.fmu")
+        self.orbit_fmu_path_var = tk.StringVar(value=self.default_orbit_fmu)
         tk.Entry(frame_orbit_fmu, textvariable=self.orbit_fmu_path_var, width=72).pack(side=tk.LEFT, padx=5, pady=4)
-        ttk.Button(frame_orbit_fmu, text="浏览...", command=lambda: self.orbit_fmu_path_var.set(
-            filedialog.askopenfilename(filetypes=[("FMU", "*.fmu")]) or self.orbit_fmu_path_var.get()
-        )).pack(side=tk.LEFT, padx=3)
+        ttk.Button(frame_orbit_fmu, text="浏览...", command=self._browse_orbit_file).pack(side=tk.LEFT, padx=3)
 
-        # 轨道参数输入
-        frame_input = ttk.LabelFrame(self.tab_orbit, text="1. 轨道初始根数设置")
+        frame_seed = ttk.LabelFrame(self.tab_orbit, text="1. 轨道种子文件 (Orbit_Pre.txt)")
+        frame_seed.pack(fill=tk.X, padx=10, pady=5)
+        
+        default_seed = os.path.join(APP_DIR, "Orbit_Pre.txt")
+        self.orbit_seed_path_var = tk.StringVar(value=default_seed if os.path.exists(default_seed) else "")
+        tk.Entry(frame_seed, textvariable=self.orbit_seed_path_var, width=72).pack(side=tk.LEFT, padx=5, pady=4)
+        ttk.Button(frame_seed, text="浏览...", command=lambda: self.orbit_seed_path_var.set(
+            filedialog.askopenfilename(filetypes=[("Text", "*.txt"), ("All", "*.*")]) or self.orbit_seed_path_var.get()
+        )).pack(side=tk.LEFT, padx=3)
+        tk.Label(frame_seed, text="* 若留空则根据下方根数自动生成", fg="#666666", font=("微软雅黑", 8)).pack(side=tk.LEFT, padx=5)
+
+        frame_input = ttk.LabelFrame(self.tab_orbit, text="2. 轨道初始根数设置")
         frame_input.pack(fill=tk.X, padx=10, pady=5)
         
-        # NOTE: Year is auto-managed by the engine (FMU EOP covers 2026+)
         self.year_var = tk.IntVar(value=2026); self.mon_var = tk.IntVar(value=4); self.day_var = tk.IntVar(value=10)
         self.hour_var = tk.IntVar(value=8); self.min_var = tk.IntVar(value=0); self.sec_var = tk.DoubleVar(value=0.0)
         self.a_mt_var = tk.DoubleVar(value=6766.71777); self.e_mt_var = tk.DoubleVar(value=0.00110); self.i_mt_var = tk.DoubleVar(value=0.72653)
         self.OMEGA_mt_var = tk.DoubleVar(value=2.39969); self.omega_mt_var = tk.DoubleVar(value=1.34409); self.f_mt_var = tk.DoubleVar(value=1.00447)
-        # EOP notice
         tk.Label(frame_input, text="⚠ 计算年份受 FMU EOP 数据范围限制 (2026)，年份将自动修正",
                  fg="#b26a00", font=("微软雅黑", 8)).grid(row=4, column=0, columnspan=6, sticky=tk.W, padx=5)
         
@@ -447,13 +577,12 @@ class FmuSolverGUI:
             tk.Label(frame_input, text=label).grid(row=r, column=c, padx=5, pady=5, sticky=tk.E)
             tk.Entry(frame_input, textvariable=var, width=12).grid(row=r, column=c+1, padx=5, sticky=tk.W)
 
-        # 策略参数
-        frame_strat = ttk.LabelFrame(self.tab_orbit, text="2. 离线计算策略配置")
+        frame_strat = ttk.LabelFrame(self.tab_orbit, text="3. 离线计算策略配置")
         frame_strat.pack(fill=tk.X, padx=10, pady=5)
         
-        self.orbit_step = tk.DoubleVar(value=10.0)   # FMU requires multiples of 10s
+        self.orbit_step = tk.DoubleVar(value=10.0)
         self.orbit_rate = tk.DoubleVar(value=0.0)
-        self.orbit_freq = tk.DoubleVar(value=0.1) # 默认 10s 一行，即 0.1Hz
+        self.orbit_freq = tk.DoubleVar(value=0.1)
         self.orbit_duration = tk.DoubleVar(value=86400.0)
         
         strats = [
@@ -464,7 +593,6 @@ class FmuSolverGUI:
             tk.Label(frame_strat, text=label).grid(row=r, column=c, padx=5, pady=5, sticky=tk.E)
             tk.Entry(frame_strat, textvariable=var, width=15).grid(row=r, column=c+1, padx=5, sticky=tk.W)
 
-        # 运行控制
         frame_ctrl = ttk.Frame(self.tab_orbit)
         frame_ctrl.pack(fill=tk.X, padx=10, pady=10)
         self.btn_run_orbit = tk.Button(frame_ctrl, text="🚀 开始预示解析", command=self.run_orbit_precalc, bg="#e8f5e9", font=("微软雅黑", 10, "bold"), padx=25)
@@ -474,7 +602,6 @@ class FmuSolverGUI:
         self.btn_export_txt = tk.Button(frame_ctrl, text="💾 导出结果", command=self.export_orbit_txt, bg="#f3e5f5", padx=20, state=tk.DISABLED)
         self.btn_export_txt.pack(side=tk.LEFT, padx=5)
 
-        # 独立日志框
         frame_olog = ttk.LabelFrame(self.tab_orbit, text="轨道预示日志")
         frame_olog.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
         self.txt_orbit_log = scrolledtext.ScrolledText(frame_olog, wrap=tk.WORD, height=12, font=("Consolas", 9))
@@ -489,14 +616,16 @@ class FmuSolverGUI:
         self.txt_data.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     def browse_file(self):
-        f = filedialog.askopenfilename(filetypes=[("FMU Files", "*.fmu")]); 
-        if f: self.fmu_path_var.set(f)
+        initial_dir = os.path.dirname(self.fmu_path_var.get().strip()) or os.path.join(APP_DIR, "FMU")
+        f = filedialog.askopenfilename(initialdir=initial_dir, filetypes=[("FMU Files", "*.fmu")])
+        if f:
+            self.fmu_path_var.set(os.path.normpath(f))
+            self._save_gui_config()
         
     def log(self, msg, tag="sys"):
         self.txt_log.insert(tk.END, msg + "\n", tag); self.txt_log.see(tk.END)
 
     def olog(self, msg, tag="sys"):
-        """Orbit-specific log panel"""
         self.txt_orbit_log.insert(tk.END, msg + "\n", tag); self.txt_orbit_log.see(tk.END)
 
     def get_cj_params(self):
@@ -508,6 +637,7 @@ class FmuSolverGUI:
         }
 
     def start_sim(self):
+        self._save_gui_config()
         fmu_path = self.fmu_path_var.get().strip()
         if not os.path.exists(fmu_path): self.log(f"[!] 找不到文件 {fmu_path}", "error"); return
         fmu_bit = get_fmu_arch(fmu_path)
@@ -515,7 +645,7 @@ class FmuSolverGUI:
         if not getattr(sys, 'frozen', False): cmd.append(os.path.abspath(__file__))
         sim_args = ["--step", str(self.step_var.get()), "--rate", str(self.rate_var.get()), 
                     "--freq", str(self.freq_var.get()), "--time", str(self.time_var.get()),
-                    "--params", json.dumps(self.get_cj_params())]
+                    "--params", json.dumps(self.get_cj_params()), "--control_port", str(CONTROL_PORT)]
         cmd.extend(["--worker", fmu_path, "--ip", self.ip_var.get(), "--port", str(self.port_var.get()), "--sync_vars", getattr(self, "sync_cfg_path", "sync_fields.json")] + sim_args)
         if fmu_bit != self.current_arch:
             worker_p = os.path.join(APP_DIR, f"FmuWorker{fmu_bit}.exe")
@@ -523,7 +653,7 @@ class FmuSolverGUI:
             cmd = [worker_p, fmu_path, "--ip", self.ip_var.get(), "--port", str(self.port_var.get()), "--sync_vars", getattr(self, "sync_cfg_path", "sync_fields.json")] + sim_args
         self.btn_start.config(state=tk.DISABLED); self.btn_stop.config(state=tk.NORMAL)
         try:
-            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=APP_DIR)
+            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env())
             self.root.after(1500, self.update_params)
             threading.Thread(target=self._read_worker_logs, daemon=True).start()
         except: self.stop_sim()
@@ -542,7 +672,7 @@ class FmuSolverGUI:
     def stop_sim(self):
         if self.worker_process:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            try: sock.sendto(json.dumps({"exit": True}).encode('utf-8'), ("127.0.0.1", 8888))
+            try: sock.sendto(json.dumps({"exit": True}).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
             except: pass
             finally: sock.close()
             self.root.after(300, lambda: subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.worker_process.pid)], creationflags=subprocess.CREATE_NO_WINDOW) if self.worker_process else None)
@@ -551,7 +681,7 @@ class FmuSolverGUI:
     def update_params(self):
         cmd = {"step_size": self.step_var.get(), "sim_time": self.time_var.get(), "sim_rate": self.rate_var.get(), "sample_freq": self.freq_var.get()}
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try: s.sendto(json.dumps(cmd).encode('utf-8'), ("127.0.0.1", 8888))
+        try: s.sendto(json.dumps(cmd).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
         except: pass
         finally: s.close()
 
@@ -567,12 +697,13 @@ class FmuSolverGUI:
     def send_ctrl_signal(self, name, val):
         if self.worker_process:
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            try: s.sendto(json.dumps({name: val}).encode('utf-8'), ("127.0.0.1", 8888))
+            try: s.sendto(json.dumps({name: val}).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
             except: pass
             finally: s.close()
 
     def run_orbit_precalc(self):
-        fmu_path = self.orbit_fmu_path_var.get().strip()   # Use orbit-specific FMU path
+        self._save_gui_config()
+        fmu_path = self.orbit_fmu_path_var.get().strip()
         worker_path = os.path.join(APP_DIR, "OrbitPreCalc32.exe")
         if not os.path.exists(worker_path):
             self.olog("[!] 找不到计算引擎 OrbitPreCalc32.exe", "error"); return
@@ -587,6 +718,10 @@ class FmuSolverGUI:
                "--step_size",   str(self.orbit_step.get()),
                "--sample_freq", str(self.orbit_freq.get()),
                "--sim_rate",    str(self.orbit_rate.get())]
+        
+        seed_path = self.orbit_seed_path_var.get().strip()
+        if seed_path and os.path.exists(seed_path):
+            cmd.extend(["--seed_path", seed_path])
 
         self.olog(f"[*] 启动轨道计算引擎...", "sys")
         self.olog(f"[*] 步长={self.orbit_step.get()}s | 频率={self.orbit_freq.get()}Hz | 时长={self.orbit_duration.get()}s | 速率={self.orbit_rate.get()}x", "sys")
@@ -596,7 +731,7 @@ class FmuSolverGUI:
 
         def run_thread():
             try:
-                self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=APP_DIR)
+                self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env())
                 ready_file = None
                 for line in iter(self.orbit_proc.stdout.readline, ''):
                     line = line.strip()
@@ -628,8 +763,7 @@ class FmuSolverGUI:
     def stop_orbit(self):
         if hasattr(self, 'orbit_proc') and self.orbit_proc:
             try:
-                subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.orbit_proc.pid)],
-                                creationflags=subprocess.CREATE_NO_WINDOW)
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.orbit_proc.pid)], creationflags=subprocess.CREATE_NO_WINDOW)
                 self.olog("[!] 用户手动停止计算进程。", "error")
             except: pass
 
@@ -651,31 +785,22 @@ class FmuSolverGUI:
         except Exception as e: self.log(f"[!] 导出失败: {e}", "error")
 
 if __name__ == "__main__":
-    try:
-        with open(r"C:\Spaceship\FMUSOLVER\FmuSolver_Package\sys_argv.log", "a") as f:
-            f.write(f"sys.argv={sys.argv}\n")
-    except: pass
     if len(sys.argv) > 1 and sys.argv[1] == "--worker":
         import argparse; parser = argparse.ArgumentParser()
-        parser.add_argument("--worker", action="store_true"); parser.add_argument("fmu_path"); parser.add_argument("--ip", default="127.0.0.1"); parser.add_argument("--port", type=int, default=8889); parser.add_argument("--sync_vars", default=None)
+        parser.add_argument("--worker", action="store_true"); parser.add_argument("fmu_path"); parser.add_argument("--ip", default="127.0.0.1"); parser.add_argument("--port", type=int, default=8889); parser.add_argument("--sync_vars", default=None); parser.add_argument("--control_port", type=int, default=8898)
         args = parser.parse_args(); os.chdir(APP_DIR)
-        try: from fmu_player import FMUPlayer; FMUPlayer(args.fmu_path, remote_ip=args.ip, remote_port=args.port, sync_vars_file=args.sync_vars).run()
+        try: from fmu_player import FMUPlayer; FMUPlayer(args.fmu_path, remote_ip=args.ip, remote_port=args.port, sync_vars_file=args.sync_vars, control_port=args.control_port).run()
         except: pass
         sys.exit(0)
     elif len(sys.argv) > 1 and sys.argv[1] == "--yaoceworker":
-        import os
-        import sys
         import builtins
-        
         APP_DIR = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
         log_file = os.path.join(APP_DIR, "yaoce_run.log")
         fatal_log = os.path.join(APP_DIR, "yaoce_fatal.log")
-        
         try:
             with open(log_file, "w", encoding="utf-8") as f: f.write("")
         except Exception as e:
             with open(fatal_log, "a", encoding="utf-8") as f: f.write(f"Clear error: {e}\n")
-        
         class FileOut:
             def __init__(self, prefix=""): self.p = prefix
             def write(self, text):
@@ -686,25 +811,19 @@ if __name__ == "__main__":
                 except Exception as e:
                     with open(fatal_log, "a", encoding="utf-8") as f: f.write(f"Write error: {e}\n")
             def flush(self): pass
-            
         my_out = FileOut()
         sys.stdout = my_out
         sys.stderr = FileOut("[!ERR] ")
-        
         def _my_print(*args, **kwargs):
             try:
                 msg = " ".join(map(str, args)) + "\n"
                 my_out.write(msg)
             except Exception as e:
                 with open(fatal_log, "a") as f: f.write(f"Print error: {e}\n")
-                
         builtins.print = _my_print
-
         yaoce_module_path = os.path.join(APP_DIR, "yaocetest")
         if yaoce_module_path not in sys.path: sys.path.append(yaoce_module_path)
-        
         yaoce_config_dir = sys.argv[2] if len(sys.argv) > 2 else yaoce_module_path
-        
         try:
             from yaocetest.main import YaoCeLinkLayerApp
             my_out.write(f"[SYS] Importing YaoCeLinkLayerApp successful. Config Dir: {yaoce_config_dir}\n")

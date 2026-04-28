@@ -1,0 +1,103 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Root>
+  <Param parId="B0171" code="B0171" desc="梦天舱总压"/>
+<Param parId="B1190" code="B1190" desc="梦天舱温度"/>
+<Param parId="B1191" code="B1191" desc="梦天舱湿度"/>
+<Param parId="B0073" code="B0073" desc="梦天舱氧分压"/>
+<Param parId="B1189" code="B1189" desc="梦天舱CO2分压"/>
+<Param parId="R1994" code="R1994" desc="外回路控温值"/>
+<Param parId="R1998" code="R1998" desc="中温回路控温值"/>
+<Param parId="B0179" code="B0179" desc="货物气闸舱总压"/>
+<Param parId="B0180" code="B0180" desc="货物气闸舱温度"/>
+<Param parId="K0693" code="K0693" desc="轨道长半轴a"/>
+<Param parId="K0694" code="K0694" desc="轨道偏心率e"/>
+<Param parId="K0695" code="K0695" desc="轨道倾角I"/>
+<Param parId="K0696" code="K0696" desc="轨道升交点赤经Ω"/>
+<Param parId="K0697" code="K0697" desc="轨道近地点幅角ω"/>
+<Param parId="K0699" code="K0699" desc="轨道真近点角f"/>
+<Param parId="K0024" code="K0024" desc="滚动姿态角度估值"/>
+<Param parId="K0025" code="K0025" desc="俯仰姿态角度估值"/>
+<Param parId="K0026" code="K0026" desc="偏航姿态角度估值"/>
+<Param parId="K0027" code="K0027" desc="滚动角速度预估"/>
+<Param parId="K0028" code="K0028" desc="俯仰角速度预估"/>
+<Param parId="K0029" code="K0029" desc="偏航角速度预估"/>
+<Param parId="K0182" code="K0182" desc="左帆板Alpha转角信息"/>
+<Param parId="K0191" code="K0191" desc="右帆板Alpha转角信息"/>
+<Param parId="K0180" code="K0180" desc="左帆板Beta转角信息"/>
+<Param parId="K0189" code="K0189" desc="右帆板Beta转角信息"/>
+<Param parId="N0830" code="N0830" desc="电池组aAh容量"/>
+<Param parId="N1111" code="N1111" desc="电池组bAh容量"/>
+<Param parId="N1383" code="N1383" desc="电池组cAh容量"/>
+<Param parId="N1655" code="N1655" desc="电池组dAh容量"/>
+<Param parId="N2682" code="N2682" desc="电池组eAh容量"/>
+<Param parId="N2963" code="N2963" desc="电池组fAh容量"/>
+<Param parId="N3235" code="N3235" desc="电池组gAh容量"/>
+<Param parId="N3507" code="N3507" desc="电池组hAh容量"/>
+<Param parId="N0100" code="N0100" desc="母线滤波a母线电压1"/>
+<Param parId="N1973" code="N1973" desc="母线滤波b母线电压1"/>
+<Param parId="N0103" code="N0103" desc="母线滤波a母线输出电流"/>
+<Param parId="N1976" code="N1976" desc="母线滤波b母线输出电流"/>
+<Param parId="N0387" code="N0387" desc="第1组方阵输出电流-A"/>
+<Param parId="N0388" code="N0388" desc="第2组方阵输出电流-A"/>
+<Param parId="N0389" code="N0389" desc="第3组方阵输出电流-A"/>
+<Param parId="N0390" code="N0390" desc="第4组方阵输出电流-A"/>
+<Param parId="N0391" code="N0391" desc="第5组方阵输出电流-A"/>
+<Param parId="N0392" code="N0392" desc="第6组方阵输出电流-A"/>
+<Param parId="N2260" code="N2260" desc="第1组方阵输出电流-B"/>
+<Param parId="N2261" code="N2261" desc="第2组方阵输出电流-B"/>
+<Param parId="N2262" code="N2262" desc="第3组方阵输出电流-B"/>
+<Param parId="N2263" code="N2263" desc="第4组方阵输出电流-B"/>
+<Param parId="N2264" code="N2264" desc="第5组方阵输出电流-B"/>
+<Param parId="N2265" code="N2265" desc="第6组方阵输出电流-B"/>
+<Param parId="V0543" code="V0543" desc="功控Ic输入总电流"/>
+<Param parId="V1195" code="V1195" desc="功控Ig输入总电流"/>
+<Param parId="V1006" code="V1006" desc="功控If输入总电流"/>
+<Param parId="V0857" code="V0857" desc="功控Ie输入总电流"/>
+<Param parId="V0732" code="V0732" desc="功控Id输入总电流"/>
+<Param parId="V0268" code="V0268" desc="功控Ia输入总电流"/>
+<Param parId="V0394" code="V0394" desc="功控Ib输入总电流"/>
+<Param parId="V1498" code="V1498" desc="功控Ij输入总电流"/>
+<Param parId="V1320" code="V1320" desc="功控Ih输入总电流"/>
+<Param parId="V1409" code="V1409" desc="功控Ii输入总电流"/>
+<Param parId="V1555" code="V1555" desc="功控IIIa输入母线总电流"/>
+<Param parId="V1615" code="V1615" desc="供控I母线A输入电流"/>
+<Param parId="V1616" code="V1616" desc="供控I母线B输入电流"/>
+
+<Param parId="N0828" code="N0828" desc="充放电a进出影标志"/>
+<Param parId="N1109" code="N1109" desc="充放电b进出影标志"/>
+<Param parId="N1381" code="N1381" desc="充放电c进出影标志"/>
+<Param parId="N1653" code="N1653" desc="充放电d进出影标志"/>
+<Param parId="N2680" code="N2680" desc="充放电e进出影标志"/>
+<Param parId="N2961" code="N2961" desc="充放电f进出影标志"/>
+<Param parId="N3233" code="N3233" desc="充放电g进出影标志"/>
+<Param parId="N3505" code="N3505" desc="充放电h进出影标志"/>
+
+<Param parId="Y0006" code="Y0006" desc="伸缩机构位置信号"/>
+<Param parId="Y0011" code="Y0011" desc="伸缩机构电机转速信号"/>
+<Param parId="Y0012" code="Y0012" desc="伸缩机构电机转向信号"/>
+<Param parId="Y0029" code="Y0029" desc="缩回到位信号"/>
+<Param parId="Y0030" code="Y0030" desc="伸出到位信号"/>		
+<Param parId="Y0034" code="Y0034" desc="旋转机构位置信号"/>
+<Param parId="Y0038" code="Y0038" desc="旋转机构电机转速信号"/>
+<Param parId="Y0039" code="Y0039" desc="旋转机构电机转向信号"/>
+<Param parId="Y0044" code="Y0044" desc="0°到位信号"/>
+<Param parId="Y0045" code="Y0045" desc="90°到位信号"/>		
+<Param parId="Y0048" code="Y0048" desc="调整机构位置信号"/>
+<Param parId="Y0052" code="Y0052" desc="调整机构电机转速信号"/>
+<Param parId="Y0053" code="Y0053" desc="调整机构电机转向信号"/>
+<Param parId="Y0070" code="Y0070" desc="初始到位信号"/>
+<Param parId="Y0071" code="Y0071" desc="极限到位信号"/>							
+<Param parId="S0067" code="S0067" desc="绝对时间码"/>
+<Param parId="DCSM34" code="DCSM34" desc="绝对时间码"/>
+<Param desc="绝对时间码.d" parId="A024" code="A024" subsys="自定义"/>
+<Param desc="绝对时间码.h" parId="A025" code="A025" subsys="自定义"/>
+<Param desc="绝对时间码.m" parId="A026" code="A026" subsys="自定义"/>
+<Param desc="绝对时间码.s" parId="A027" code="A027" subsys="自定义"/>
+<Param desc="绝对时间码.ms" parId="A028" code="A028" subsys="自定义"/>
+<Param desc="北京时.年" parId="A029" code="A029" subsys="自定义"/>
+<Param desc="北京时.月" parId="A02A" code="A02A" subsys="自定义"/>
+<Param desc="北京时.日" parId="A02B" code="A02B" subsys="自定义"/>
+<Param desc="北京时.时" parId="A02C" code="A02C" subsys="自定义"/>
+<Param desc="北京时.分" parId="A02D" code="A02D" subsys="自定义"/>
+<Param desc="北京时.秒" parId="A02E" code="A02E" subsys="自定义"/>
+ </Root>
