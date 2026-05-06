@@ -1,0 +1,7 @@
+{
+  "sim_fmu": "C:\\Spaceship\\FMUSOLVER\\FmuSolver_Package\\FMU\\MTLibrary_System_EPS_PD_EPS_CJ.fmu",
+  "orbit_fmu": "C:\\Spaceship\\FMUSOLVER\\FmuSolver_Package\\FMU\\MTLibrary_System_EPS_PD_Orbit_Pre.fmu",
+  "yaoce_dir": "C:\\Spaceship\\FMUSOLVER\\FmuSolver_Package\\yaocetest",
+  "ip": "127.0.0.1",
+  "port": 8889
+}

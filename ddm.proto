@@ -1,0 +1,43 @@
+syntax = "proto2";
+
+package pb;
+
+// 仿真数据包定义
+message DDMData {
+  required double machine_time = 1;   // 机器时，基准1970-01-01 00:00:00
+  required double sim_time = 2;       // 仿真时间
+  repeated SimVar sim_vars = 3;       // 仿真变量数组
+  optional bool is_start_sim = 4;     // 仿真开始标识
+  optional bool is_stop_sim = 5;      // 仿真停止标识
+  repeated TmVar tm_vars = 6;         // 遥测数组
+  repeated FcVar fc_vars = 7;         // 飞控指令数组
+
+  // 单个仿真变量数据
+  message SimVar {
+    required string name = 1;         // 变量全名
+    required Type type = 2;           // 变量类型
+    optional double double_value = 3; // double类型值
+    optional double int_value = 4;    // int类型值
+    optional double bool_value = 5;   // bool类型值
+    optional string string_value = 6; // string类型值
+
+    enum Type {
+      Bool = 1;
+      Int = 2;
+      Double = 3;
+      String = 4;
+    }
+  }
+
+  // 遥测变量
+  message TmVar {
+    required string code = 1;         // 遥测代号
+    required double value = 2;        // 遥测值
+  }
+
+  // 飞控变量
+  message FcVar {
+    required string code = 1;         // 飞控指令代号
+    required double time = 2;         // 指令时间
+  }
+}
