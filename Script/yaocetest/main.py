@@ -65,7 +65,7 @@ class YaoCeLinkLayerApp:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         
         self.last_recv_time = time.time()
-        record_file = os.path.join(self.config_mgr.root_dir, f"raw_record_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log")
+        record_file = os.path.join(self.config_mgr.root_dir, "raw_record_latest.log")
         print(f"[*] Raw hex records will be saved to: {record_file}")
         
         def monitor_heartbeat():
@@ -86,7 +86,7 @@ class YaoCeLinkLayerApp:
             
             print(f"[*] Listening on UDP {recv_port}...")
             
-            with open(record_file, "a", encoding="utf-8") as f_rec:
+            with open(record_file, "w", encoding="utf-8") as f_rec:
                 f_rec.write(f"--- YaoCe UDP Raw Record Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
                 while self.running:
                     data, addr = sock.recvfrom(65535)

@@ -1,0 +1,458 @@
+{
+  "LastSession": {
+    "dock_order": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "dock_vars": {
+      "1": [
+        "DisChargeAh_MT[2]",
+        "DisChargeAh_MT[3]",
+        "DisChargeAh_MT[4]",
+        "DisChargeAh_MT[5]",
+        "DisChargeAh_MT[6]"
+      ],
+      "2": [
+        "InSunArea",
+        "Ah_MT_Pre[1]",
+        "Ah_MT_Pre[2]",
+        "enviroment.SolarAngle[1]",
+        "enviroment.SolarAngle[2]"
+      ],
+      "3": [
+        "MTSatVel[2]",
+        "MTSatVel[3]"
+      ],
+      "4": [
+        "SixRoot_MT[4]",
+        "SixRoot_MT[5]",
+        "SixRoot_MT[6]"
+      ],
+      "5": [
+        "MTSatVel[1]",
+        "MTSatVel[2]",
+        "MTSatVel[3]"
+      ],
+      "6": []
+    },
+    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAAWqAAADxvwCAAAAB/wAAAAAAAAC3gAAAAAA/////AIAAAAC/AAAAAAAAALeAAAAAAD////8AQAAAAL8AAAAAAAAA44AAAAAAP////wCAAAAAvsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAEAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAAAAALeAAAAAAAAAAD8AAAAAAAAA44AAAAAAP////wCAAAAAvwAAAAAAAAC3gAAAAAA/////AEAAAAD+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAAAAADjgAAAAAAAAAA+wAAAAwARABvAGMAawBfAEEAAAAAAAAAA44AAAAAAAAAAPsAAAAMAEQAbwBjAGsAXwBCAAAAAAAAAAOOAAAAAAAAAAD7AAAAEABEAG8AYwBrAF8AbwBuAGUAAAAAAAAAAt4AAAAAAAAAAPwAAAAAAAAAkAAAAAAA/////AEAAAAD+wAAABIARABvAGMAawBfAGYAbwB1AHIAAAABJwAAASMAAAAAAAAAAPsAAAAUAEQAbwBjAGsAXwBhAGwAcABoAGEAAAABiAAAAMAAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBiAGUAdABhAAAAAAD/////AAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAALUAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAAAAAAAAAALeAAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAP////8AAAAAAAAAAPsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAAAAAAA/////wAAAAAAAAAA+wAAABwARABvAGMAawBfAE0AYQBpAG4AIABQAGwAbwB0AQAAAeoAAAD0AAAAAAAAAAD8AAAAAAAAA8YAAAHsAP////wBAAAAAvwAAAAAAAACCQAAAUAA/////AIAAAAC+wAAAAwARABvAGMAawBfADEBAAAAAAAAAeEAAAD0AP////sAAAAMAEQAbwBjAGsAXwA0AQAAAeUAAAHhAAAA9AD////8AAACDQAAA50AAAKEAP////wCAAAAAvwAAAAAAAAB4QAAAPQA/////AEAAAAC+wAAAAwARABvAGMAawBfADIBAAACDQAAAc0AAAFAAP////sAAAAMAEQAbwBjAGsAXwAzAQAAA94AAAHMAAABQAD////8AAAB5QAAAeEAAAD0AP////wBAAAAAvsAAAAMAEQAbwBjAGsAXwA1AQAAAg0AAAHNAAABQAD////7AAAADABEAG8AYwBrAF8ANgEAAAPeAAABzAAAAUAA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAA/////wAAAAAAAAAAAAAAAwAAAAAAAAAA/AEAAAAB+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAD/////AAAAAAAAAAAAAAAAAAADxgAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+    "dock_geometry": {
+      "1": {
+        "floating": false,
+        "x": 0,
+        "y": 0,
+        "w": 521,
+        "h": 481
+      },
+      "2": {
+        "floating": false,
+        "x": 525,
+        "y": 0,
+        "w": 461,
+        "h": 481
+      },
+      "3": {
+        "floating": false,
+        "x": 990,
+        "y": 0,
+        "w": 460,
+        "h": 481
+      },
+      "4": {
+        "floating": false,
+        "x": 0,
+        "y": 485,
+        "w": 521,
+        "h": 481
+      },
+      "5": {
+        "floating": false,
+        "x": 525,
+        "y": 485,
+        "w": 461,
+        "h": 481
+      },
+      "6": {
+        "floating": false,
+        "x": 990,
+        "y": 485,
+        "w": 460,
+        "h": 481
+      },
+      "__proportions__": {
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 1450,
+          "h": 966
+        },
+        "items": {
+          "1": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.0,
+            "w_ratio": 0.3593103448275862,
+            "h_ratio": 0.4979296066252588
+          },
+          "2": {
+            "x_ratio": 0.3620689655172414,
+            "y_ratio": 0.0,
+            "w_ratio": 0.3179310344827586,
+            "h_ratio": 0.4979296066252588
+          },
+          "3": {
+            "x_ratio": 0.6827586206896552,
+            "y_ratio": 0.0,
+            "w_ratio": 0.31724137931034485,
+            "h_ratio": 0.4979296066252588
+          },
+          "4": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.3593103448275862,
+            "h_ratio": 0.4979296066252588
+          },
+          "5": {
+            "x_ratio": 0.3620689655172414,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.3179310344827586,
+            "h_ratio": 0.4979296066252588
+          },
+          "6": {
+            "x_ratio": 0.6827586206896552,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.31724137931034485,
+            "h_ratio": 0.4979296066252588
+          }
+        }
+      }
+    },
+    "active_dock": "6"
+  },
+  "四个": {
+    "dock_order": [
+      "1",
+      "2",
+      "3",
+      "4"
+    ],
+    "dock_vars": {
+      "1": [],
+      "2": [],
+      "3": [],
+      "4": []
+    },
+    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAAOOAAAC3vwCAAAAB/wAAAAAAAAC3gAAAAAA/////AIAAAAC/AAAAAAAAALeAAAAAAD////8AQAAAAL8AAAAAAAAA44AAAAAAP////wCAAAAAvsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAEAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAAAAALeAAAAAAAAAAD8AAAAAAAAA44AAAAAAP////wCAAAAAvwAAAAAAAAC3gAAAAAA/////AEAAAAD+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAAAAADjgAAAAAAAAAA+wAAAAwARABvAGMAawBfAEEAAAAAAAAAA44AAAAAAAAAAPsAAAAMAEQAbwBjAGsAXwBCAAAAAAAAAAOOAAAAAAAAAAD7AAAAEABEAG8AYwBrAF8AbwBuAGUAAAAAAAAAAt4AAAAAAAAAAPwAAAAAAAAAkAAAAAAA/////AEAAAAD+wAAABIARABvAGMAawBfAGYAbwB1AHIAAAABJwAAASMAAAAAAAAAAPsAAAAUAEQAbwBjAGsAXwBhAGwAcABoAGEAAAABiAAAAMAAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBiAGUAdABhAAAAAAD/////AAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAALUAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAAAAAAAAAALeAAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAP////8AAAAAAAAAAPsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAAAAAAA/////wAAAAAAAAAA+wAAABwARABvAGMAawBfAE0AYQBpAG4AIABQAGwAbwB0AQAAAeoAAAD0AAAAAAAAAAD8AAAAAAAAAt4AAAHsAP////wBAAAAAvwAAAAAAAAB0QAAAUAA/////AIAAAAC+wAAAAwARABvAGMAawBfADEBAAAAAAAAAW0AAAD0AP////sAAAAMAEQAbwBjAGsAXwAzAQAAAXEAAAFtAAAA9AD////8AAAB1QAAAbkAAAFAAP////wCAAAAAvsAAAAMAEQAbwBjAGsAXwAyAQAAAAAAAAFtAAAA9AD////7AAAADABEAG8AYwBrAF8ANAEAAAFxAAABbQAAAPQA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAA/////wAAAAAAAAAAAAAAAwAAAAAAAAAA/AEAAAAB+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAD/////AAAAAAAAAAAAAAAAAAAC3gAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+    "dock_geometry": {
+      "1": {
+        "floating": false,
+        "x": 0,
+        "y": 0,
+        "w": 465,
+        "h": 365
+      },
+      "2": {
+        "floating": false,
+        "x": 469,
+        "y": 0,
+        "w": 441,
+        "h": 365
+      },
+      "3": {
+        "floating": false,
+        "x": 0,
+        "y": 369,
+        "w": 465,
+        "h": 365
+      },
+      "4": {
+        "floating": false,
+        "x": 469,
+        "y": 369,
+        "w": 441,
+        "h": 365
+      },
+      "__proportions__": {
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 910,
+          "h": 734
+        },
+        "items": {
+          "1": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.0,
+            "w_ratio": 0.510989010989011,
+            "h_ratio": 0.49727520435967304
+          },
+          "2": {
+            "x_ratio": 0.5153846153846153,
+            "y_ratio": 0.0,
+            "w_ratio": 0.4846153846153846,
+            "h_ratio": 0.49727520435967304
+          },
+          "3": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.502724795640327,
+            "w_ratio": 0.510989010989011,
+            "h_ratio": 0.49727520435967304
+          },
+          "4": {
+            "x_ratio": 0.5153846153846153,
+            "y_ratio": 0.502724795640327,
+            "w_ratio": 0.4846153846153846,
+            "h_ratio": 0.49727520435967304
+          }
+        }
+      }
+    },
+    "active_dock": "2"
+  },
+  "六个": {
+    "dock_order": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "dock_vars": {
+      "1": [],
+      "2": [],
+      "3": [],
+      "4": [],
+      "5": [],
+      "6": []
+    },
+    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAAU5AAADufwCAAAAB/wAAAAAAAAC3gAAAAAA/////AIAAAAC/AAAAAAAAALeAAAAAAD////8AQAAAAL8AAAAAAAAA44AAAAAAP////wCAAAAAvsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAEAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAAAAALeAAAAAAAAAAD8AAAAAAAAA44AAAAAAP////wCAAAAAvwAAAAAAAAC3gAAAAAA/////AEAAAAD+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAAAAADjgAAAAAAAAAA+wAAAAwARABvAGMAawBfAEEAAAAAAAAAA44AAAAAAAAAAPsAAAAMAEQAbwBjAGsAXwBCAAAAAAAAAAOOAAAAAAAAAAD7AAAAEABEAG8AYwBrAF8AbwBuAGUAAAAAAAAAAt4AAAAAAAAAAPwAAAAAAAAAkAAAAAAA/////AEAAAAD+wAAABIARABvAGMAawBfAGYAbwB1AHIAAAABJwAAASMAAAAAAAAAAPsAAAAUAEQAbwBjAGsAXwBhAGwAcABoAGEAAAABiAAAAMAAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBiAGUAdABhAAAAAAD/////AAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAALUAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAAAAAAAAAALeAAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAP////8AAAAAAAAAAPsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAAAAAAA/////wAAAAAAAAAA+wAAABwARABvAGMAawBfAE0AYQBpAG4AIABQAGwAbwB0AQAAAeoAAAD0AAAAAAAAAAD8AAAAAAAAA7kAAAHsAP////wBAAAAAvwAAAAAAAABeQAAAUAA/////AIAAAAC+wAAAAwARABvAGMAawBfADEBAAAAAAAAAdsAAAD0AP////sAAAAMAEQAbwBjAGsAXwA0AQAAAd8AAAHaAAAA9AD////8AAABfQAAA7wAAAKEAP////wCAAAAAvwAAAAAAAAB2wAAAPQA/////AEAAAAC+wAAAAwARABvAGMAawBfADIBAAABfQAAAdUAAAFAAP////sAAAAMAEQAbwBjAGsAXwAzAQAAA1YAAAHjAAABQAD////8AAAB3wAAAdoAAAD0AP////wBAAAAAvsAAAAMAEQAbwBjAGsAXwA1AQAAAX0AAAHcAAABQAD////7AAAADABEAG8AYwBrAF8ANgEAAANdAAAB3AAAAUAA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAA/////wAAAAAAAAAAAAAAAwAAAAAAAAAA/AEAAAAB+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAD/////AAAAAAAAAAAAAAAAAAADuQAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+    "dock_geometry": {
+      "1": {
+        "floating": false,
+        "x": 0,
+        "y": 0,
+        "w": 377,
+        "h": 475
+      },
+      "2": {
+        "floating": false,
+        "x": 381,
+        "y": 0,
+        "w": 469,
+        "h": 475
+      },
+      "3": {
+        "floating": false,
+        "x": 854,
+        "y": 0,
+        "w": 483,
+        "h": 475
+      },
+      "4": {
+        "floating": false,
+        "x": 0,
+        "y": 479,
+        "w": 377,
+        "h": 474
+      },
+      "5": {
+        "floating": false,
+        "x": 381,
+        "y": 479,
+        "w": 476,
+        "h": 474
+      },
+      "6": {
+        "floating": false,
+        "x": 861,
+        "y": 479,
+        "w": 476,
+        "h": 474
+      },
+      "__proportions__": {
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 1337,
+          "h": 953
+        },
+        "items": {
+          "1": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.0,
+            "w_ratio": 0.2819745699326851,
+            "h_ratio": 0.49842602308499473
+          },
+          "2": {
+            "x_ratio": 0.2849663425579656,
+            "y_ratio": 0.0,
+            "w_ratio": 0.3507853403141361,
+            "h_ratio": 0.49842602308499473
+          },
+          "3": {
+            "x_ratio": 0.6387434554973822,
+            "y_ratio": 0.0,
+            "w_ratio": 0.3612565445026178,
+            "h_ratio": 0.49842602308499473
+          },
+          "4": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.5026232948583421,
+            "w_ratio": 0.2819745699326851,
+            "h_ratio": 0.49737670514165794
+          },
+          "5": {
+            "x_ratio": 0.2849663425579656,
+            "y_ratio": 0.5026232948583421,
+            "w_ratio": 0.35602094240837695,
+            "h_ratio": 0.49737670514165794
+          },
+          "6": {
+            "x_ratio": 0.643979057591623,
+            "y_ratio": 0.5026232948583421,
+            "w_ratio": 0.35602094240837695,
+            "h_ratio": 0.49737670514165794
+          }
+        }
+      }
+    },
+    "active_dock": "1"
+  },
+  "6": {
+    "dock_order": [
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6"
+    ],
+    "dock_vars": {
+      "1": [
+        "DisChargeAh_MT[2]",
+        "DisChargeAh_MT[3]",
+        "DisChargeAh_MT[4]",
+        "DisChargeAh_MT[5]",
+        "DisChargeAh_MT[6]"
+      ],
+      "2": [
+        "InSunArea",
+        "Ah_MT_Pre[1]",
+        "Ah_MT_Pre[2]",
+        "enviroment.SolarAngle[1]",
+        "enviroment.SolarAngle[2]"
+      ],
+      "3": [
+        "MTSatVel[2]",
+        "MTSatVel[3]"
+      ],
+      "4": [
+        "SixRoot_MT[4]",
+        "SixRoot_MT[5]",
+        "SixRoot_MT[6]"
+      ],
+      "5": [
+        "MTSatVel[1]",
+        "MTSatVel[2]",
+        "MTSatVel[3]"
+      ],
+      "6": []
+    },
+    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAAWqAAADxvwCAAAAB/wAAAAAAAAC3gAAAAAA/////AIAAAAC/AAAAAAAAALeAAAAAAD////8AQAAAAL8AAAAAAAAA44AAAAAAP////wCAAAAAvsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAEAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAAAAALeAAAAAAAAAAD8AAAAAAAAA44AAAAAAP////wCAAAAAvwAAAAAAAAC3gAAAAAA/////AEAAAAD+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAAAAADjgAAAAAAAAAA+wAAAAwARABvAGMAawBfAEEAAAAAAAAAA44AAAAAAAAAAPsAAAAMAEQAbwBjAGsAXwBCAAAAAAAAAAOOAAAAAAAAAAD7AAAAEABEAG8AYwBrAF8AbwBuAGUAAAAAAAAAAt4AAAAAAAAAAPwAAAAAAAAAkAAAAAAA/////AEAAAAD+wAAABIARABvAGMAawBfAGYAbwB1AHIAAAABJwAAASMAAAAAAAAAAPsAAAAUAEQAbwBjAGsAXwBhAGwAcABoAGEAAAABiAAAAMAAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBiAGUAdABhAAAAAAD/////AAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAALUAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAAAAAAAAAALeAAAAAAAAAAD7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAP////8AAAAAAAAAAPsAAAAcAEQAbwBjAGsAXwBNAGEAaQBuACAAUABsAG8AdAAAAAAA/////wAAAAAAAAAA+wAAABwARABvAGMAawBfAE0AYQBpAG4AIABQAGwAbwB0AQAAAeoAAAD0AAAAAAAAAAD8AAAAAAAAA8YAAAHsAP////wBAAAAAvwAAAAAAAACPwAAAUAA/////AIAAAAC+wAAAAwARABvAGMAawBfADEBAAAAAAAAAeEAAAD0AP////sAAAAMAEQAbwBjAGsAXwA0AQAAAeUAAAHhAAAA9AD////8AAACQwAAA2cAAAKEAP////wCAAAAAvwAAAAAAAAB4QAAAPQA/////AEAAAAC+wAAAAwARABvAGMAawBfADIBAAACQwAAAbIAAAFAAP////sAAAAMAEQAbwBjAGsAXwAzAQAAA/kAAAGxAAABQAD////8AAAB5QAAAeEAAAD0AP////wBAAAAAvsAAAAMAEQAbwBjAGsAXwA1AQAAAkMAAAGyAAABQAD////7AAAADABEAG8AYwBrAF8ANgEAAAP5AAABsQAAAUAA////AAAAAQAAAAAAAAAA/AIAAAAB+wAAABQARABvAGMAawBfAHQAaAByAGUAZQAAAAAA/////wAAAAAAAAAAAAAAAwAAAAAAAAAA/AEAAAAB+wAAABAARABvAGMAawBfAHQAdwBvAAAAAAD/////AAAAAAAAAAAAAAAAAAAC3gAAAAQAAAAEAAAACAAAAAj8AAAAAA==",
+    "dock_geometry": {
+      "1": {
+        "floating": false,
+        "x": 0,
+        "y": 0,
+        "w": 575,
+        "h": 481
+      },
+      "2": {
+        "floating": false,
+        "x": 579,
+        "y": 0,
+        "w": 434,
+        "h": 481
+      },
+      "3": {
+        "floating": false,
+        "x": 1017,
+        "y": 0,
+        "w": 433,
+        "h": 481
+      },
+      "4": {
+        "floating": false,
+        "x": 0,
+        "y": 485,
+        "w": 575,
+        "h": 481
+      },
+      "5": {
+        "floating": false,
+        "x": 579,
+        "y": 485,
+        "w": 434,
+        "h": 481
+      },
+      "6": {
+        "floating": false,
+        "x": 1017,
+        "y": 485,
+        "w": 433,
+        "h": 481
+      },
+      "__proportions__": {
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "w": 1450,
+          "h": 966
+        },
+        "items": {
+          "1": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.0,
+            "w_ratio": 0.39655172413793105,
+            "h_ratio": 0.4979296066252588
+          },
+          "2": {
+            "x_ratio": 0.3993103448275862,
+            "y_ratio": 0.0,
+            "w_ratio": 0.2993103448275862,
+            "h_ratio": 0.4979296066252588
+          },
+          "3": {
+            "x_ratio": 0.7013793103448276,
+            "y_ratio": 0.0,
+            "w_ratio": 0.2986206896551724,
+            "h_ratio": 0.4979296066252588
+          },
+          "4": {
+            "x_ratio": 0.0,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.39655172413793105,
+            "h_ratio": 0.4979296066252588
+          },
+          "5": {
+            "x_ratio": 0.3993103448275862,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.2993103448275862,
+            "h_ratio": 0.4979296066252588
+          },
+          "6": {
+            "x_ratio": 0.7013793103448276,
+            "y_ratio": 0.5020703933747412,
+            "w_ratio": 0.2986206896551724,
+            "h_ratio": 0.4979296066252588
+          }
+        }
+      }
+    },
+    "active_dock": "2"
+  }
+}

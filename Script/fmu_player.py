@@ -7,6 +7,7 @@ import platform
 import zipfile
 import shutil
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 import builtins
 import json
@@ -78,6 +79,25 @@ def check_dll_arch(filepath):
     except: pass
     return None
 
+def iter_resource_roots(root_dir):
+    roots = []
+    seen = set()
+
+    def add(path):
+        norm = os.path.normpath(path)
+        if norm in seen or not os.path.isdir(norm):
+            return
+        seen.add(norm)
+        roots.append(norm)
+
+    add(root_dir)
+    add(os.path.join(root_dir, ".."))
+    add(os.path.join(root_dir, "..", "FmuSolver_Package"))
+    add(os.path.join(root_dir, "..", "FmuSolver_Package05061502", "FmuSolver_Package"))
+    add(os.path.join(root_dir, "fmu_work_worker2", "binaries", "win32"))
+    add(os.path.join(root_dir, "fmu_work_worker2", "binaries", "win64"))
+    return roots
+
 class FMUProcessor:
     def __init__(self, fmu_path):
         self.fmu_path = fmu_path
@@ -105,28 +125,42 @@ class FMUProcessor:
             with open(marker_file, 'w') as f: f.write(str(time.time()))
         
         root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
+        resource_roots = iter_resource_roots(root_dir)
         protected = ['kernel32.dll', 'user32.dll', 'ntdll.dll', 'advapi32.dll']
         os.makedirs(target_bin, exist_ok=True)
-        
-        for fname in os.listdir(root_dir):
-            ext = fname.lower().split('.')[-1] if '.' in fname else ''
-            if ext in ['dll', 'txt', 'dat', 'xml', 'ini', 'json'] and fname.lower() not in protected:
-                src_file = os.path.join(root_dir, fname)
+
+        copied = set()
+        for search_root in resource_roots:
+            for fname in os.listdir(search_root):
+                ext = fname.lower().split('.')[-1] if '.' in fname else ''
+                if ext not in ['dll', 'txt', 'dat', 'xml', 'ini', 'json']:
+                    continue
+                if fname.lower() in protected or fname.lower() in copied:
+                    continue
+
+                src_file = os.path.join(search_root, fname)
                 if ext == 'dll':
                     arch = check_dll_arch(src_file)
-                    if arch and arch != host_arch: continue
+                    if arch and arch != host_arch:
+                        continue
+
                 target_file = os.path.join(target_bin, fname)
-                try: shutil.copy2(src_file, target_file)
-                except: pass
+                try:
+                    shutil.copy2(src_file, target_file)
+                    copied.add(fname.lower())
+                except:
+                    pass
 
         return self.model_desc
 
 class DDMCommManager:
-    def __init__(self, remote_ip="127.0.0.1", remote_port=8889, listen_port=8898):
+    def __init__(self, remote_ip="127.0.0.1", remote_port=8889, listen_port=8898, replace_dot=False):
         self.target_addr = (remote_ip, remote_port)
+        self.viz_addr = ("127.0.0.1", 22345) # 专用图表端口，避免冲突
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.last_received_data = None
         self.listen_port = listen_port
+        self.replace_dot = replace_dot
 
     def start_receiver(self):
         def listen_loop():
@@ -149,37 +183,67 @@ class DDMCommManager:
         var_names = list(variables.keys())
         for i in range(0, len(var_names), chunk_size):
             chunk_names = var_names[i:i + chunk_size]
-            packet = ddm_pb2.DDMData()
-            packet.machine_time = time.time()
-            packet.sim_time = sim_time
+            
+            # --- 1. 组装给外部的包 (应用重命名逻辑) ---
+            packet_ext = ddm_pb2.DDMData()
+            packet_ext.machine_time = time.time()
+            packet_ext.sim_time = sim_time
+            
+            # --- 2. 组装给本地看板的包 (绝对不重命名) ---
+            packet_viz = ddm_pb2.DDMData()
+            packet_viz.machine_time = time.time()
+            packet_viz.sim_time = sim_time
+            
             for name in chunk_names:
                 val = variables[name]
-                svar = packet.sim_vars.add()
-                svar.name = name.replace('.', '_')
+                
+                # 配置外部包
+                svar_ext = packet_ext.sim_vars.add()
+                svar_ext.name = name.replace('.', '_') if self.replace_dot else name
+                
+                # 配置看板包
+                svar_viz = packet_viz.sim_vars.add()
+                svar_viz.name = name
+                
+                # 类型推断与赋值
                 if isinstance(val, bool):
-                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Bool")
-                    svar.bool_value = 1.0 if val else 0.0
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Bool")
+                    svar_ext.type = vt; svar_viz.type = vt
+                    svar_ext.bool_value = 1.0 if val else 0.0
+                    svar_viz.bool_value = 1.0 if val else 0.0
                 elif isinstance(val, int):
-                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Int")
-                    svar.int_value = float(val)
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Int")
+                    svar_ext.type = vt; svar_viz.type = vt
+                    svar_ext.int_value = float(val)
+                    svar_viz.int_value = float(val)
                 elif isinstance(val, float):
-                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
-                    svar.double_value = val
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                    svar_ext.type = vt; svar_viz.type = vt
+                    svar_ext.double_value = val
+                    svar_viz.double_value = val
                 elif isinstance(val, str):
-                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("String")
-                    svar.string_value = str(val)
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("String")
+                    svar_ext.type = vt; svar_viz.type = vt
+                    svar_ext.string_value = str(val)
+                    svar_viz.string_value = str(val)
+                    
+            # 广播发送
             try:
-                raw_bytes = packet.SerializeToString()
-                b64_str = base64.b64encode(raw_bytes).decode('ascii')
-                self.sock.sendto(b64_str.encode('ascii'), self.target_addr)
+                # 给外部系统
+                raw_ext = packet_ext.SerializeToString()
+                self.sock.sendto(base64.b64encode(raw_ext).decode('ascii').encode('ascii'), self.target_addr)
+                
+                # 给本地看板
+                raw_viz = packet_viz.SerializeToString()
+                self.sock.sendto(base64.b64encode(raw_viz).decode('ascii').encode('ascii'), self.viz_addr)
             except: pass
 
 class FMUPlayer:
-    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sim_id=None, sync_vars_file=None, control_port=8898):
+    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sim_id=None, sync_vars_file=None, control_port=8898, replace_dot=False):
         self.fmu_path = fmu_path
         self.sim_id = sim_id
         self.processor = FMUProcessor(fmu_path)
-        self.comm = DDMCommManager(remote_ip=remote_ip, remote_port=remote_port, listen_port=control_port)
+        self.comm = DDMCommManager(remote_ip=remote_ip, remote_port=remote_port, listen_port=control_port, replace_dot=replace_dot)
         self.sync_vars_file = sync_vars_file
 
     def run(self, step_size=0.01, sim_time=float('inf'), sim_rate=1.0, sample_freq=0.0, init_params=None):
@@ -266,29 +330,70 @@ class FMUPlayer:
             fmu_instance.enterInitializationMode()
             fmu_instance.exitInitializationMode()
 
-            # 变量白名单过滤
-            target_vars = None
+            # 建立 FMU 变量名查找索引 (支持模糊匹配)
+            fmu_vars_map = {v.name: v for v in vars_list}
+            fmu_vars_fuzzy = {v.name.replace('.', '_').replace(':', '_'): v.name for v in vars_list}
+
+            # 变量映射处理 (支持 Alias)
+            target_vars = set()
+            var_mapping = {} # FMU_VarName -> DisplayName
+            found_count = 0
+            missing_vars = []
+
             if self.sync_vars_file and os.path.exists(self.sync_vars_file):
                 try:
                     with open(self.sync_vars_file, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                     field_list = data.get("fields", []) if isinstance(data, dict) else data
-                    target_vars = set()
                     for item in field_list:
                         if isinstance(item, dict):
-                            if item.get("sync", True): target_vars.add(item["name"])
-                        else: target_vars.add(str(item))
-                except: pass
+                            name = item.get("name")
+                            source = item.get("source") or name
+                            if not item.get("sync", True): continue
+                            
+                            # 多级查找策略
+                            actual_fmu_name = None
+                            # 1. 精确匹配 Source
+                            if source in fmu_vars_map: actual_fmu_name = source
+                            # 2. 模糊匹配 Source
+                            if not actual_fmu_name:
+                                actual_fmu_name = fmu_vars_fuzzy.get(source.replace('.', '_').replace(':', '_'))
+                            # 3. 如果 Source 找不到且与 Name 不同，尝试匹配 Name
+                            if not actual_fmu_name and source != name:
+                                if name in fmu_vars_map: actual_fmu_name = name
+                                if not actual_fmu_name:
+                                    actual_fmu_name = fmu_vars_fuzzy.get(name.replace('.', '_').replace(':', '_'))
+                            
+                            # 4. 终极兜底：后缀匹配 (处理 Modelica 层次结构路径，如 model.sub.var -> var)
+                            if not actual_fmu_name:
+                                search_suffix = "." + source if "." not in source else source
+                                for fmu_n in fmu_vars_map.keys():
+                                    if fmu_n.endswith(source) or (source.startswith("[") and fmu_n.endswith(source)):
+                                        actual_fmu_name = fmu_n
+                                        break
 
-            def is_sync(n): return target_vars is None or n in target_vars
+                            if actual_fmu_name:
+                                target_vars.add(actual_fmu_name)
+                                var_mapping[actual_fmu_name] = name
+                                found_count += 1
+                            else:
+                                missing_vars.append(source)
+                except Exception as e:
+                    print(f"[!] Sync file read error: {e}")
 
-            def get_v_type(v):
-                return getattr(v, 'type', 'Real')
+            print(f"[*] Variable Filter Summary: {found_count} found, {len(missing_vars)} missing (Total FMU Vars: {len(vars_list)})")
+            if missing_vars:
+                print(f"[!] Missing variables (first 20): {', '.join(missing_vars[:20])}")
 
-            v_real = [v for v in vars_list if get_v_type(v) == 'Real' and is_sync(v.name)]
-            v_int  = [v for v in vars_list if get_v_type(v) == 'Integer' and is_sync(v.name)]
-            v_bool = [v for v in vars_list if get_v_type(v) == 'Boolean' and is_sync(v.name)]
+            def is_sync(n): return n in target_vars
+
+            v_real = [v for v in vars_list if getattr(v, 'type', 'Real') == 'Real' and is_sync(v.name)]
+            v_int  = [v for v in vars_list if getattr(v, 'type', 'Integer') == 'Integer' and is_sync(v.name)]
+            v_bool = [v for v in vars_list if getattr(v, 'type', 'Boolean') == 'Boolean' and is_sync(v.name)]
             
+            def get_out_name(fmu_name):
+                return var_mapping.get(fmu_name, fmu_name)
+
             real_vr_map = {v.name: v.valueReference for v in v_real}
             int_vr_map = {v.name: v.valueReference for v in v_int}
 
@@ -332,13 +437,13 @@ class FMUPlayer:
                     out = {}
                     if v_real:
                         vals = fmu_instance.getReal([v.valueReference for v in v_real])
-                        for v, val in zip(v_real, vals): out[v.name] = float(val)
+                        for v, val in zip(v_real, vals): out[get_out_name(v.name)] = float(val)
                     if v_int:
                         vals = fmu_instance.getInteger([v.valueReference for v in v_int])
-                        for v, val in zip(v_int, vals): out[v.name] = int(val)
+                        for v, val in zip(v_int, vals): out[get_out_name(v.name)] = int(val)
                     if v_bool:
                         vals = fmu_instance.getBoolean([v.valueReference for v in v_bool])
-                        for v, val in zip(v_bool, vals): out[v.name] = bool(val)
+                        for v, val in zip(v_bool, vals): out[get_out_name(v.name)] = bool(val)
                     self.comm.send_fmu_data(current_time, out)
 
                 # ── 定时打印运行日志 (每 1% 进度 或 每 1s 仿真时间) ──
@@ -386,6 +491,7 @@ if __name__ == "__main__":
     parser.add_argument("--params", default=None)
     parser.add_argument("--control_port", type=int, default=8898)
     parser.add_argument("--sim_id", default=None)
+    parser.add_argument("--replace_dot", action="store_true", help="Replace '.' with '_' in variable names")
     args = parser.parse_args()
     
     init_params = None
@@ -393,6 +499,6 @@ if __name__ == "__main__":
         try: init_params = json.loads(args.params)
         except: pass
         
-    FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port).run(
+    FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port, replace_dot=args.replace_dot).run(
         step_size=args.step, sim_time=args.time, sim_rate=args.rate, sample_freq=args.freq, init_params=init_params
     )

@@ -1,0 +1,76 @@
+{
+  "Windows": [
+    {
+      "Title": "Temp3 \u66F2\u7EBF\u7A97\u53E3",
+      "X": 5,
+      "Y": 0,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "Temp3"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    },
+    {
+      "Title": "Z_speed3 \u66F2\u7EBF\u7A97\u53E3",
+      "X": 507,
+      "Y": -1,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "Z_speed3"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    },
+    {
+      "Title": "A_EgasT \u66F2\u7EBF\u7A97\u53E3",
+      "X": 1013,
+      "Y": 4,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "A_EgasT"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    },
+    {
+      "Title": "As_Temp3 \u66F2\u7EBF\u7A97\u53E3",
+      "X": 6,
+      "Y": 353,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "As_Temp3"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    },
+    {
+      "Title": "Be_Temp3 \u66F2\u7EBF\u7A97\u53E3",
+      "X": 502,
+      "Y": 352,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "Be_Temp3"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    },
+    {
+      "Title": "Be_Pa3 \u66F2\u7EBF\u7A97\u53E3",
+      "X": 1016,
+      "Y": 354,
+      "W": 500,
+      "H": 350,
+      "Tags": [
+        "Be_Pa3"
+      ],
+      "ShowError": false,
+      "ErrorType": ""
+    }
+  ]
+}

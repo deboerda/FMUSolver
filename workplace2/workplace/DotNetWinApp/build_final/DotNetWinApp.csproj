@@ -1,0 +1,80 @@
+﻿
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{7905E1FD-4C20-339B-98CF-29A41810B481}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Configurations>Debug;Release;MinSizeRel;RelWithDebInfo</Configurations>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <VCProjectUpgraderObjectName>NoUpgrade</VCProjectUpgraderObjectName>
+    <ManagedAssembly>true</ManagedAssembly>
+    <TargetFramework>net6.0-windows</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <OutputPath>D:\workplace\DotNetWinApp\build_final\Debug\</OutputPath>
+    <AssemblyName>DotNetWinApp</AssemblyName>
+    <DebugType>full</DebugType>
+    <DefineConstants>TRACE;DEBUG</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <Optimize>false</Optimize>
+    <Platform>x64</Platform>
+    <WarningLevel>3</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <OutputPath>D:\workplace\DotNetWinApp\build_final\Release\</OutputPath>
+    <AssemblyName>DotNetWinApp</AssemblyName>
+    <DebugType>none</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>queue</ErrorReport>
+    <Optimize>true</Optimize>
+    <Platform>x64</Platform>
+    <WarningLevel>1</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'MinSizeRel'">
+    <OutputPath>D:\workplace\DotNetWinApp\build_final\MinSizeRel\</OutputPath>
+    <AssemblyName>DotNetWinApp</AssemblyName>
+    <DebugType>none</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'RelWithDebInfo'">
+    <OutputPath>D:\workplace\DotNetWinApp\build_final\RelWithDebInfo\</OutputPath>
+    <AssemblyName>DotNetWinApp</AssemblyName>
+    <DebugType>full</DebugType>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>false</Optimize>
+    <Platform>x64</Platform>
+  </PropertyGroup>
+  <Target Condition="'$(Configuration)' == 'Debug'" Name="PostBuildDebug" AfterTargets="PostBuildEvent">
+    <Exec Command="setlocal&#10;&quot;C:\Program Files\CMake\bin\cmake.exe&quot; -E copy_if_different D:/workplace/DotNetWinApp/config.json D:/workplace/DotNetWinApp/build_final/Debug/config.json&#10;if %errorlevel% neq 0 goto :cmEnd&#10;:cmEnd&#10;endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone&#10;:cmErrorLevel&#10;exit /b %1&#10;:cmDone&#10;if %errorlevel% neq 0 goto :VCEnd&#10;:VCEnd&#10;" />
+  </Target>
+  <Target Condition="'$(Configuration)' == 'Release'" Name="PostBuildRelease" AfterTargets="PostBuildEvent">
+    <Exec Command="setlocal&#10;&quot;C:\Program Files\CMake\bin\cmake.exe&quot; -E copy_if_different D:/workplace/DotNetWinApp/config.json D:/workplace/DotNetWinApp/build_final/Release/config.json&#10;if %errorlevel% neq 0 goto :cmEnd&#10;:cmEnd&#10;endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone&#10;:cmErrorLevel&#10;exit /b %1&#10;:cmDone&#10;if %errorlevel% neq 0 goto :VCEnd&#10;:VCEnd&#10;" />
+  </Target>
+  <Target Condition="'$(Configuration)' == 'MinSizeRel'" Name="PostBuildMinSizeRel" AfterTargets="PostBuildEvent">
+    <Exec Command="setlocal&#10;&quot;C:\Program Files\CMake\bin\cmake.exe&quot; -E copy_if_different D:/workplace/DotNetWinApp/config.json D:/workplace/DotNetWinApp/build_final/MinSizeRel/config.json&#10;if %errorlevel% neq 0 goto :cmEnd&#10;:cmEnd&#10;endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone&#10;:cmErrorLevel&#10;exit /b %1&#10;:cmDone&#10;if %errorlevel% neq 0 goto :VCEnd&#10;:VCEnd&#10;" />
+  </Target>
+  <Target Condition="'$(Configuration)' == 'RelWithDebInfo'" Name="PostBuildRelWithDebInfo" AfterTargets="PostBuildEvent">
+    <Exec Command="setlocal&#10;&quot;C:\Program Files\CMake\bin\cmake.exe&quot; -E copy_if_different D:/workplace/DotNetWinApp/config.json D:/workplace/DotNetWinApp/build_final/RelWithDebInfo/config.json&#10;if %errorlevel% neq 0 goto :cmEnd&#10;:cmEnd&#10;endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone&#10;:cmErrorLevel&#10;exit /b %1&#10;:cmDone&#10;if %errorlevel% neq 0 goto :VCEnd&#10;:VCEnd&#10;" />
+  </Target>
+  <ItemGroup>
+    <Compile Include="D:\workplace\DotNetWinApp\Program_v2.cs">
+      <Link>Program_v2.cs</Link>
+    </Compile>
+    <Compile Include="D:\workplace\DotNetWinApp\UDPClient.cs">
+      <Link>UDPClient.cs</Link>
+    </Compile>
+    <Compile Include="D:\workplace\Ddm.cs">
+      <Link>Ddm.cs</Link>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ScottPlot.WinForms" Version="4.1.71" />
+    <PackageReference Include="Google.Protobuf" Version="3.21.12" />
+  </ItemGroup>
+  <ItemGroup>
+  </ItemGroup>
+</Project>

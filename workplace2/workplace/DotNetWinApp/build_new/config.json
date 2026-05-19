@@ -1,0 +1,8 @@
+{
+  "Network": {
+    "LocalIP": "127.0.0.1",
+    "LocalPort": 5810,
+    "RemoteIP": "127.0.0.1",
+    "RemotePort": 54321
+  }
+}

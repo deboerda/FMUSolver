@@ -16,11 +16,13 @@
 *   **执行编译**: 运行 `rebuild_all.bat`。
 *   **发布目标**: 编译生成的 `.exe` 必须存放在 `c:\Spaceship\FMUSOLVER\FmuSolver_Package\` 中。
 *   **检查清单**:
-    - [ ] `FmuSolver.exe` (64-bit)
-    - [ ] `YaoCe_LinkLayer.exe` (64-bit)
-    - [ ] `FmuWorker64.exe` (64-bit)
-    - [ ] `FmuWorker32.exe` (32-bit)
-    - [ ] `OrbitPreCalc32.exe` (32-bit)
+    - [x] `FmuSolver.exe` (64-bit)
+    - [x] `YaoCe_LinkLayer.exe` (64-bit)
+    - [x] `FmuWorker64.exe` (64-bit)
+    - [x] `FmuWorker32.exe` (32-bit)
+    - [x] `OrbitPreCalc32.exe` (32-bit)
+    - [x] `DataVisualizer64.exe` (64-bit)
+    - [x] `DataVisualizer32.exe` (32-bit)
 
 ## 4. 故障排除模式
 *   如果编译报错“Path not found”，立即运行 `dir /s` 重新定位源码位置。

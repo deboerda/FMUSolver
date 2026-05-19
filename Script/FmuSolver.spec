@@ -5,7 +5,7 @@ a = Analysis(
     ['FmuLauncherUniversal.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('fmusolver_full.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -35,5 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['C:\\Spaceship\\fmusolver.ico'],
+    icon='fmusolver_full.ico',
 )

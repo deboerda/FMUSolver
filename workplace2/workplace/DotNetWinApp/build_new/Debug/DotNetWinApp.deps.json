@@ -1,0 +1,75 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v6.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v6.0": {
+      "DotNetWinApp/1.0.0": {
+        "dependencies": {
+          "Google.Protobuf": "3.21.12",
+          "ScottPlot.WinForms": "4.1.71"
+        },
+        "runtime": {
+          "DotNetWinApp.dll": {}
+        }
+      },
+      "Google.Protobuf/3.21.12": {
+        "runtime": {
+          "lib/net5.0/Google.Protobuf.dll": {
+            "assemblyVersion": "3.21.12.0",
+            "fileVersion": "3.21.12.0"
+          }
+        }
+      },
+      "ScottPlot/4.1.71": {
+        "runtime": {
+          "lib/net6.0/ScottPlot.dll": {
+            "assemblyVersion": "4.1.71.0",
+            "fileVersion": "4.1.71.0"
+          }
+        }
+      },
+      "ScottPlot.WinForms/4.1.71": {
+        "dependencies": {
+          "ScottPlot": "4.1.71"
+        },
+        "runtime": {
+          "lib/net6.0-windows7.0/ScottPlot.WinForms.dll": {
+            "assemblyVersion": "4.1.71.0",
+            "fileVersion": "4.1.71.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "DotNetWinApp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Google.Protobuf/3.21.12": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-1TXWxQy0PDDM1NC/LojlX4YVh7NhOvvyriCfERzeUVTp0XNXv8mo/AyWxDYCvMQ9xRZHUVdWoE4/B8ridP8Btg==",
+      "path": "google.protobuf/3.21.12",
+      "hashPath": "google.protobuf.3.21.12.nupkg.sha512"
+    },
+    "ScottPlot/4.1.71": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-Spzmtz4XwtHxsBifGS+7fMHK8JPI4fgVxzeFu4bPck0ZxlWbXohKUkgi0g3NZb0G4I/AVN83BElA/+NWBiRDsQ==",
+      "path": "scottplot/4.1.71",
+      "hashPath": "scottplot.4.1.71.nupkg.sha512"
+    },
+    "ScottPlot.WinForms/4.1.71": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-JRc6c3JC2tltOLHZhP7P1k/Y/JaXPx4Uf+MqsUtHowDovblIqI9Sug+p2nRzGLm45VtqlmoQjOQ+/F8Zf9O1bA==",
+      "path": "scottplot.winforms/4.1.71",
+      "hashPath": "scottplot.winforms.4.1.71.nupkg.sha512"
+    }
+  }
+}

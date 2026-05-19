@@ -1,0 +1,452 @@
+[
+  {
+    "Name": "Temp3:\u4E3B\u673A\u6392\u6C14\u6E29\u5EA6",
+    "Tag": "Temp3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Red",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_speed3:A\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_speed3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Cyan",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedB:B\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedB",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Lime",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "A_EgasT:A\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "A_EgasT",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Yellow",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "B_EgasT:B\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "B_EgasT",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Magenta",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "As_Temp3:A\u6392\u7A7A\u51B7\u5668\u524D\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "As_Temp3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Orange",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_Temp3:A\u6392\u7A7A\u51B7\u5668\u540E\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "Be_Temp3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "White",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_Pa3:A\u6392\u7A7A\u51B7\u5668\u51FA\u53E3\u7A7A\u6C14\u538B\u529B",
+    "Tag": "Be_Pa3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Pink",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "FuelRack3:\u6CB9\u95E8",
+    "Tag": "FuelRack3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Gold",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Power3:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "Power3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "LightBlue",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "R_speed3:\u67F4\u6CB9\u673A\u8F6C\u901F",
+    "Tag": "R_speed3",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "SpringGreen",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Temp4:\u4E3B\u673A\u6392\u6C14\u6E29\u5EA6",
+    "Tag": "Temp4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Aqua",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_Speed4:A\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_Speed4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "DeepPink",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedB2:B\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedB2",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Chartreuse",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "A_EgasT2:A\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "A_EgasT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Violet",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "B_EgasT2:B\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "B_EgasT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Tomato",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "As_Temp4:A\u6392\u7A7A\u51B7\u5668\u524D\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "As_Temp4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Red",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_Temp4:A\u6392\u7A7A\u51B7\u5668\u540E\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "Be_Temp4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Cyan",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_Pa4:A\u6392\u7A7A\u51B7\u5668\u51FA\u53E3\u7A7A\u6C14\u538B\u529B",
+    "Tag": "Be_Pa4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Lime",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "FuelRack4:\u6CB9\u95E8",
+    "Tag": "FuelRack4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Yellow",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Power4:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "Power4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Magenta",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "R_speed4:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "R_speed4",
+    "Region": "4#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "Orange",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "TempT2:\u4E3B\u673A\u6392\u6C14\u6E29\u5EA6",
+    "Tag": "TempT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "White",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedT2:A\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Pink",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedBT2:B\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedBT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Gold",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "A_EgasT4:A\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "A_EgasT4",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "LightBlue",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "B_EgasT4:B\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "B_EgasT4",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "SpringGreen",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "As_TempT2:A\u6392\u7A7A\u51B7\u5668\u524D\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "As_TempT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Aqua",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_TempT2:A\u6392\u7A7A\u51B7\u5668\u540E\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "Be_TempT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "DeepPink",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_PaT2:A\u6392\u7A7A\u51B7\u5668\u51FA\u53E3\u7A7A\u6C14\u538B\u529B",
+    "Tag": "Be_PaT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Chartreuse",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "FuelRackT2:\u6CB9\u95E8",
+    "Tag": "FuelRackT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Violet",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "PowerT2:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "PowerT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Tomato",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "R_speedT2:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "R_speedT2",
+    "Region": "3#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Red",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "TempT:\u4E3B\u673A\u6392\u6C14\u6E29\u5EA6",
+    "Tag": "TempT",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Cyan",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedT:A\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedT",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Lime",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Z_SpeedBT:B\u6392\u589E\u538B\u5668\u8F6C\u901F",
+    "Tag": "Z_SpeedBT",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Yellow",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "A_EgasT3:A\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "A_EgasT3",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Magenta",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "B_EgasT3:B\u5217\u589E\u538B\u5668\u5E9F\u6C14\u6E29\u5EA6",
+    "Tag": "B_EgasT3",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Orange",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "As_TempT:A\u6392\u7A7A\u51B7\u5668\u524D\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "As_TempT",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "White",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_TempT2:A\u6392\u7A7A\u51B7\u5668\u540E\u7A7A\u6C14\u6E29\u5EA6",
+    "Tag": "Be_TempT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Pink",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Be_PaT2:A\u6392\u7A7A\u51B7\u5668\u51FA\u53E3\u7A7A\u6C14\u538B\u529B",
+    "Tag": "Be_PaT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Gold",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "FuelRackT2:\u6CB9\u95E8",
+    "Tag": "FuelRackT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "LightBlue",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "PowerT2:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "PowerT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "SpringGreen",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "R_speedT2:\u67F4\u6CB9\u673A\u529F\u7387",
+    "Tag": "R_speedT2",
+    "Region": "4#\u67F4\u6CB9\u673A\u8BD5\u9A8C\u6570\u636E",
+    "ColorHtml": "Aqua",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  },
+  {
+    "Name": "Sd_Temp:\u4E3B\u673A\u6392\u6C14\u6E29\u5EA6",
+    "Tag": "Sd_Temp",
+    "Region": "3#\u67F4\u6CB9\u673A\u4EFF\u771F\u6570\u636E",
+    "ColorHtml": "#D5A2DD",
+    "IsSelected": false,
+    "DataType": "double",
+    "CurrentValue": 0,
+    "MaxValue": -1.7976931348623157E+308
+  }
+]
