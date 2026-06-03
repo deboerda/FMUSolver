@@ -1520,6 +1520,12 @@ class FmuSolverGUI(QMainWindow):
                     p.terminate()
                     p.wait(timeout=1)
         except: pass
+        try:
+            if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
+                for ev in self.inj_stop_events:
+                    try: ev.set()
+                    except: pass
+        except: pass
         super().closeEvent(event)
 
     def _apply_sim_prog(self, pct, text):
@@ -1963,9 +1969,9 @@ class FmuSolverGUI(QMainWindow):
         cl1.addWidget(lbl("转发配置与过滤规则", obj="Title"))
         self.yaoce_dir_lbl = lbl(f"配置目录: {self.yaoce_dir}", obj="Muted"); cl1.addWidget(self.yaoce_dir_lbl)
         row = QHBoxLayout(); row.setSpacing(8)
-        b_dir = btn("更改目录", False); b_cfg = btn("打开 config.ini", False); b_xml = btn("打开 ParamFilter.xml", False)
-        b_dir.clicked.connect(self._choose_yaoce_dir); b_cfg.clicked.connect(lambda: self._open_yaoce_file("config.ini")); b_xml.clicked.connect(lambda: self._open_yaoce_file("ParamFilter.xml"))
-        for bw in [b_dir, b_cfg, b_xml]: row.addWidget(bw)
+        b_dir = btn("更改目录", False); b_cfg = btn("打开 config.ini", False); b_xml = btn("打开 ParamFilter.xml", False); b_logs = btn("打开日志文件夹", False)
+        b_dir.clicked.connect(self._choose_yaoce_dir); b_cfg.clicked.connect(lambda: self._open_yaoce_file("config.ini")); b_xml.clicked.connect(lambda: self._open_yaoce_file("ParamFilter.xml")); b_logs.clicked.connect(self._open_yaoce_logs)
+        for bw in [b_dir, b_cfg, b_xml, b_logs]: row.addWidget(bw)
         cl1.addLayout(row)
         lay.addWidget(c1)
 
@@ -1990,6 +1996,11 @@ class FmuSolverGUI(QMainWindow):
         p = os.path.join(self.yaoce_dir, name)
         if os.path.exists(p): os.startfile(p)
         else: self.ylog(f"[!] {p} 不存在!", "error")
+
+    def _open_yaoce_logs(self):
+        log_dir = os.path.join(self.yaoce_dir, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        os.startfile(log_dir)
 
     def nativeEvent(self, eventType, message):
         if eventType in ("windows_generic_MSG", b"windows_generic_MSG", "windows_dispatcher_MSG", b"windows_dispatcher_MSG"):
@@ -2299,7 +2310,10 @@ class FmuSolverGUI(QMainWindow):
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("仿真停止")
         self.orbit_progress.setValue(int(0)); self.orbit_prog_lbl.setText("计算停止")
         # 停止注入监听
-        if hasattr(self, 'inj_stop_event'): self.inj_stop_event.set()
+        if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
+            for ev in self.inj_stop_events:
+                try: ev.set()
+                except: pass
 
 
     def stop_sim(self):
@@ -2391,75 +2405,123 @@ class FmuSolverGUI(QMainWindow):
 
     def _start_injection_listener(self):
         """启动后台 UDP 监听，接收外部变量注入"""
-        self.inj_stop_event = threading.Event()
+        if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
+            for ev in self.inj_stop_events:
+                try: ev.set()
+                except: pass
+            
+        self.inj_stop_events = []
+        
         ip = self.inj_ip_edit.edit.text().strip() or "0.0.0.0"
         try:
             port = int(self.inj_port_edit.edit.text() or "9988")
         except: port = 9988
         
-        def loop():
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(1.0)
-            fwd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            last_log_time = 0
-            
-            try:
-                sock.bind((ip, port))
-                self.sig_log.emit(f"[*] 变量注入监听已启动: {ip}:{port}", "info")
-            except Exception as e:
-                self.sig_log.emit(f"[!] 注入监听启动失败: {e}", "error")
-                return
-            
-            while not self.inj_stop_event.is_set():
-                try:
-                    data, addr = sock.recvfrom(4096)
-                    try:
-                        raw_data = data.decode('utf-8').strip()
-                        now = time.time()
-                        do_log = (now - last_log_time > 1.0) # 限制日志频率为 1Hz，防止 UI 卡死
-                        
-                        cmd = None
-                        try:
-                            decoded = base64.b64decode(raw_data)
-                            pb_data = ddm_pb2.DDMData()
-                            pb_data.ParseFromString(decoded)
-                            cmd = {v.name: v.double_value for v in pb_data.sim_vars}
-                            if cmd and do_log:
-                                self.sig_log.emit(f"[*] RECV Protobuf: {len(cmd)} vars (Throttled)", "info")
-                                last_log_time = now
-                        except:
-                            try:
-                                cmd = json.loads(raw_data)
-                                if not isinstance(cmd, dict): cmd = None
-                                if cmd and do_log:
-                                    self.sig_log.emit(f"[*] RECV JSON: {len(cmd)} vars (Throttled)", "info")
-                                    last_log_time = now
-                            except: pass
-                        
-                        if not cmd:
-                            if do_log: self.sig_log.emit("[!] 数据格式不正确 (非 Base64/Protobuf 且非 JSON)", "error")
-                            continue
-                        
-                        # 转发给 Worker
-                        if self.worker_process:
-                            msg = {"sim_id": getattr(self, 'current_sim_id', "")}
-                            for k, v in cmd.items():
-                                msg[k] = v
-                            fwd_sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
-                    except Exception as e:
-                        if (time.time() - last_log_time > 1.0):
-                            self.sig_log.emit(f"[!] 注入处理异常: {e}", "error")
-                            last_log_time = time.time()
-                    except Exception as e:
-                        self.sig_log.emit(f"[!] 注入处理失败: {e}", "error")
-                except socket.timeout:
-                    continue
-                except: break
-            sock.close()
-            fwd_sock.close()
-            self.sig_log.emit("[*] 变量注入监听已停止", "sys")
+        ports_to_listen = {port}
+        try:
+            config_ini = os.path.join(self.yaoce_dir, "config.ini")
+            if os.path.exists(config_ini):
+                import configparser
+                parser = configparser.ConfigParser()
+                parser.read(config_ini, encoding='utf-8-sig')
+                if 'Common' in parser:
+                    common = parser['Common']
+                    t1_ip = common.get('Target1_IP', '127.0.0.1').strip()
+                    if t1_ip in ('127.0.0.1', '0.0.0.0', 'localhost'):
+                        ports_to_listen.add(int(common.get('Target1_Port', '8888')))
+                    t2_ip = common.get('Target2_IP', '127.0.0.1').strip()
+                    if t2_ip in ('127.0.0.1', '0.0.0.0', 'localhost'):
+                        ports_to_listen.add(int(common.get('Target2_Port', '8890')))
+        except Exception as e:
+            print(f"[!] Error reading config.ini for ports: {e}")
 
-        threading.Thread(target=loop, daemon=True).start()
+        def safe_log(msg, tag):
+            try:
+                self.sig_log.emit(str(msg), tag)
+            except:
+                pass
+                
+        def create_listener(listen_port):
+            stop_event = threading.Event()
+            self.inj_stop_events.append(stop_event)
+            
+            def loop():
+                sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                sock.settimeout(1.0)
+                fwd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                last_log_time = 0
+                
+                try:
+                    sock.bind((ip, listen_port))
+                    safe_log(f"[*] 变量注入监听已启动: {ip}:{listen_port}", "info")
+                except Exception as e:
+                    safe_log(f"[!] 注入监听启动失败 (端口 {listen_port}): {e}", "error")
+                    sock.close()
+                    fwd_sock.close()
+                    return
+                
+                while not stop_event.is_set():
+                    try:
+                        data, addr = sock.recvfrom(4096)
+                        try:
+                            raw_data = data.decode('utf-8', errors='ignore').strip()
+                            now = time.time()
+                            do_log = (now - last_log_time > 1.0)
+                            
+                            cmd = None
+                            try:
+                                decoded = base64.b64decode(raw_data)
+                                if ddm_pb2 is not None:
+                                    pb_data = ddm_pb2.DDMData()
+                                    pb_data.ParseFromString(decoded)
+                                    cmd = {v.name: v.double_value for v in pb_data.sim_vars}
+                                    if cmd and do_log:
+                                        safe_log(f"[*] [Port {listen_port}] RECV Protobuf: {len(cmd)} vars (Throttled)", "info")
+                                        last_log_time = now
+                            except:
+                                pass
+                                
+                            if not cmd:
+                                try:
+                                    cmd = json.loads(raw_data)
+                                    if not isinstance(cmd, dict): cmd = None
+                                    if cmd and do_log:
+                                        safe_log(f"[*] [Port {listen_port}] RECV JSON: {len(cmd)} vars (Throttled)", "info")
+                                        last_log_time = now
+                                except:
+                                    pass
+                            
+                            if not cmd:
+                                if do_log:
+                                    safe_log(f"[!] [Port {listen_port}] 数据格式不正确 (非 Base64/Protobuf 且非 JSON)", "error")
+                                    last_log_time = now
+                                continue
+                            
+                            # 转发给 Worker
+                            if self.worker_process and self.worker_process.poll() is None:
+                                msg = {"sim_id": getattr(self, 'current_sim_id', "")}
+                                for k, v in cmd.items():
+                                    try:
+                                        msg[str(k)] = float(v)
+                                    except:
+                                        msg[str(k)] = v
+                                fwd_sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+                        except Exception as e:
+                            if time.time() - last_log_time > 1.0:
+                                safe_log(f"[!] [Port {listen_port}] 注入处理异常: {e}", "error")
+                                last_log_time = time.time()
+                    except socket.timeout:
+                        continue
+                    except Exception as e:
+                        break
+                sock.close()
+                fwd_sock.close()
+                safe_log(f"[*] [Port {listen_port}] 变量注入监听已停止", "sys")
+            
+            threading.Thread(target=loop, daemon=True).start()
+
+        for p in ports_to_listen:
+            create_listener(p)
 
     def run_orbit_precalc(self):
         self._save_gui_config()

@@ -39,20 +39,25 @@ class YaoCeLinkLayerApp:
     def __init__(self, root_dir):
         self.config_mgr = ConfigManager(root_dir)
         self.data_queue = queue.Queue()
+        self.log_queue = queue.Queue()
         self.running = False
         self.reported_matches = set() # 记录已匹配过的参数名
         self.packet_count = 0
         self.reported_warnings = set()
+        self.log_dir = os.path.join(self.config_mgr.root_dir, "logs")
         
     def start(self):
         self.config_mgr.load_config()
         self.config_mgr.load_filter_params()
+        os.makedirs(self.log_dir, exist_ok=True)
         self.running = True
         
         print(f"[*] YaoCe -> DDM Bridge (SimVar Mode) Started.")
         print(f"[*] Filtered Parameters: {len(self.config_mgr.filter_params)}")
         print(f"[*] Targets: {self.config_mgr.targets}")
         
+        self.logger_thread = threading.Thread(target=self.logging_loop, daemon=True)
+        self.logger_thread.start()
         self.process_thread = threading.Thread(target=self.processing_loop, daemon=True)
         self.process_thread.start()
         self.receive_loop()
@@ -65,8 +70,8 @@ class YaoCeLinkLayerApp:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         
         self.last_recv_time = time.time()
-        record_file = os.path.join(self.config_mgr.root_dir, "raw_record_latest.log")
-        print(f"[*] Raw hex records will be saved to: {record_file}")
+        record_file = os.path.join(self.log_dir, "originaldata.log")
+        print(f"[*] Raw hex records will be saved asynchronously to: {record_file}")
         
         def monitor_heartbeat():
             while self.running:
@@ -86,18 +91,12 @@ class YaoCeLinkLayerApp:
             
             print(f"[*] Listening on UDP {recv_port}...")
             
-            with open(record_file, "w", encoding="utf-8") as f_rec:
-                f_rec.write(f"--- YaoCe UDP Raw Record Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
-                while self.running:
-                    data, addr = sock.recvfrom(65535)
-                    self.last_recv_time = time.time()
-                    try:
-                        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                        hex_str = data.hex(' ').upper()
-                        f_rec.write(f"[{ts}] RX {len(data)} bytes from {addr[0]}:{addr[1]}\n{hex_str}\n\n")
-                        f_rec.flush()
-                    except: pass
-                    self.data_queue.put(data)
+            while self.running:
+                data, addr = sock.recvfrom(65535)
+                self.last_recv_time = time.time()
+                ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                self.data_queue.put(data)
+                self.log_queue.put(("original", data, addr, ts))
         except Exception as e:
             print(f"[!] Receiver error: {e}")
         finally:
@@ -128,6 +127,11 @@ class YaoCeLinkLayerApp:
                         for target_ip, target_port in self.config_mgr.targets:
                             send_sock.sendto(payload, (target_ip, target_port))
                         
+                        # Log converted visible data to queue
+                        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
+                        vars_str = ", ".join([f"{var.name}={var.double_value}" for var in ddm_msg.sim_vars])
+                        self.log_queue.put(("send", ddm_msg.sim_time, vars_str, ts))
+
                         # 严格按照用户要求的格式：[Live]Time: 38.00s | Sent40vars | Rate: 1.0x | Freq:50.0Hz
                         now = time.time()
                         if now - self.last_log_time >= 1.0: # 每秒输出一次日志
@@ -145,6 +149,60 @@ class YaoCeLinkLayerApp:
             except queue.Empty: continue
             except Exception as e:
                 print(f"[!] Processor error: {e}")
+
+    def logging_loop(self):
+        originaldata_file = os.path.join(self.log_dir, "originaldata.log")
+        senddata_file = os.path.join(self.log_dir, "senddata.log")
+        
+        f_orig = None
+        f_send = None
+        try:
+            f_orig = open(originaldata_file, "w", encoding="utf-8", buffering=1024*1024)
+            f_orig.write(f"--- YaoCe UDP Raw Record Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
+            f_orig.flush()
+        except Exception as e:
+            print(f"[!] Failed to open originaldata.log: {e}")
+            
+        try:
+            f_send = open(senddata_file, "a", encoding="utf-8", buffering=1024*1024)
+        except Exception as e:
+            print(f"[!] Failed to open senddata.log: {e}")
+
+        last_flush_time = time.time()
+        
+        while self.running or not self.log_queue.empty():
+            try:
+                log_item = self.log_queue.get(timeout=0.5)
+                log_type = log_item[0]
+                
+                if log_type == "original":
+                    _, data, addr, ts = log_item
+                    if f_orig:
+                        hex_str = data.hex(' ').upper()
+                        f_orig.write(f"[{ts}] RX {len(data)} bytes from {addr[0]}:{addr[1]}\n{hex_str}\n\n")
+                elif log_type == "send":
+                    _, sim_time, vars_str, ts = log_item
+                    if f_send:
+                        f_send.write(f"[{ts}] SimTime: {sim_time:.3f} | {vars_str}\n")
+                        
+                self.log_queue.task_done()
+            except queue.Empty:
+                pass
+            except Exception as e:
+                print(f"[!] Logger loop error: {e}")
+                
+            now = time.time()
+            if now - last_flush_time >= 1.0:
+                try:
+                    if f_orig: f_orig.flush()
+                    if f_send: f_send.flush()
+                except: pass
+                last_flush_time = now
+                
+        try:
+            if f_orig: f_orig.close()
+            if f_send: f_send.close()
+        except: pass
 
     def generate_ddm_protobuf(self, pkg: InfoTransPkg):
         if ddm_pb2 is None: return None

@@ -368,10 +368,12 @@ class FmuSolverGUI(QMainWindow):
         b_dir   = btn("更改目录", False)
         b_cfg   = text_btn("打开 config.ini")
         b_xml   = text_btn("打开 ParamFilter.xml")
+        b_logs  = text_btn("打开日志文件夹")
         b_dir.clicked.connect(self._choose_yaoce_dir)
         b_cfg.clicked.connect(lambda: self._open_yaoce_file("config.ini"))
         b_xml.clicked.connect(lambda: self._open_yaoce_file("ParamFilter.xml"))
-        for bw in [b_dir, b_cfg, b_xml]: row.addWidget(bw)
+        b_logs.clicked.connect(self._open_yaoce_logs)
+        for bw in [b_dir, b_cfg, b_xml, b_logs]: row.addWidget(bw)
         row.addStretch()
         cl1.addLayout(row)
         lay.addWidget(c1)
@@ -406,6 +408,16 @@ class FmuSolverGUI(QMainWindow):
         p = os.path.join(self.yaoce_dir, name)
         if os.path.exists(p): os.startfile(p)
         else: self.ylog(f"[!] {p} 不存在!", "error")
+
+    def _open_yaoce_logs(self):
+        log_dir = os.path.join(self.yaoce_dir, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        os.startfile(log_dir)
+
+    def _open_yaoce_logs(self):
+        log_dir = os.path.join(self.yaoce_dir, "logs")
+        os.makedirs(log_dir, exist_ok=True)
+        os.startfile(log_dir)
 
     def _open_fields(self):
         sync_path = os.path.join(APP_DIR, "sync_fields.json")
