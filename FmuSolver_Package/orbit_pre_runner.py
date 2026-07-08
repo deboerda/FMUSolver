@@ -154,6 +154,7 @@ if __name__ == "__main__":
     parser.add_argument("--sample_freq", type=float, default=0.1)
     parser.add_argument("--sim_rate",    type=float, default=0.0)
     parser.add_argument("--seed_path",   default=None, help="Optional external Orbit_Pre.txt to use as seed")
+    parser.add_argument("--pause_file",  default=None, help="Pause while this file exists")
     args = parser.parse_args()
 
     user_params     = json.loads(args.params)
@@ -361,8 +362,22 @@ if __name__ == "__main__":
 
         sim_wall_anchor = time.perf_counter()
         sim_time_anchor = 0.0
+        last_log_wall = 0.0
+        last_log_pct = -1
+        pause_logged = False
 
         while current_time < stop_time - 1e-9:
+            while args.pause_file and os.path.exists(args.pause_file):
+                if not pause_logged:
+                    log(f"[*] Orbit pre-calc paused at Time: {current_time:.2f}s")
+                    pause_logged = True
+                time.sleep(0.1)
+                sim_wall_anchor = time.perf_counter()
+                sim_time_anchor = current_time
+            if pause_logged:
+                log(f"[*] Orbit pre-calc resumed at Time: {current_time:.2f}s")
+                pause_logged = False
+
             if (stop_time - current_time) < fmu_step - 1e-6:
                 break
 
@@ -378,9 +393,12 @@ if __name__ == "__main__":
                 data_rows.append([next_sample] + [float(v) for v in vals])
                 next_sample += output_interval
 
-            if step_count % log_every_steps == 0 or step_count % one_sec_steps == 0:
-                pct = min(100, int((current_time / stop_time) * 100)) if stop_time > 0 else 0
+            now_wall = time.perf_counter()
+            pct = min(100, int((current_time / stop_time) * 100)) if stop_time > 0 else 0
+            if (now_wall - last_log_wall) >= 1.0 or pct != last_log_pct:
                 log(f"[Live] [{pct}%] Time: {current_time:6.2f}s | Collected {len(data_rows)} rows | Rate: {args.sim_rate:4.1f}x")
+                last_log_wall = now_wall
+                last_log_pct = pct
 
             if args.sim_rate > 0:
                 target_wall_time = sim_wall_anchor + (current_time - sim_time_anchor) / args.sim_rate

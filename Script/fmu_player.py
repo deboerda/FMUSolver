@@ -11,6 +11,9 @@ import tempfile
 import xml.etree.ElementTree as ET
 import builtins
 import json
+import hashlib
+import re
+import queue
 
 # ── 优先使用环境变量传入的 C 盘安全目录，或退回默认 ──
 _base_temp = os.environ.get('TEMP', tempfile.gettempdir() if 'tempfile' in sys.modules else "C:\\FmuSolver_Runtime")
@@ -39,6 +42,32 @@ def get_guaranteed_safe_workspace(app_dir, name="fmu_work_worker2"):
     candidate = os.path.join(base_dir, name)
     os.makedirs(candidate, exist_ok=True)
     return get_safe_windows_path(candidate)
+
+def get_unique_safe_workspace(prefix="fmu_work_worker2"):
+    base_dir = "C:\\FmuSolver_Runtime"
+    try:
+        os.makedirs(base_dir, exist_ok=True)
+    except Exception:
+        base_dir = _base_temp
+    name = f"{prefix}_{os.getpid()}_{int(time.time() * 1000)}"
+    candidate = os.path.join(base_dir, name)
+    os.makedirs(candidate, exist_ok=True)
+    return get_safe_windows_path(candidate)
+
+def cleanup_old_workspaces(prefix="fmu_work_worker2", max_age_hours=12):
+    base_dir = "C:\\FmuSolver_Runtime"
+    if not os.path.isdir(base_dir):
+        return
+    cutoff = time.time() - max_age_hours * 3600.0
+    for name in os.listdir(base_dir):
+        if not name.startswith(prefix + "_"):
+            continue
+        path = os.path.join(base_dir, name)
+        try:
+            if os.path.isdir(path) and os.path.getmtime(path) < cutoff:
+                shutil.rmtree(path)
+        except Exception:
+            pass
 
 def _configure_unbuffered_output():
     try:
@@ -98,11 +127,51 @@ def iter_resource_roots(root_dir):
     add(os.path.join(root_dir, "fmu_work_worker2", "binaries", "win64"))
     return roots
 
+def file_fingerprint(path):
+    st = os.stat(path)
+    seed = f"{os.path.abspath(path)}|{st.st_size}|{int(st.st_mtime)}"
+    return hashlib.sha1(seed.encode('utf-8', errors='ignore')).hexdigest()
+
+def normalize_guid(guid):
+    return str(guid or '').strip().strip('{}').lower()
+
+def binary_contains_guid(path, guid):
+    """Return False when a cached FMU DLL clearly belongs to another modelDescription."""
+    expected = normalize_guid(guid)
+    if not expected or not os.path.exists(path):
+        return True
+    try:
+        with open(path, 'rb') as f:
+            data = f.read()
+        found = {
+            normalize_guid(m.decode('ascii', errors='ignore'))
+            for m in re.findall(rb'[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}', data)
+        }
+        return not found or expected in found
+    except Exception:
+        return True
+
+def normalize_var_key(name):
+    return str(name or '').strip().replace('.', '_').replace(':', '_').replace('/', '_').replace(' ', '_')
+
+def strip_source_prefix(name):
+    text = str(name or '').strip()
+    for prefix in ('PE.', 'YC.'):
+        if text.startswith(prefix):
+            return text[len(prefix):]
+    return text
+
+def parse_bool_value(value):
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(value)
+
 class FMUProcessor:
     def __init__(self, fmu_path):
         self.fmu_path = fmu_path
-        # 传递 None 即可，内部会忽略并强制使用 C:\FmuSolver_Runtime
-        self.temp_dir = get_guaranteed_safe_workspace(None, "fmu_work_worker2")
+        # Use a per-run workspace so Windows DLL locks from an old worker never block a new FMU extraction.
+        cleanup_old_workspaces("fmu_work_worker2")
+        self.temp_dir = get_unique_safe_workspace("fmu_work_worker2")
         self.model_desc = None
 
     def check_and_prepare(self):
@@ -112,17 +181,18 @@ class FMUProcessor:
 
         fmu_name = os.path.basename(self.fmu_path)
         marker_file = os.path.join(self.temp_dir, f"__extracted_{fmu_name}__")
+        expected_marker = file_fingerprint(self.fmu_path)
         host_arch = "win64" if sys.maxsize > 2**32 else "win32"
         target_bin = os.path.join(self.temp_dir, "binaries", host_arch)
 
         core_lib_name = self.model_desc.modelIdentifier if self.model_desc else fmu_name.replace(".fmu", "")
         core_dll = os.path.join(target_bin, f"{core_lib_name}.dll")
 
-        if not os.path.exists(marker_file) or not os.path.exists(core_dll):
-            print(f"[*] Environment incomplete or new FMU: {fmu_name}. Patching...")
-            with zipfile.ZipFile(self.fmu_path, 'r') as z:
-                z.extractall(self.temp_dir)
-            with open(marker_file, 'w') as f: f.write(str(time.time()))
+        print(f"[*] Runtime workspace: {self.temp_dir}")
+        print(f"[*] Extracting FMU into isolated workspace: {fmu_name}")
+        with zipfile.ZipFile(self.fmu_path, 'r') as z:
+            z.extractall(self.temp_dir)
+        with open(marker_file, 'w', encoding='utf-8') as f: f.write(expected_marker)
         
         root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
         resource_roots = iter_resource_roots(root_dir)
@@ -139,12 +209,15 @@ class FMUProcessor:
                     continue
 
                 src_file = os.path.join(search_root, fname)
+                target_file = os.path.join(target_bin, fname)
                 if ext == 'dll':
+                    if os.path.exists(target_file):
+                        copied.add(fname.lower())
+                        continue
                     arch = check_dll_arch(src_file)
                     if arch and arch != host_arch:
                         continue
 
-                target_file = os.path.join(target_bin, fname)
                 try:
                     shutil.copy2(src_file, target_file)
                     copied.add(fname.lower())
@@ -159,6 +232,7 @@ class DDMCommManager:
         self.viz_addr = ("127.0.0.1", 22345) # 专用图表端口，避免冲突
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.last_received_data = None
+        self.received_queue = queue.Queue(maxsize=1000)
         self.listen_port = listen_port
         self.replace_dot = replace_dot
 
@@ -176,6 +250,13 @@ class DDMCommManager:
             while True:
                 data, _ = recv_sock.recvfrom(65536)
                 self.last_received_data = data
+                try:
+                    self.received_queue.put_nowait(data)
+                except queue.Full:
+                    try: self.received_queue.get_nowait()
+                    except Exception: pass
+                    try: self.received_queue.put_nowait(data)
+                    except Exception: pass
         threading.Thread(target=listen_loop, daemon=True).start()
 
     def send_fmu_data(self, sim_time, variables, chunk_size=200):
@@ -238,13 +319,48 @@ class DDMCommManager:
                 self.sock.sendto(base64.b64encode(raw_viz).decode('ascii').encode('ascii'), self.viz_addr)
             except: pass
 
+    def send_injection_echo_to_viz(self, sim_time, variables, prefix="PE"):
+        """Mirror external injected variables to the local dashboard for observability."""
+        if ddm_pb2 is None or not variables:
+            return
+        packet = ddm_pb2.DDMData()
+        packet.machine_time = time.time()
+        packet.sim_time = sim_time
+        for name, val in variables.items():
+            svar = packet.sim_vars.add()
+            name_text = str(name)
+            svar.name = name_text if name_text.startswith(('PE.', 'YC.')) else f"{prefix}.{name_text}"
+            if isinstance(val, bool):
+                svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Bool")
+                svar.bool_value = 1.0 if val else 0.0
+            elif isinstance(val, int) and not isinstance(val, bool):
+                svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Int")
+                svar.int_value = float(val)
+            elif isinstance(val, str):
+                try:
+                    num = float(val)
+                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                    svar.double_value = num
+                except Exception:
+                    svar.type = ddm_pb2.DDMData.SimVar.Type.Value("String")
+                    svar.string_value = val
+            else:
+                svar.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                svar.double_value = float(val)
+        try:
+            raw = packet.SerializeToString()
+            self.sock.sendto(base64.b64encode(raw).decode('ascii').encode('ascii'), self.viz_addr)
+        except Exception:
+            pass
+
 class FMUPlayer:
-    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sim_id=None, sync_vars_file=None, control_port=8898, replace_dot=False):
+    def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sim_id=None, sync_vars_file=None, control_port=8898, replace_dot=False, pause_file=None):
         self.fmu_path = fmu_path
         self.sim_id = sim_id
         self.processor = FMUProcessor(fmu_path)
         self.comm = DDMCommManager(remote_ip=remote_ip, remote_port=remote_port, listen_port=control_port, replace_dot=replace_dot)
         self.sync_vars_file = sync_vars_file
+        self.pause_file = pause_file
 
     def run(self, step_size=0.01, sim_time=float('inf'), sim_rate=1.0, sample_freq=0.0, init_params=None):
         md = self.processor.check_and_prepare()
@@ -396,32 +512,109 @@ class FMUPlayer:
 
             real_vr_map = {v.name: v.valueReference for v in v_real}
             int_vr_map = {v.name: v.valueReference for v in v_int}
+            bool_vr_map = {v.name: v.valueReference for v in v_bool}
+            input_real_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Real') == 'Real'}
+            input_int_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Integer') == 'Integer'}
+            input_bool_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Boolean') == 'Boolean'}
+            input_all_names = list(input_real_vr_map) + list(input_int_vr_map) + list(input_bool_vr_map)
+            input_fuzzy = {}
+            for n in input_all_names:
+                for key in {normalize_var_key(n), normalize_var_key(n.split('.')[-1]), normalize_var_key(n.split(':')[-1])}:
+                    input_fuzzy.setdefault(key, n)
+
+            def resolve_input_name(name):
+                key = strip_source_prefix(name)
+                if key in input_real_vr_map or key in input_int_vr_map or key in input_bool_vr_map:
+                    return key
+                norm = normalize_var_key(key)
+                if norm in input_fuzzy:
+                    return input_fuzzy[norm]
+                for candidate in input_all_names:
+                    if candidate.endswith(key) or normalize_var_key(candidate).endswith(norm):
+                        return candidate
+                return None
 
             current_time = 0.0
             next_sample_time = 0.0
             sim_wall_anchor = time.perf_counter()
             sim_time_anchor = current_time
             last_log_wall = time.perf_counter()
+            last_log_pct = -1
+            paused = False
+            last_injection_log_wall = 0.0
             
             print(f"[*] Simulation Loop Started. Step={step_size}s, Rate={sim_rate}x")
 
             while current_time <= sim_time:
-                if self.comm.last_received_data:
+                while True:
                     try:
-                        cmd = json.loads(self.comm.last_received_data.decode('utf-8'))
+                        raw_cmd = self.comm.received_queue.get_nowait()
+                    except queue.Empty:
+                        break
+                    try:
+                        cmd = json.loads(raw_cmd.decode('utf-8'))
                         if self.sim_id and cmd.get("sim_id") != self.sim_id:
                             self.comm.last_received_data = None
                             continue
                         if cmd.get("exit"): break
+                        if "pause" in cmd:
+                            paused = bool(cmd.get("pause"))
+                            print(f"[*] Simulation {'Paused' if paused else 'Resumed'}", flush=True)
+                        if "resume" in cmd and cmd.get("resume"):
+                            paused = False
+                            print("[*] Simulation Resumed", flush=True)
                         if "sim_rate" in cmd:
                             sim_rate = float(cmd["sim_rate"])
                             sim_wall_anchor = time.perf_counter()
                             sim_time_anchor = current_time
+                        injected_count = 0
+                        missing_injection = []
+                        injected_echo = {}
                         for k, v in cmd.items():
-                            if k in real_vr_map: fmu_instance.setReal([real_vr_map[k]], [float(v)])
-                            elif k in int_vr_map: fmu_instance.setInteger([int_vr_map[k]], [int(v)])
-                    except: pass
-                    self.comm.last_received_data = None
+                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq"):
+                                continue
+                            injected_echo[str(k)] = v
+                            actual = resolve_input_name(k)
+                            if actual in input_real_vr_map:
+                                fmu_instance.setReal([input_real_vr_map[actual]], [float(v)])
+                                injected_count += 1
+                                if time.perf_counter() - last_injection_log_wall > 1.0:
+                                    print(f"[*] Injected Real {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                            elif actual in input_int_vr_map:
+                                fmu_instance.setInteger([input_int_vr_map[actual]], [int(v)])
+                                injected_count += 1
+                                if time.perf_counter() - last_injection_log_wall > 1.0:
+                                    print(f"[*] Injected Integer {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                            elif actual in input_bool_vr_map:
+                                fmu_instance.setBoolean([input_bool_vr_map[actual]], [parse_bool_value(v)])
+                                injected_count += 1
+                                if time.perf_counter() - last_injection_log_wall > 1.0:
+                                    print(f"[*] Injected Boolean {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                            else:
+                                missing_injection.append(str(k))
+                        if time.perf_counter() - last_injection_log_wall > 1.0:
+                            total_cmd = len([k for k in cmd if k not in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq")])
+                            if missing_injection:
+                                print(f"[!] Injection summary: {injected_count}/{total_cmd} applied; missing: {', '.join(missing_injection[:8])}", flush=True)
+                            elif injected_count:
+                                print(f"[*] Injection summary: {injected_count}/{total_cmd} applied", flush=True)
+                            last_injection_log_wall = time.perf_counter()
+                        self.comm.send_injection_echo_to_viz(current_time, injected_echo)
+                    except Exception as e:
+                        print(f"[!] Control command error: {e}", flush=True)
+                self.comm.last_received_data = None
+
+                if self.pause_file:
+                    file_paused = os.path.exists(self.pause_file)
+                    if file_paused != paused:
+                        paused = file_paused
+                        print(f"[*] Simulation {'Paused' if paused else 'Resumed'} by pause flag", flush=True)
+
+                if paused:
+                    time.sleep(0.05)
+                    sim_wall_anchor = time.perf_counter()
+                    sim_time_anchor = current_time
+                    continue
 
                 # doStep in FMPy may return None on success. Error handling is managed internally via exceptions.
                 fmu_instance.doStep(currentCommunicationPoint=current_time, communicationStepSize=step_size)
@@ -446,15 +639,14 @@ class FMUPlayer:
                         for v, val in zip(v_bool, vals): out[get_out_name(v.name)] = bool(val)
                     self.comm.send_fmu_data(current_time, out)
 
-                # ── 定时打印运行日志 (每 1% 进度 或 每 1s 仿真时间) ──
-                log_step_count = max(1, int((sim_time / step_size) / 100))
-                one_sec_steps = max(1, int(1.0 / step_size))
-                current_step = int(current_time / step_size)
-                
-                if current_step % log_step_count == 0 or current_step % one_sec_steps == 0:
+                # Keep logs tied to wall-clock time so high-speed simulation does not flood the GUI.
+                now_wall = time.perf_counter()
+                pct = min(100, int((current_time / sim_time) * 100)) if sim_time > 0 and sim_time != float('inf') else 0
+                if (now_wall - last_log_wall) >= 1.0 or pct != last_log_pct:
                     v_count = len(v_real) + len(v_int) + len(v_bool)
-                    pct = min(100, int((current_time / sim_time) * 100)) if sim_time > 0 else 0
                     print(f"[Live] [{pct}%] Time: {current_time:6.2f}s | Sent {v_count} vars | Rate: {sim_rate:4.1f}x | Freq: {sample_freq:4.1f}Hz", flush=True)
+                    last_log_wall = now_wall
+                    last_log_pct = pct
 
                 current_time += step_size
                 if sim_rate > 0:
@@ -492,6 +684,7 @@ if __name__ == "__main__":
     parser.add_argument("--control_port", type=int, default=8898)
     parser.add_argument("--sim_id", default=None)
     parser.add_argument("--replace_dot", action="store_true", help="Replace '.' with '_' in variable names")
+    parser.add_argument("--pause_file", default=None, help="Pause while this file exists")
     args = parser.parse_args()
     
     init_params = None
@@ -499,6 +692,6 @@ if __name__ == "__main__":
         try: init_params = json.loads(args.params)
         except: pass
         
-    FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port, replace_dot=args.replace_dot).run(
+    FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port, replace_dot=args.replace_dot, pause_file=args.pause_file).run(
         step_size=args.step, sim_time=args.time, sim_rate=args.rate, sample_freq=args.freq, init_params=init_params
     )

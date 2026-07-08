@@ -20,7 +20,7 @@ try:
     from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                  QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                  QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog,
-                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget)
+                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox)
     from PySide6.QtCore import Qt, QTimer, Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen
     QT_VERSION = 6
@@ -28,7 +28,7 @@ except ImportError:
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog,
-                               QSpinBox, QComboBox, QGridLayout, QListView, QDockWidget)
+                               QSpinBox, QComboBox, QGridLayout, QListView, QDockWidget, QFileDialog, QMessageBox)
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal as Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen
     QT_VERSION = 5
@@ -731,6 +731,9 @@ class ProfessionalVisualizer(QMainWindow):
         add_dock_btn = QPushButton("+ 新建窗口"); add_dock_btn.setObjectName("PrimaryButton")
         add_dock_btn.clicked.connect(self.create_new_dock)
         ctrl_row.addWidget(add_dock_btn)
+        export_word_btn = QPushButton("导出 Word")
+        export_word_btn.clicked.connect(self.export_charts_to_word)
+        ctrl_row.addWidget(export_word_btn)
         self.chk_autoscroll = QCheckBox("Realtime"); self.chk_autoscroll.setChecked(True)
         self.chk_autoscroll.toggled.connect(self.on_realtime_toggled)
         ctrl_row.addWidget(self.chk_autoscroll)
@@ -865,6 +868,28 @@ class ProfessionalVisualizer(QMainWindow):
         self.load_ui_settings()
         # 初始加载默认或上一次的布局
         QTimer.singleShot(500, self.auto_load_last_layout)
+
+    def register_runtime_variable(self, tag, desc=""):
+        """Add variables received at runtime to the dashboard only, without touching sync_fields.json."""
+        if not tag or tag in self.data_store:
+            return
+        row = self.table.rowCount()
+        self.table.blockSignals(True)
+        self.table.insertRow(row)
+        chk = QTableWidgetItem()
+        chk.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+        chk.setCheckState(Qt.Unchecked)
+        self.table.setItem(row, 0, chk)
+        self.table.setItem(row, 1, QTableWidgetItem(self.get_display_name(tag)))
+        self.table.setItem(row, 2, QTableWidgetItem("0.0000"))
+        self.table.blockSignals(False)
+
+        self.ordered_tags.append(tag)
+        self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
+        self.data_store[tag] = np.full(self.max_points, np.nan)
+        self.trend_store[tag] = []
+        self.var_styles[tag] = {"color": pg.intColor(len(self.ordered_tags) - 1, hues=max(10, len(self.ordered_tags))), "width": 2}
+        self.vars_desc[tag] = desc
 
     def auto_load_last_layout(self):
         if "LastSession" in self.presets:
@@ -1589,10 +1614,41 @@ class ProfessionalVisualizer(QMainWindow):
                 self.trend_bucket_values[tag].append(value)
                 self.trend_bucket_last_values[tag] = value
 
+    def sanitize_active_series(self, t_data, y_data):
+        t_arr = np.asarray(t_data, dtype=float)
+        if t_arr.size == 0:
+            return np.asarray([], dtype=float), {tag: np.asarray([], dtype=float) for tag in y_data}
+
+        min_len = min([t_arr.size] + [len(values) for values in y_data.values()]) if y_data else t_arr.size
+        t_arr = t_arr[:min_len]
+        y_arrs = {tag: np.asarray(values, dtype=float)[:min_len] for tag, values in y_data.items()}
+        finite_time = np.isfinite(t_arr)
+        if not finite_time.any():
+            return np.asarray([], dtype=float), {tag: np.asarray([], dtype=float) for tag in y_data}
+
+        t_arr = t_arr[finite_time]
+        y_arrs = {tag: values[finite_time] for tag, values in y_arrs.items()}
+
+        # If simulation time restarts, keep only the newest monotonic segment.
+        if t_arr.size > 1:
+            reset_steps = np.where(np.diff(t_arr) < -1e-9)[0]
+            if reset_steps.size:
+                start = int(reset_steps[-1]) + 1
+                t_arr = t_arr[start:]
+                y_arrs = {tag: values[start:] for tag, values in y_arrs.items()}
+
+        if t_arr.size > 1:
+            keep = np.concatenate(([True], np.diff(t_arr) > 1e-9))
+            t_arr = t_arr[keep]
+            y_arrs = {tag: values[keep] for tag, values in y_arrs.items()}
+
+        return t_arr, y_arrs
+
     def get_active_series(self):
         if self.accumulate_enabled and self.trend_times:
             self.flush_trend_bucket()
-            return np.asarray(self.trend_times, dtype=float), self.trend_store
+            t_data = np.asarray(self.trend_times, dtype=float)
+            return self.sanitize_active_series(t_data, self.trend_store)
 
         valid_len = min(self.current_idx, self.max_points)
         wrapped_idx = None
@@ -1608,7 +1664,25 @@ class ProfessionalVisualizer(QMainWindow):
                 y_data[tag] = np.concatenate((self.data_store[tag][wrapped_idx:], self.data_store[tag][:wrapped_idx]))
             else:
                 y_data[tag] = self.data_store[tag][:valid_len]
-        return t_data, y_data
+        return self.sanitize_active_series(t_data, y_data)
+
+    def build_realtime_plot_data(self, x_data, y_data, max_points):
+        x_arr = np.asarray(x_data, dtype=float)
+        y_arr = np.asarray(y_data, dtype=float)
+        finite_mask = np.isfinite(x_arr) & np.isfinite(y_arr)
+        if not finite_mask.any():
+            return np.asarray([], dtype=float), np.asarray([], dtype=float)
+
+        x_arr = x_arr[finite_mask]
+        y_arr = y_arr[finite_mask]
+        total = len(x_arr)
+        target = max(16, int(max_points))
+        if total <= target:
+            return x_arr, y_arr
+
+        sampled_idx = np.linspace(0, total - 1, target, dtype=int)
+        sampled_idx = np.asarray(sorted(set(sampled_idx.tolist() + [total - 1])), dtype=int)
+        return x_arr[sampled_idx], y_arr[sampled_idx]
 
     def build_trend_plot_data(self, x_data, y_data, max_points):
         x_arr = np.asarray(x_data, dtype=float)
@@ -1742,6 +1816,63 @@ class ProfessionalVisualizer(QMainWindow):
             style = self.var_styles[tag]
             for dock_name, curveItem in self.curves[tag].items():
                 curveItem.setPen(self.make_curve_pen(style))
+
+    def export_charts_to_word(self):
+        if not self.plot_widgets:
+            QMessageBox.information(self, "导出 Word", "当前没有可导出的图表窗口。")
+            return
+
+        default_name = datetime.datetime.now().strftime("FmuSolver_Charts_%Y%m%d_%H%M%S.docx")
+        out_path = QFileDialog.getSaveFileName(self, "导出图表到 Word", os.path.join(APP_DIR, default_name), "Word Document (*.docx)")[0]
+        if not out_path:
+            return
+        if not out_path.lower().endswith(".docx"):
+            out_path += ".docx"
+
+        try:
+            from docx import Document
+            from docx.shared import Inches
+        except Exception as e:
+            QMessageBox.critical(self, "导出 Word", f"缺少 python-docx 组件，无法导出 Word: {e}")
+            return
+
+        export_dir = os.path.join(APP_DIR, "chart_exports")
+        os.makedirs(export_dir, exist_ok=True)
+
+        doc = Document()
+        doc.add_heading("FmuSolver 看板图表导出", 0)
+        doc.add_paragraph(datetime.datetime.now().strftime("导出时间: %Y-%m-%d %H:%M:%S"))
+
+        exported = 0
+        for dock_name in self.dock_order:
+            pw = self.plot_widgets.get(dock_name)
+            if pw is None or not pw.isVisible():
+                continue
+
+            doc.add_heading(str(dock_name), level=1)
+            curve_names = [tag for tag, dock_map in self.curves.items() if dock_name in dock_map]
+            if curve_names:
+                doc.add_paragraph("曲线: " + ", ".join(self.get_display_name(tag) for tag in curve_names))
+                latest_lines = []
+                for tag in curve_names:
+                    if tag in self.latest_values:
+                        latest_lines.append(f"{self.get_display_name(tag)} = {self.latest_values[tag]:.6g}")
+                if latest_lines:
+                    doc.add_paragraph("最新值: " + "; ".join(latest_lines))
+
+            QApplication.processEvents()
+            image_path = os.path.join(export_dir, f"chart_{exported + 1}.png")
+            pixmap = pw.grab()
+            pixmap.save(image_path, "PNG")
+            doc.add_picture(image_path, width=Inches(6.7))
+            exported += 1
+
+        if exported == 0:
+            QMessageBox.information(self, "导出 Word", "当前没有可见图表可导出。")
+            return
+
+        doc.save(out_path)
+        QMessageBox.information(self, "导出 Word", f"已导出 {exported} 个图表到:\n{out_path}")
 
     def update_dock_y_range(self, dock_name, view_box, y_arrays):
         finite_chunks = []
@@ -1900,13 +2031,8 @@ class ProfessionalVisualizer(QMainWindow):
             pos = evt
             if plot_widget.sceneBoundingRect().contains(pos):
                 mousePoint = plot_widget.plotItem.vb.mapSceneToView(pos)
-                # Ensure times is monotonic for correct cursor indexing
-                valid_len = min(self.current_idx, self.max_points)
-                if self.current_idx > self.max_points:
-                    idx = self.current_idx % self.max_points
-                    t_array = np.concatenate((self.times[idx:], self.times[:idx]))
-                else:
-                    t_array = self.times[:valid_len]
+                # Use the same sanitized series as the renderer to avoid cursor drift after wraparound.
+                t_array, y_store = self.get_active_series()
                     
                 if len(t_array) > 0:
                     index = (np.abs(t_array - mousePoint.x())).argmin()
@@ -1923,10 +2049,9 @@ class ProfessionalVisualizer(QMainWindow):
                         has_data = False
                         for tag in self.curves:
                             if name in self.curves[tag]:
-                                if self.current_idx > self.max_points:
-                                    y_array = np.concatenate((self.data_store[tag][idx:], self.data_store[tag][:idx]))
-                                else:
-                                    y_array = self.data_store[tag][:valid_len]
+                                y_array = y_store.get(tag)
+                                if y_array is None or index >= len(y_array) or not np.isfinite(y_array[index]):
+                                    continue
                                 val = y_array[index]
                                 text += f"{self.get_display_name(tag)}: {val:.4f}\n"
                                 has_data = True
@@ -2073,7 +2198,22 @@ class ProfessionalVisualizer(QMainWindow):
         idx = self.current_idx % self.max_points
         self.times[idx] = t
         
-        var_map = {v.name: v.double_value for v in pb_data.sim_vars}
+        var_map = {}
+        for v in pb_data.sim_vars:
+            try:
+                if v.type == ddm_pb2.DDMData.SimVar.Type.Value("Bool"):
+                    var_map[v.name] = 1.0 if v.bool_value else 0.0
+                elif v.type == ddm_pb2.DDMData.SimVar.Type.Value("Int"):
+                    var_map[v.name] = float(v.int_value)
+                elif v.type == ddm_pb2.DDMData.SimVar.Type.Value("String"):
+                    try:
+                        var_map[v.name] = float(v.string_value)
+                    except Exception:
+                        continue
+                else:
+                    var_map[v.name] = float(v.double_value)
+            except Exception:
+                continue
         if self.accumulate_enabled:
             self.append_trend_sample(t, var_map)
         
@@ -2086,6 +2226,10 @@ class ProfessionalVisualizer(QMainWindow):
                     self.base_sim_time = t
                     self.base_datetime = datetime.datetime(y, m, d, h, minute, s)
             except: pass
+
+        for name in var_map:
+            if name not in self.data_store:
+                self.register_runtime_variable(name)
 
         for name in self.data_store:
             if name in var_map:
@@ -2191,13 +2335,13 @@ class ProfessionalVisualizer(QMainWindow):
                     t_plot_render, y_plot = self.build_trend_plot_data(t_slice, y_slice, self.accumulate_max_render_points)
                     if len(t_plot_render) == 0 or len(y_plot) == 0:
                         continue
-                    self.curves[tag][dock_name].setData(x=t_plot_render, y=y_plot)
+                    self.curves[tag][dock_name].setData(x=t_plot_render, y=y_plot, connect='finite')
                     rendered_y_arrays.append(y_plot)
                 else:
-                    t_plot_render, y_plot = self.build_trend_plot_data(t_slice, y_slice, self.realtime_max_render_points)
+                    t_plot_render, y_plot = self.build_realtime_plot_data(t_slice, y_slice, self.realtime_max_render_points)
                     if len(t_plot_render) == 0 or len(y_plot) == 0:
                         continue
-                    self.curves[tag][dock_name].setData(x=t_plot_render, y=y_plot)
+                    self.curves[tag][dock_name].setData(x=t_plot_render, y=y_plot, connect='finite')
                     rendered_y_arrays.append(y_plot)
                 self.last_curve_update_idx[update_key] = self.current_idx
 

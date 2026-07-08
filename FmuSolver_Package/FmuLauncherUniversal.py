@@ -1539,7 +1539,11 @@ class FmuSolverGUI(QMainWindow):
     def _orbit_done_ui(self):
         self.btn_run_orbit.setText("▶ 开始预示解算")
         self.btn_run_orbit.setEnabled(True)
+        if hasattr(self, 'btn_pause_orbit'):
+            self.btn_pause_orbit.setEnabled(False)
+            self.btn_pause_orbit.setText("⏸ 暂停")
         self.btn_stop_orbit.setEnabled(False)
+        self.orbit_paused = False
 
     def _load_gui_config(self):
         if os.path.exists(self.gui_config_path):
@@ -1612,10 +1616,10 @@ class FmuSolverGUI(QMainWindow):
             self.sec_e.edit: ("orbit_sec", "0.0"),
             self.a_e.edit: ("orbit_a", "6766.71777"),
             self.ecc_e.edit: ("orbit_ecc", "0.00110"),
-            self.inc_e.edit: ("orbit_inc", "0.72653"),
-            self.om_e.edit: ("orbit_om", "2.39969"),
-            self.w_e.edit: ("orbit_w", "1.34409"),
-            self.f_e.edit: ("orbit_f", "1.00447"),
+            self.inc_e.edit: ("orbit_inc", "41.627"),
+            self.om_e.edit: ("orbit_om", "137.492"),
+            self.w_e.edit: ("orbit_w", "77.010"),
+            self.f_e.edit: ("orbit_f", "57.552"),
             self.o_step_e.edit: ("orbit_step", "10.0"),
             self.o_rate_e.edit: ("orbit_rate", "0.0"),
             self.o_freq_e.edit: ("orbit_freq", "0.1"),
@@ -1819,16 +1823,16 @@ class FmuSolverGUI(QMainWindow):
         config_l.addLayout(path_row)
 
         g2 = QGridLayout(); g2.setHorizontalSpacing(10); g2.setVerticalSpacing(4)
-        self.year_e = pill_field("Year:", "2026"); self.mon_e = pill_field("Month:", "4"); self.day_e = pill_field("Day:", "10")
-        self.hour_e = pill_field("Hour:", "8"); self.min_e = pill_field("Min:", "0"); self.sec_e = pill_field("Sec:", "0.0")
+        self.year_e = pill_field("Year (北京时间):", "2026"); self.mon_e = pill_field("Month (北京时间):", "4"); self.day_e = pill_field("Day (北京时间):", "10")
+        self.hour_e = pill_field("Hour (北京时间):", "8"); self.min_e = pill_field("Min (北京时间):", "0"); self.sec_e = pill_field("Sec (北京时间):", "0.0")
         g2.addWidget(self.year_e, 0, 0); g2.addWidget(self.mon_e, 0, 1); g2.addWidget(self.day_e, 0, 2)
         g2.addWidget(self.hour_e, 1, 0); g2.addWidget(self.min_e, 1, 1); g2.addWidget(self.sec_e, 1, 2)
         config_l.addLayout(g2)
 
         config_l.addWidget(divider())
         g2e = QGridLayout(); g2e.setHorizontalSpacing(10); g2e.setVerticalSpacing(4)
-        self.a_e = pill_field("MTC半长轴 A (KM):", "6766.71777"); self.ecc_e = pill_field("MTC偏心率 E:", "0.00110"); self.inc_e = pill_field("MTC轨道倾角 I (RAD):", "0.72653")
-        self.om_e = pill_field("MTC升交点赤经 Ω (RAD):", "2.39969"); self.w_e = pill_field("MTC近地点幅角 ω (RAD):", "1.34409"); self.f_e = pill_field("MTC真近点角 F (RAD):", "1.00447")
+        self.a_e = pill_field("MTC半长轴 A (KM):", "6766.71777"); self.ecc_e = pill_field("MTC偏心率 E:", "0.00110"); self.inc_e = pill_field("MTC轨道倾角 I (deg):", "41.627")
+        self.om_e = pill_field("MTC升交点赤经 Ω (deg):", "137.492"); self.w_e = pill_field("MTC近地点幅角 ω (deg):", "77.010"); self.f_e = pill_field("MTC真近点角 F (deg):", "57.552")
         g2e.addWidget(self.a_e, 0, 0); g2e.addWidget(self.ecc_e, 0, 1); g2e.addWidget(self.inc_e, 0, 2)
         g2e.addWidget(self.om_e, 1, 0); g2e.addWidget(self.w_e, 1, 1); g2e.addWidget(self.f_e, 1, 2)
         config_l.addLayout(g2e)
@@ -1848,10 +1852,10 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_prog_lbl = lbl("等待启动...", obj="Muted"); self.orbit_prog_lbl.setAlignment(Qt.AlignCenter); exec_l.addWidget(self.orbit_prog_lbl)
 
         act = QHBoxLayout(); act.setContentsMargins(0, 0, 0, 0); act.setSpacing(8)
-        self.btn_run_orbit = btn("▶ 开始预示解答", True); self.btn_stop_orbit = danger_btn("■ 停止运行"); self.btn_stop_orbit.setEnabled(False)
+        self.btn_run_orbit = btn("▶ 开始预示解答", True); self.btn_pause_orbit = btn("⏸ 暂停", False); self.btn_pause_orbit.setEnabled(False); self.orbit_paused = False; self.btn_stop_orbit = danger_btn("■ 停止运行"); self.btn_stop_orbit.setEnabled(False)
         self.btn_export = btn("↓ 导出结果", False); self.btn_export.setEnabled(False)
-        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt)
-        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addStretch()
+        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_pause_orbit.clicked.connect(self.toggle_orbit_pause); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt)
+        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_pause_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addStretch()
         exec_l.addLayout(act)
         lay.addWidget(execution_panel)
 
@@ -1909,9 +1913,9 @@ class FmuSolverGUI(QMainWindow):
         cl3.addWidget(lbl("3. 初值与参数定义 (EPS_CJ)", obj="Title"))
         
         g3 = QGridLayout(); g3.setHorizontalSpacing(10); g3.setVerticalSpacing(4)
-        self.cj_year_e = pill_field("Year:", "2026")
-        self.cj_mon_e = pill_field("Mon:", "3"); self.cj_day_e = pill_field("Day:", "31")
-        self.cj_hour_e = pill_field("Hour:", "12"); self.cj_min_e = pill_field("Min:", "19"); self.cj_sec_e = pill_field("Sec:", "0.0")
+        self.cj_year_e = pill_field("Year (北京时间):", "2026")
+        self.cj_mon_e = pill_field("Mon (北京时间):", "3"); self.cj_day_e = pill_field("Day (北京时间):", "31")
+        self.cj_hour_e = pill_field("Hour (北京时间):", "12"); self.cj_min_e = pill_field("Min (北京时间):", "19"); self.cj_sec_e = pill_field("Sec (北京时间):", "0.0")
         g3.addWidget(self.cj_year_e, 0, 0); g3.addWidget(self.cj_mon_e, 0, 1); g3.addWidget(self.cj_day_e, 0, 2)
         g3.addWidget(self.cj_hour_e, 1, 0); g3.addWidget(self.cj_min_e, 1, 1); g3.addWidget(self.cj_sec_e, 1, 2)
         cl3.addLayout(g3)
@@ -1946,11 +1950,12 @@ class FmuSolverGUI(QMainWindow):
 
         bar = QHBoxLayout(); bar.setSpacing(8)
         self.btn_start = btn("▶ 启动仿真", True); self.chk_auto_vis = QCheckBox("自动开启看板"); self.chk_auto_vis.setObjectName("SwitchCheck"); self.chk_auto_vis.setChecked(True)
+        self.btn_pause = btn("⏸ 暂停", False); self.btn_pause.setEnabled(False); self.sim_paused = False
         self.btn_fields = btn("变量配置", False); self.btn_initial = btn("⚡ 同步 (0)", False); self.btn_stop = danger_btn("■ 停止"); self.btn_stop.setEnabled(False)
         self.btn_viz = btn("📊 看板", False); self.btn_out = btn("📁 输出包", False); self.status_lbl = lbl("就绪", obj="Muted")
-        self.btn_start.clicked.connect(self.start_sim); self.btn_stop.clicked.connect(self.stop_sim); self.btn_fields.clicked.connect(self._open_fields); self.btn_initial.clicked.connect(self.toggle_is_initial)
+        self.btn_start.clicked.connect(self.start_sim); self.btn_pause.clicked.connect(self.toggle_sim_pause); self.btn_stop.clicked.connect(self.stop_sim); self.btn_fields.clicked.connect(self._open_fields); self.btn_initial.clicked.connect(self.toggle_is_initial)
         self.btn_viz.clicked.connect(self._launch_viz_manual); self.btn_out.clicked.connect(lambda: os.startfile(os.path.join(APP_DIR, "txt")))
-        for b in [self.btn_start, self.chk_auto_vis, self.btn_fields, self.btn_initial, self.btn_stop, self.btn_viz, self.btn_out]: bar.addWidget(b)
+        for b in [self.btn_start, self.chk_auto_vis, self.btn_pause, self.btn_fields, self.btn_initial, self.btn_stop, self.btn_viz, self.btn_out]: bar.addWidget(b)
         bar.addStretch(); bar.addWidget(lbl("📡", obj="Muted")); bar.addWidget(self.status_lbl)
         lay.addLayout(bar)
 
@@ -1969,9 +1974,9 @@ class FmuSolverGUI(QMainWindow):
         cl1.addWidget(lbl("转发配置与过滤规则", obj="Title"))
         self.yaoce_dir_lbl = lbl(f"配置目录: {self.yaoce_dir}", obj="Muted"); cl1.addWidget(self.yaoce_dir_lbl)
         row = QHBoxLayout(); row.setSpacing(8)
-        b_dir = btn("更改目录", False); b_cfg = btn("打开 config.ini", False); b_xml = btn("打开 ParamFilter.xml", False); b_logs = btn("打开日志文件夹", False)
-        b_dir.clicked.connect(self._choose_yaoce_dir); b_cfg.clicked.connect(lambda: self._open_yaoce_file("config.ini")); b_xml.clicked.connect(lambda: self._open_yaoce_file("ParamFilter.xml")); b_logs.clicked.connect(self._open_yaoce_logs)
-        for bw in [b_dir, b_cfg, b_xml, b_logs]: row.addWidget(bw)
+        b_dir = btn("更改目录", False); b_cfg = btn("打开 config.ini", False); b_xml = btn("打开 ParamFilter.xml", False); b_rel = btn("DTS关系配置", False); b_logs = btn("打开日志文件夹", False)
+        b_dir.clicked.connect(self._choose_yaoce_dir); b_cfg.clicked.connect(lambda: self._open_yaoce_file("config.ini")); b_xml.clicked.connect(lambda: self._open_yaoce_file("ParamFilter.xml")); b_rel.clicked.connect(lambda: self._open_yaoce_file("DTS.TM.Sim.Relationship.xml")); b_logs.clicked.connect(self._open_yaoce_logs)
+        for bw in [b_dir, b_cfg, b_xml, b_rel, b_logs]: row.addWidget(bw)
         cl1.addLayout(row)
         lay.addWidget(c1)
 
@@ -2076,6 +2081,26 @@ class FmuSolverGUI(QMainWindow):
 
     def ylog(self, msg, tag="sys"):
         self.sig_ylog.emit(str(msg), tag)
+
+    def _decode_process_line(self, data):
+        """Decode mixed Python UTF-8 logs and native FMU/DLL console output safely."""
+        if isinstance(data, str):
+            return data.rstrip("\r\n")
+        if not data:
+            return ""
+        for enc in ("utf-8-sig", "utf-8", "gb18030", "gbk", "mbcs"):
+            try:
+                return data.decode(enc).rstrip("\r\n")
+            except Exception:
+                continue
+        return data.decode("utf-8", errors="replace").rstrip("\r\n")
+
+    def _is_structured_runner_log(self, line):
+        """Structured runner logs are useful; raw FMU console chatter is throttled separately."""
+        if not line:
+            return False
+        prefixes = ("[*]", "[OK]", "[!]", "[ERROR]", "[SUCCESS]", "[EXPORT_READY]", "[Live]")
+        return line.startswith(prefixes) or line.startswith("Traceback") or "Fatal" in line
         
         
 
@@ -2099,7 +2124,13 @@ class FmuSolverGUI(QMainWindow):
         self._yaoce_log_pos = 0
         try:
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
-            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+            child_env = self._child_env()
+            child_env["FMUSOLVER_PE_IP"] = self.ip_edit.edit.text().strip() or "127.0.0.1"
+            child_env["FMUSOLVER_PE_PORT"] = self.port_edit.edit.text().strip() or "8889"
+            child_env["FMUSOLVER_LOCAL_INJECT_PORT"] = str(int(self.inj_port_edit.edit.text() or "9988"))
+            self.ylog(f"[*] 遥测与仿真统一转发到 PE: {child_env['FMUSOLVER_PE_IP']}:{child_env['FMUSOLVER_PE_PORT']}", "sys")
+            self.ylog(f"[*] 遥测同步注入到本机 FMU 监听端口: 127.0.0.1:{child_env['FMUSOLVER_LOCAL_INJECT_PORT']}", "sys")
+            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', bufsize=1, cwd=APP_DIR, env=child_env, creationflags=cf)
             
             def poll_log():
                 if not hasattr(self, 'yaoce_proc') or not self.yaoce_proc: return
@@ -2176,12 +2207,18 @@ class FmuSolverGUI(QMainWindow):
         
         # 生成唯一会话 ID，防止陈旧 UDP 指令干扰
         self.current_sim_id = str(int(time.time()))
+        self.sim_pause_file = os.path.join(APP_DIR, f"sim_pause_{self.current_sim_id}.flag")
+        try:
+            if os.path.exists(self.sim_pause_file): os.remove(self.sim_pause_file)
+        except Exception:
+            pass
         
         sim_args = ["--step", str(float(self.step_e.edit.text() or '0.02')), "--rate", str(float(self.rate_e.edit.text() or '1.0')), 
                     "--freq", str(float(self.freq_e.edit.text() or '50.0')), "--time", str(float(self.time_e.edit.text() or '86400.0')),
                     "--sim_id", self.current_sim_id,
                     "--ip", self.ip_edit.edit.text().strip(), "--port", str(int(self.port_edit.edit.text() or '12345')),
-                    "--params", json.dumps(self.get_cj_params()), "--control_port", str(CONTROL_PORT)]
+                    "--params", json.dumps(self.get_cj_params()), "--control_port", str(CONTROL_PORT),
+                    "--pause_file", self.sim_pause_file]
         
         # 确保传入变量过滤配置
         sync_path = os.path.join(APP_DIR, "sync_fields.json")
@@ -2214,7 +2251,8 @@ class FmuSolverGUI(QMainWindow):
             py_exe = sys.executable if fmu_bit == "64" else r"C:\Py32\python.exe"
             cmd = [py_exe, player_script, fmu_path] + sim_args
 
-        self.btn_start.setEnabled(False); self.btn_stop.setEnabled(True)
+        self.sim_paused = False
+        self.btn_start.setEnabled(False); self.btn_pause.setEnabled(True); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(True)
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("正在启动...")
         self._update_led("running")
         self.txt_log.clear()
@@ -2226,7 +2264,7 @@ class FmuSolverGUI(QMainWindow):
                 self._launch_viz_manual()
 
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
-            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
             QTimer.singleShot(2000, self.update_params) # 延迟2秒同步参数
             threading.Thread(target=self._read_worker_logs, daemon=True).start()
             
@@ -2241,9 +2279,9 @@ class FmuSolverGUI(QMainWindow):
         if not self.worker_process: return
         total_t = float(self.time_e.edit.text() or '86400.0')
         last_live_log_at = 0.0
-        for line in iter(self.worker_process.stdout.readline, ''):
+        for line in iter(self.worker_process.stdout.readline, b''):
             if not line: continue
-            line_str = line.strip()
+            line_str = self._decode_process_line(line).strip()
             pct_match = re.search(r'\[(\d+)%\]', line_str)
             if pct_match:
                 try:
@@ -2259,7 +2297,7 @@ class FmuSolverGUI(QMainWindow):
                     self.sig_log.emit(line_str, "sys")
                     last_live_log_at = now
             else:
-                tag = "info" if "[OK]" in line else ("error" if "[!]" in line else "sys")
+                tag = "info" if "[OK]" in line_str else ("error" if "[!]" in line_str else "sys")
                 self.sig_log.emit(line_str, tag)
         self.worker_process.stdout.close()
         self.worker_process.wait()
@@ -2304,7 +2342,8 @@ class FmuSolverGUI(QMainWindow):
 
 
     def _reset_ui(self):
-        self.btn_start.setEnabled(True); self.btn_stop.setEnabled(False); self.worker_process = None
+        self.btn_start.setEnabled(True); self.btn_pause.setEnabled(False); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(False); self.worker_process = None
+        self.sim_paused = False
         self.current_sim_id = None
         self._update_led("ready")
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("仿真停止")
@@ -2336,9 +2375,40 @@ class FmuSolverGUI(QMainWindow):
             except: pass
             self.visualizer_process = None
         
+        self.btn_pause.setEnabled(False)
+        self.btn_pause.setText("⏸ 暂停")
+        self.sim_paused = False
+        try:
+            if hasattr(self, 'sim_pause_file') and os.path.exists(self.sim_pause_file):
+                os.remove(self.sim_pause_file)
+        except Exception:
+            pass
         self._update_led("stopped")
         # UI 重置由 _terminate_worker 触发或在此处提前部分重置
         self.sim_prog_lbl.setText("正在停止仿真...")
+
+
+    def toggle_sim_pause(self):
+        if not self.worker_process:
+            return
+        self.sim_paused = not getattr(self, 'sim_paused', False)
+        cmd = {"sim_id": getattr(self, 'current_sim_id', ""), "pause": self.sim_paused}
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            pause_file = getattr(self, 'sim_pause_file', os.path.join(APP_DIR, "sim_pause.flag"))
+            if self.sim_paused:
+                with open(pause_file, 'w', encoding='utf-8') as f:
+                    f.write('pause')
+            elif os.path.exists(pause_file):
+                os.remove(pause_file)
+            s.sendto(json.dumps(cmd).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+            self.btn_pause.setText("▶ 继续" if self.sim_paused else "⏸ 暂停")
+            self.sim_prog_lbl.setText("仿真已暂停" if self.sim_paused else "仿真继续运行")
+            self.log("[*] 仿真暂停" if self.sim_paused else "[*] 仿真继续", "sys")
+        except Exception as e:
+            self.log(f"[!] 暂停/继续指令发送失败: {e}", "error")
+        finally:
+            s.close()
 
 
     def _terminate_worker(self):
@@ -2365,29 +2435,29 @@ class FmuSolverGUI(QMainWindow):
 
 
     def toggle_is_initial(self):
-        """脉冲式触发：自动 1 -> 0 (针对 PointSun)"""
+        """Pulse Is_initial during runtime; PointSun is only a pre-simulation option."""
         def do_pulse():
             # 1. 变高并保持一会儿
             self.btn_initial.setText("⚡ 同步中..."); self.btn_initial.setEnabled(False)
             
             # 日志输出同步操作涉及的变量
             self.log("===========================================", "sys")
-            self.log("[SYNC] 点击同步按钮，对 PointSun 变量进行脉冲触发 (1 -> 0)...", "info")
+            self.log("[SYNC] 点击同步按钮，对 Is_initial 变量进行脉冲触发 (1 -> 0)...", "info")
             
             # 发送脉冲开始
             if self.worker_process:
                 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 try:
-                    msg = {"sim_id": getattr(self, 'current_sim_id', ""), "PointSun": 1.0}
+                    msg = {"sim_id": getattr(self, 'current_sim_id', ""), "Is_initial": 1.0}
                     s.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
-                    self.log("  -> PointSun: 1.0 (已发送)", "info")
+                    self.log("  -> Is_initial: 1.0 (已发送)", "info")
                 except: pass
                 finally: s.close()
             
             # 2. 0.5秒后恢复为低电平
             QTimer.singleShot(500, lambda: [
-                self.send_ctrl_signal("PointSun", 0.0),
-                self.log("  -> PointSun: 0.0 (已恢复)", "info"),
+                self.send_ctrl_signal("Is_initial", 0.0),
+                self.log("  -> Is_initial: 0.0 (已恢复)", "info"),
                 self.btn_initial.setText("⚡ 同步 (0)"),
                 self.btn_initial.setEnabled(True)
             ])
@@ -2474,7 +2544,20 @@ class FmuSolverGUI(QMainWindow):
                                 if ddm_pb2 is not None:
                                     pb_data = ddm_pb2.DDMData()
                                     pb_data.ParseFromString(decoded)
-                                    cmd = {v.name: v.double_value for v in pb_data.sim_vars}
+                                    cmd = {}
+                                    type_names = getattr(ddm_pb2.DDMData.SimVar, 'Type', None)
+                                    for v in pb_data.sim_vars:
+                                        if type_names is not None:
+                                            if v.type == ddm_pb2.DDMData.SimVar.Type.Value("Bool"):
+                                                cmd[v.name] = bool(v.bool_value)
+                                            elif v.type == ddm_pb2.DDMData.SimVar.Type.Value("Int"):
+                                                cmd[v.name] = int(v.int_value)
+                                            elif v.type == ddm_pb2.DDMData.SimVar.Type.Value("String"):
+                                                cmd[v.name] = v.string_value
+                                            else:
+                                                cmd[v.name] = float(v.double_value)
+                                        else:
+                                            cmd[v.name] = float(v.double_value)
                                     if cmd and do_log:
                                         safe_log(f"[*] [Port {listen_port}] RECV Protobuf: {len(cmd)} vars (Throttled)", "info")
                                         last_log_time = now
@@ -2501,11 +2584,11 @@ class FmuSolverGUI(QMainWindow):
                             if self.worker_process and self.worker_process.poll() is None:
                                 msg = {"sim_id": getattr(self, 'current_sim_id', "")}
                                 for k, v in cmd.items():
-                                    try:
-                                        msg[str(k)] = float(v)
-                                    except:
-                                        msg[str(k)] = v
+                                    msg[str(k)] = v
                                 fwd_sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+                                if do_log:
+                                    safe_log(f"[*] [Port {listen_port}] 已转发注入变量到 FMU Worker: {len(cmd)} vars", "info")
+                                    last_log_time = now
                         except Exception as e:
                             if time.time() - last_log_time > 1.0:
                                 safe_log(f"[!] [Port {listen_port}] 注入处理异常: {e}", "error")
@@ -2537,23 +2620,32 @@ class FmuSolverGUI(QMainWindow):
             self.olog(f"[!] 找不到FMU文件: {fmu_path}", "error"); return
 
         params = {"Year": int(self.year_e.edit.text() or '2026'), "Mon": int(self.mon_e.edit.text() or '1'), "Day": int(self.day_e.edit.text() or '1'), "Hour": int(self.hour_e.edit.text() or '0'), "Min": int(self.min_e.edit.text() or '0'), "Sec": float(self.sec_e.edit.text() or '0.0'),
-            "a_MT": float(self.a_e.edit.text() or '6766.71777'), "e_MT": float(self.ecc_e.edit.text() or '0.0011'), "i_MT": float(self.inc_e.edit.text() or '0.72653'), "OMEGA_MT": float(self.om_e.edit.text() or '2.39969'), "omega_MT": float(self.w_e.edit.text() or '1.34409'), "f_MT": float(self.f_e.edit.text() or '1.00447')}
+            "a_MT": float(self.a_e.edit.text() or '6766.71777'), "e_MT": float(self.ecc_e.edit.text() or '0.0011'), "i_MT": float(self.inc_e.edit.text() or '41.627'), "OMEGA_MT": float(self.om_e.edit.text() or '137.492'), "omega_MT": float(self.w_e.edit.text() or '77.010'), "f_MT": float(self.f_e.edit.text() or '57.552')}
         
         if getattr(sys, 'frozen', False):
             cmd = [worker_path, fmu_path]
         else:
             runner_script = os.path.join(APP_DIR, "orbit_pre_runner.py")
             cmd = [worker_path, runner_script, fmu_path]
+
+        self.orbit_pause_file = os.path.join(APP_DIR, "orbit_pause.flag")
+        try:
+            if os.path.exists(self.orbit_pause_file): os.remove(self.orbit_pause_file)
+        except: pass
             
         cmd.extend(["--params",      json.dumps(params),
                     "--stop_time",   str(float(self.o_dur_e.edit.text() or '86400.0')),
                     "--step_size",   str(float(self.o_step_e.edit.text() or '10.0')),
                     "--sample_freq", str(float(self.o_freq_e.edit.text() or '0.1')),
-                    "--sim_rate",    str(float(self.o_rate_e.edit.text() or '0.0'))])
+                    "--sim_rate",    str(float(self.o_rate_e.edit.text() or '0.0')),
+                    "--pause_file",  self.orbit_pause_file])
 
         self.olog(f"[*] 启动轨道计算引擎...", "sys")
+        self.olog("[*] 时间输入按北京时间解释；界面六根数角度项按度显示，并按界面数值原样传入 FMU。", "sys")
         self.olog(f"[*] 步长={float(self.o_step_e.edit.text() or '10.0')}s | 频率={float(self.o_freq_e.edit.text() or '0.1')}Hz | 时长={float(self.o_dur_e.edit.text() or '86400.0')}s | 速率={float(self.o_rate_e.edit.text() or '0.0')}x", "sys")
+        self.orbit_paused = False
         self.btn_run_orbit.setText("运行中..."); self.btn_run_orbit.setEnabled(False)
+        self.btn_pause_orbit.setText("⏸ 暂停"); self.btn_pause_orbit.setEnabled(True)
         self.btn_stop_orbit.setEnabled(True)
         self.orbit_progress.setValue(int(0))
         self.orbit_prog_lbl.setText("正在启动...")
@@ -2563,12 +2655,14 @@ class FmuSolverGUI(QMainWindow):
             total_t = float(self.o_dur_e.edit.text() or '86400.0')
             try:
                 cf = 0x08000000 if os.name == 'nt' else 0
-                self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+                self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
                 ready_file = None
                 last_ui_update = 0
                 last_log_update = 0
-                for line in iter(self.orbit_proc.stdout.readline, ''):
-                    line_str = line.strip()
+                last_native_log_update = 0
+                suppressed_native_lines = 0
+                for line in iter(self.orbit_proc.stdout.readline, b''):
+                    line_str = self._decode_process_line(line).strip()
                     if not line_str: continue
                     
                     # 进度条解析: [Live] [45%] Time: 123.4s | ... (频率限制)
@@ -2589,6 +2683,20 @@ class FmuSolverGUI(QMainWindow):
                     
                     # 只有关键信息才实时显示，普通 Live 信息 1s 更新一次
                     is_live = "[Live]" in line_str
+                    is_structured = self._is_structured_runner_log(line_str)
+                    if not is_structured:
+                        suppressed_native_lines += 1
+                        if now - last_native_log_update > 3.0:
+                            self.sig_olog.emit(f"[*] FMU 原生日志正在输出，已折叠 {suppressed_native_lines} 行以保持计算速度。", "sys")
+                            suppressed_native_lines = 0
+                            last_native_log_update = now
+                        continue
+
+                    if suppressed_native_lines and (not is_live or now - last_native_log_update > 3.0):
+                        self.sig_olog.emit(f"[*] FMU 原生日志已折叠 {suppressed_native_lines} 行。", "sys")
+                        suppressed_native_lines = 0
+                        last_native_log_update = now
+
                     if not is_live or (now - last_log_update > 1.0):
                         tag = "info" if "[OK]" in line_str or "SUCCESS" in line_str else ("error" if "[!]" in line_str or "Error" in line_str or "Fatal" in line_str else "sys")
                         self.sig_olog.emit(line_str, tag)
@@ -2625,10 +2733,34 @@ class FmuSolverGUI(QMainWindow):
     def stop_orbit(self):
         if hasattr(self, 'orbit_proc') and self.orbit_proc:
             try:
+                if hasattr(self, 'orbit_pause_file') and os.path.exists(self.orbit_pause_file):
+                    try: os.remove(self.orbit_pause_file)
+                    except: pass
                 subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.orbit_proc.pid)],
                                 creationflags=subprocess.CREATE_NO_WINDOW)
                 self.olog("[!] 用户手动停止计算进程。", "error")
             except: pass
+
+
+    def toggle_orbit_pause(self):
+        if not getattr(self, 'orbit_proc', None):
+            return
+        self.orbit_paused = not getattr(self, 'orbit_paused', False)
+        pause_file = getattr(self, 'orbit_pause_file', os.path.join(APP_DIR, "orbit_pause.flag"))
+        try:
+            if self.orbit_paused:
+                with open(pause_file, 'w', encoding='utf-8') as f:
+                    f.write('pause')
+                self.btn_pause_orbit.setText("▶ 继续")
+                self.orbit_prog_lbl.setText("轨道预示已暂停")
+                self.olog("[*] 轨道预示暂停", "sys")
+            else:
+                if os.path.exists(pause_file): os.remove(pause_file)
+                self.btn_pause_orbit.setText("⏸ 暂停")
+                self.orbit_prog_lbl.setText("轨道预示继续运行")
+                self.olog("[*] 轨道预示继续", "sys")
+        except Exception as e:
+            self.olog(f"[!] 轨道暂停/继续失败: {e}", "error")
 
 
     def _save_to_orbit_txt(self, filepath):

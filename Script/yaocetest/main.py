@@ -7,6 +7,11 @@ import os
 import sys
 import base64
 from datetime import datetime
+
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+if THIS_DIR not in sys.path:
+    sys.path.insert(0, THIS_DIR)
+
 try:
     from packet_parser import PacketParser, InfoTransPkg
     from config_manager import ConfigManager
@@ -45,6 +50,7 @@ class YaoCeLinkLayerApp:
         self.packet_count = 0
         self.reported_warnings = set()
         self.log_dir = os.path.join(self.config_mgr.root_dir, "logs")
+        self.max_log_bytes = 20 * 1024 * 1024
         
     def start(self):
         self.config_mgr.load_config()
@@ -122,9 +128,12 @@ class YaoCeLinkLayerApp:
                 ddm_msg = self.generate_ddm_protobuf(pkg)
                 if ddm_msg:
                     try:
-                        raw_bytes = ddm_msg.SerializeToString()
-                        payload = base64.b64encode(raw_bytes)
                         for target_ip, target_port in self.config_mgr.targets:
+                            msg_to_send = ddm_msg
+                            if self.config_mgr.is_local_injection_target(target_ip, target_port):
+                                msg_to_send = self.clone_ddm_with_prefix(ddm_msg, "YC")
+                            raw_bytes = msg_to_send.SerializeToString()
+                            payload = base64.b64encode(raw_bytes)
                             send_sock.sendto(payload, (target_ip, target_port))
                         
                         # Log converted visible data to queue
@@ -149,6 +158,18 @@ class YaoCeLinkLayerApp:
             except queue.Empty: continue
             except Exception as e:
                 print(f"[!] Processor error: {e}")
+
+    def clone_ddm_with_prefix(self, msg, prefix):
+        cloned = ddm_pb2.DDMData()
+        cloned.machine_time = msg.machine_time
+        cloned.sim_time = msg.sim_time
+        prefix_text = f"{prefix}."
+        for src in msg.sim_vars:
+            dst = cloned.sim_vars.add()
+            dst.CopyFrom(src)
+            if not dst.name.startswith(prefix_text):
+                dst.name = prefix_text + dst.name
+        return cloned
 
     def logging_loop(self):
         originaldata_file = os.path.join(self.log_dir, "originaldata.log")
@@ -178,8 +199,10 @@ class YaoCeLinkLayerApp:
                 if log_type == "original":
                     _, data, addr, ts = log_item
                     if f_orig:
-                        hex_str = data.hex(' ').upper()
-                        f_orig.write(f"[{ts}] RX {len(data)} bytes from {addr[0]}:{addr[1]}\n{hex_str}\n\n")
+                        hex_bytes = data[:512]
+                        hex_str = hex_bytes.hex(' ').upper()
+                        suffix = " ..." if len(data) > len(hex_bytes) else ""
+                        f_orig.write(f"[{ts}] RX {len(data)} bytes from {addr[0]}:{addr[1]}\n{hex_str}{suffix}\n\n")
                 elif log_type == "send":
                     _, sim_time, vars_str, ts = log_item
                     if f_send:
@@ -196,6 +219,14 @@ class YaoCeLinkLayerApp:
                 try:
                     if f_orig: f_orig.flush()
                     if f_send: f_send.flush()
+                    if f_orig and f_orig.tell() > self.max_log_bytes:
+                        f_orig.seek(0)
+                        f_orig.truncate()
+                        f_orig.write(f"--- YaoCe UDP Raw Record Rotated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
+                    if f_send and f_send.tell() > self.max_log_bytes:
+                        f_send.seek(0)
+                        f_send.truncate()
+                        f_send.write(f"--- YaoCe DDM Send Record Rotated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n\n")
                 except: pass
                 last_flush_time = now
                 
@@ -270,9 +301,10 @@ class YaoCeLinkLayerApp:
         for item in pkg.info_body_vct:
             allowed, mapped_name = self.config_mgr.is_param_allowed(item.sys_ident)
             if not allowed: continue
+            sim_var_name = self.config_mgr.map_to_sim_var(mapped_name)
             
             if mapped_name not in self.reported_matches:
-                print(f"[DEBUG] First match for parameter: Original='{item.sys_ident}', Mapped='{mapped_name}', Value='{item.value}'")
+                print(f"[DEBUG] First match for parameter: Original='{item.sys_ident}', Code='{mapped_name}', SimVar='{sim_var_name}', Value='{item.value}'")
                 self.reported_matches.add(mapped_name)
                 
             is_any_field_added = True
@@ -283,25 +315,25 @@ class YaoCeLinkLayerApp:
                 if mapped_name in clock_codes:
                     parsed_clock = parse_clock_value(item.value)
                     if parsed_clock is not None:
-                        add_to_sim_vars(mapped_name, parsed_clock["total"])
-                        add_to_sim_vars("A024", parsed_clock["A024"])
-                        add_to_sim_vars("A025", parsed_clock["A025"])
-                        add_to_sim_vars("A026", parsed_clock["A026"])
-                        add_to_sim_vars("A027", parsed_clock["A027"])
-                        add_to_sim_vars("A028", parsed_clock["A028"])
+                        add_to_sim_vars(sim_var_name, parsed_clock["total"])
+                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A024"), parsed_clock["A024"])
+                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A025"), parsed_clock["A025"])
+                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A026"), parsed_clock["A026"])
+                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A027"), parsed_clock["A027"])
+                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A028"), parsed_clock["A028"])
                     elif item.sys_ident == mapped_name:
                         warn_key = (mapped_name, "clock_fallback")
                         if warn_key not in self.reported_warnings:
                             print(f"[WARN] Clock field '{mapped_name}' has non-clock payload '{item.value}', forwarded as raw numeric fallback.")
                             self.reported_warnings.add(warn_key)
-                        add_to_sim_vars(mapped_name, item.value)
+                        add_to_sim_vars(sim_var_name, item.value)
                     else:
                         warn_key = (item.sys_ident, mapped_name, "clock_collision")
                         if warn_key not in self.reported_warnings:
                             print(f"[WARN] Ignored suffix-based remap '{item.sys_ident}' -> '{mapped_name}' because payload '{item.value}' is not a clock string.")
                             self.reported_warnings.add(warn_key)
                 else:
-                    add_to_sim_vars(mapped_name, item.value)
+                    add_to_sim_vars(sim_var_name, item.value)
             except Exception as e:
                 print(f"[!] Unexpected error mapping field '{mapped_name}': {e}")
                     

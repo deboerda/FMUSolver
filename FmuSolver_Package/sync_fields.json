@@ -278,5 +278,19 @@
     "type": "Real",
     "desc": "",
     "sync": true
+  },
+  {
+    "name": "SolarArrayMTB_I_Online[1]",
+    "source": "SolarArrayMTB_I_Online[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "SolarAngle_CJinput[1]",
+    "source": "SolarAngle_CJinput[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": false
   }
 ]

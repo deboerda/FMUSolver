@@ -1,6 +1,7 @@
 import xml.etree.ElementTree as ET
 import configparser
 import os
+import re
 
 class ConfigManager:
     def __init__(self, root_dir):
@@ -10,6 +11,7 @@ class ConfigManager:
         self.filter_params = set()       # 原始 code 集合（完整匹配）
         self.filter_numeric = set()      # 数字后缀集合（去前缀匹配）
         self.filter_num_to_code = {}     # 数字后缀 -> 原始code 映射（用于调试）
+        self.telemetry_to_sim_map = {}    # 遥测 code/parId -> FMU sim_var
         self.targets = []
         self.config = {}
 
@@ -26,14 +28,31 @@ class ConfigManager:
                 self.config['EndianMark'] = '>' if endian_str == 'big' else '<'
                 print(f"[*] Configured Endian: {endian_str} ('{self.config['EndianMark']}')")
 
+                pe_ip = os.environ.get('FMUSOLVER_PE_IP', '').strip()
+                pe_port = os.environ.get('FMUSOLVER_PE_PORT', '').strip()
+                def add_target(host, port):
+                    target = (str(host), int(port))
+                    if target not in self.targets:
+                        self.targets.append(target)
+
+                if pe_ip and pe_port:
+                    add_target(pe_ip, pe_port)
+                    print(f"[*] Unified PE target from FmuSolver UI: {pe_ip}:{pe_port}")
+
+                    local_inject_port = os.environ.get('FMUSOLVER_LOCAL_INJECT_PORT', '').strip()
+                    if local_inject_port:
+                        add_target('127.0.0.1', local_inject_port)
+                        print(f"[*] Local FMU injection target: 127.0.0.1:{local_inject_port}")
+                    return
+
                 # 读取双目标配置
                 t1_ip = common.get('Target1_IP', '127.0.0.1')
                 t1_port = int(common.get('Target1_Port', '8888'))
-                self.targets.append((t1_ip, t1_port))
+                add_target(t1_ip, t1_port)
 
                 t2_ip = common.get('Target2_IP', '127.0.0.1')
                 t2_port = int(common.get('Target2_Port', '8890'))
-                self.targets.append((t2_ip, t2_port))
+                add_target(t2_ip, t2_port)
         else:
             print(f"[!] Warning: config.ini not found at {self.config_ini_path}. Using defaults.")
             self.config['RecvPort'] = 30019
@@ -84,9 +103,39 @@ class ConfigManager:
 
             print(f"[*] Loaded {len(self.filter_params)} parameters for filtering.")
             print(f"[*] Numeric-suffix index built: {len(self.filter_numeric)} entries.")
+            self.load_relationship_mapping()
 
         except Exception as e:
             print(f"[!] Error parsing ParamFilter.xml: {e}")
+
+    def load_relationship_mapping(self):
+        candidates = [
+            os.path.join(self.root_dir, "DTS.TM.Sim.Relationship.xml"),
+            os.path.join(os.path.dirname(self.root_dir), "DTS.TM.Sim.Relationship.xml"),
+        ]
+        rel_path = next((p for p in candidates if os.path.exists(p)), None)
+        if not rel_path:
+            print("[*] Telemetry relationship XML not found; using raw telemetry codes.")
+            return
+        try:
+            root = ET.parse(rel_path).getroot()
+            for var in root.findall('.//Var'):
+                sim_var = (var.get('sim_var') or '').strip()
+                expr = var.get('expression') or ''
+                if not sim_var:
+                    continue
+                codes = re.findall(r'@([A-Za-z0-9_]+)\)', expr)
+                # Only direct one-to-one expressions can be safely renamed here.
+                if len(codes) != 1:
+                    continue
+                code = codes[0].strip()
+                self.telemetry_to_sim_map[code] = sim_var
+            print(f"[*] Loaded {len(self.telemetry_to_sim_map)} telemetry->sim variable mappings from {rel_path}")
+        except Exception as e:
+            print(f"[!] Error parsing telemetry relationship XML: {e}")
+
+    def map_to_sim_var(self, telemetry_code):
+        return self.telemetry_to_sim_map.get(telemetry_code, telemetry_code)
 
     def is_param_allowed(self, param_name):
         """
