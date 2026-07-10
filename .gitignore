@@ -52,6 +52,10 @@ gui_config.json
 chart_exports/
 FmuSolver_Package/Visualizer/chart_exports/
 FmuSolver_Package/txt/
+FmuSolver_Package/fmu_work_worker2/
+Script/fmu_work_worker2/
+FmuSolver_Package05061502/
+workplace2/
 .git-status-cleanup.txt
 
 # Ignore large archive files
