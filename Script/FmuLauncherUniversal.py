@@ -342,6 +342,20 @@ QLabel#ConsoleStar {{
     font-weight: 600;
 }}
 
+QPushButton#ConsoleToggle {{
+    background: rgba(255, 255, 255, 24);
+    color: rgba(248, 250, 252, 220);
+    border: 1px solid rgba(255, 255, 255, 42);
+    border-radius: 7px;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+}}
+
+QPushButton#ConsoleToggle:hover {{
+    background: rgba(255, 255, 255, 38);
+}}
+
 QScrollBar:vertical, QScrollBar:horizontal {{
     background: transparent;
     width: 0px;
@@ -1068,6 +1082,7 @@ def divider(parent=None):
 def console_panel(title, editor, parent=None, min_height=None, fixed_height=None):
     shell = QFrame(parent)
     shell.setObjectName("ConsoleShell")
+    shell._log_collapsed = False
     lay = QVBoxLayout(shell)
     lay.setContentsMargins(12, 10, 12, 10)
     lay.setSpacing(6)
@@ -1076,9 +1091,15 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
     header.setSpacing(8)
     header.addWidget(lbl(title, obj="ConsoleTitle"))
     header.addStretch()
+    toggle_btn = QPushButton("折叠日志")
+    toggle_btn.setObjectName("ConsoleToggle")
+    toggle_btn.setToolTip("折叠后停止向界面写入日志，完整日志仍写入文件")
+    toggle_btn.setFixedHeight(24)
+    header.addWidget(toggle_btn)
     lay.addLayout(header)
     editor.setObjectName("Console")
     editor.setReadOnly(True)
+    editor.document().setMaximumBlockCount(min(editor.document().maximumBlockCount() or 120, 120))
     if fixed_height is not None:
         editor.setFixedHeight(fixed_height)
     if min_height is not None:
@@ -1091,6 +1112,26 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
     star.setObjectName("ConsoleStar")
     foot.addWidget(star)
     lay.addLayout(foot)
+
+    def toggle_console():
+        collapsed = not getattr(shell, "_log_collapsed", False)
+        shell._log_collapsed = collapsed
+        editor.setProperty("log_collapsed", collapsed)
+        editor.setVisible(not collapsed)
+        star.setVisible(not collapsed)
+        if collapsed:
+            editor.clear()
+            shell.setMaximumHeight(52)
+            toggle_btn.setText("展开日志")
+            toggle_btn.setToolTip("展开后恢复显示新的日志信息")
+        else:
+            shell.setMaximumHeight(16777215)
+            toggle_btn.setText("折叠日志")
+            toggle_btn.setToolTip("折叠后停止向界面写入日志，完整日志仍写入文件")
+
+    toggle_btn.clicked.connect(toggle_console)
+    editor._log_toggle_button = toggle_btn
+    editor._log_panel_shell = shell
     return shell
 
 # ─── Low-level Engine Helpers ───
@@ -1877,6 +1918,8 @@ class FmuSolverGUI(QMainWindow):
         
         QFrame#ConsoleShell {{ background: rgba(30, 30, 30, 242); border: none; border-radius: 12px; }}
         QTextEdit#Console {{ background: transparent; color: #FFFFFF; border: none; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; line-height: 1.4; }}
+        QPushButton#ConsoleToggle {{ background: rgba(255,255,255,26); color: #FFFFFF; border: 1px solid rgba(255,255,255,42); border-radius: 7px; padding: 0 10px; font-size: 11px; font-weight: 700; }}
+        QPushButton#ConsoleToggle:hover {{ background: rgba(255,255,255,42); }}
         
         QScrollBar:vertical {{ border: none; background: transparent; width: 8px; margin: 0px 0px 0px 0px; }}
         QScrollBar::handle:vertical {{ background: rgba(128, 128, 128, 100); min-height: 30px; border-radius: 4px; }}
@@ -2146,12 +2189,21 @@ class FmuSolverGUI(QMainWindow):
 
     def _append_log(self, widget, msg, tag="sys"):
         """Internal helper to append text to log widgets with timestamps and colors."""
+        if widget.property("log_collapsed"):
+            return
         msg_text = str(msg)
         if ("[Live]" in msg_text or "[PERF]" in msg_text) and tag != "error":
             key = (id(widget), msg_text.split(']', 1)[0] if ']' in msg_text else msg_text[:24])
             now = time.time()
             last = self._ui_log_throttle.get(key, 0.0)
-            if now - last < 2.0:
+            if now - last < 5.0:
+                return
+            self._ui_log_throttle[key] = now
+        elif tag != "error":
+            key = (id(widget), msg_text[:40])
+            now = time.time()
+            last = self._ui_log_throttle.get(key, 0.0)
+            if ("Injected " in msg_text or "Injection summary" in msg_text or "RECV Protobuf" in msg_text) and now - last < 15.0:
                 return
             self._ui_log_throttle[key] = now
         ts = datetime.now().strftime("%H:%M:%S")
