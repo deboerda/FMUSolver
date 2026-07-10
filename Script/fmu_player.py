@@ -14,6 +14,44 @@ import json
 import hashlib
 import re
 import queue
+import traceback
+
+def is_process_alive(pid):
+    try:
+        pid = int(pid)
+    except Exception:
+        return True
+    if pid <= 0 or pid == os.getpid():
+        return True
+    if os.name == 'nt':
+        try:
+            import ctypes
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
+def start_parent_watchdog(stop_event=None):
+    parent_pid = os.environ.get("FMUSOLVER_PARENT_PID", "")
+    if not parent_pid:
+        return
+    def watch_parent():
+        while True:
+            time.sleep(1.0)
+            if stop_event is not None and stop_event.is_set():
+                return
+            if not is_process_alive(parent_pid):
+                print(f"[SYS] Parent process {parent_pid} is gone; FMU worker exiting.", flush=True)
+                os._exit(0)
+    threading.Thread(target=watch_parent, daemon=True).start()
 
 # ── 优先使用环境变量传入的 C 盘安全目录，或退回默认 ──
 _base_temp = os.environ.get('TEMP', tempfile.gettempdir() if 'tempfile' in sys.modules else "C:\\FmuSolver_Runtime")
@@ -161,10 +199,64 @@ def strip_source_prefix(name):
             return text[len(prefix):]
     return text
 
+RAW_TIME_TELEMETRY_NAMES = {
+    'S0067', 'DCSM34', 'DCSH34', 'DCSW34',
+    'A024', 'A025', 'A026', 'A027', 'A028',
+    'A029', 'A02A', 'A02B', 'A02C', 'A02D', 'A02E',
+    'DCSH34.d', 'DCSH34.h', 'DCSH34.m', 'DCSH34.s', 'DCSH34.ms',
+    'DCSW34.d', 'DCSW34.h', 'DCSW34.m', 'DCSW34.s', 'DCSW34.ms',
+}
+
+def should_forward_telemetry_to_pe(name):
+    if os.environ.get('FMUSOLVER_PE_FORWARD_RAW_TIME', '').strip().lower() in ('1', 'true', 'yes', 'on'):
+        return True
+    return strip_source_prefix(name) not in RAW_TIME_TELEMETRY_NAMES
+
 def parse_bool_value(value):
     if isinstance(value, str):
         return value.strip().lower() in ('1', 'true', 'yes', 'on')
     return bool(value)
+
+def load_injection_blacklist(root_dir):
+    path = os.path.join(root_dir, "fmu_injection_blacklist.json")
+    try:
+        with open(path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            items = data.get("variables", data)
+            if isinstance(items, dict):
+                return path, set(str(k) for k in items.keys())
+            if isinstance(items, list):
+                return path, set(str(k) for k in items)
+    except Exception:
+        pass
+    return path, set()
+
+def append_injection_blacklist(path, variable, reason):
+    variable = str(variable or '').strip()
+    if not variable:
+        return
+    data = {"variables": {}}
+    try:
+        if os.path.exists(path):
+            with open(path, 'r', encoding='utf-8') as f:
+                old = json.load(f)
+            if isinstance(old, dict):
+                if isinstance(old.get("variables"), dict):
+                    data = old
+                else:
+                    data["variables"] = {str(k): v for k, v in old.items()}
+    except Exception:
+        pass
+    data.setdefault("variables", {})[variable] = {
+        "reason": reason,
+        "time": time.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception:
+        pass
 
 class FMUProcessor:
     def __init__(self, fmu_path):
@@ -235,6 +327,20 @@ class DDMCommManager:
         self.received_queue = queue.Queue(maxsize=1000)
         self.listen_port = listen_port
         self.replace_dot = replace_dot
+        self.recv_count = 0
+        self.recv_drop_count = 0
+        self.ext_send_count = 0
+        self.viz_send_count = 0
+        self.viz_echo_send_count = 0
+        self.send_error_count = 0
+        self.last_ext_var_count = 0
+        self.last_ext_payload_bytes = 0
+        self.last_viz_var_count = 0
+        self.last_viz_payload_bytes = 0
+        self.viz_send_max_hz = max(0.1, float(os.environ.get("FMUSOLVER_VIZ_SEND_HZ", "10.0")))
+        self.viz_send_interval = 1.0 / self.viz_send_max_hz
+        self.last_viz_send_wall = 0.0
+        self.viz_skip_count = 0
 
     def start_receiver(self):
         def listen_loop():
@@ -249,75 +355,115 @@ class DDMCommManager:
             else: return
             while True:
                 data, _ = recv_sock.recvfrom(65536)
+                self.recv_count += 1
                 self.last_received_data = data
                 try:
                     self.received_queue.put_nowait(data)
                 except queue.Full:
+                    self.recv_drop_count += 1
                     try: self.received_queue.get_nowait()
                     except Exception: pass
                     try: self.received_queue.put_nowait(data)
                     except Exception: pass
         threading.Thread(target=listen_loop, daemon=True).start()
 
-    def send_fmu_data(self, sim_time, variables, chunk_size=200):
+    def send_fmu_data(self, sim_time, variables, chunk_size=200, extra_external_variables=None):
         if ddm_pb2 is None or not variables: return
+        external_variables = dict(variables)
+        if extra_external_variables:
+            external_variables.update(extra_external_variables)
+
         var_names = list(variables.keys())
-        for i in range(0, len(var_names), chunk_size):
-            chunk_names = var_names[i:i + chunk_size]
+        ext_var_names = list(external_variables.keys())
+        for i in range(0, len(ext_var_names), chunk_size):
+            ext_chunk_names = ext_var_names[i:i + chunk_size]
             
             # --- 1. 组装给外部的包 (应用重命名逻辑) ---
             packet_ext = ddm_pb2.DDMData()
             packet_ext.machine_time = time.time()
             packet_ext.sim_time = sim_time
             
+            for name in ext_chunk_names:
+                val = external_variables[name]
+
+                # 配置外部包
+                svar_ext = packet_ext.sim_vars.add()
+                svar_ext.name = name.replace('.', '_') if self.replace_dot else name
+
+                # 类型推断与赋值
+                if isinstance(val, bool):
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Bool")
+                    svar_ext.type = vt
+                    svar_ext.bool_value = 1.0 if val else 0.0
+                elif isinstance(val, int):
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Int")
+                    svar_ext.type = vt
+                    svar_ext.int_value = float(val)
+                elif isinstance(val, float):
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                    svar_ext.type = vt
+                    svar_ext.double_value = val
+                elif isinstance(val, str):
+                    vt = ddm_pb2.DDMData.SimVar.Type.Value("String")
+                    svar_ext.type = vt
+                    svar_ext.string_value = str(val)
+
+            try:
+                raw_ext = packet_ext.SerializeToString()
+                self.last_ext_var_count = len(ext_chunk_names)
+                self.last_ext_payload_bytes = len(raw_ext)
+                self.sock.sendto(base64.b64encode(raw_ext).decode('ascii').encode('ascii'), self.target_addr)
+                self.ext_send_count += 1
+            except Exception:
+                self.send_error_count += 1
+
+        now_wall = time.perf_counter()
+        if now_wall - self.last_viz_send_wall < self.viz_send_interval:
+            self.viz_skip_count += 1
+            return
+        self.last_viz_send_wall = now_wall
+
+        for i in range(0, len(var_names), chunk_size):
+            chunk_names = var_names[i:i + chunk_size]
+
             # --- 2. 组装给本地看板的包 (绝对不重命名) ---
             packet_viz = ddm_pb2.DDMData()
             packet_viz.machine_time = time.time()
             packet_viz.sim_time = sim_time
-            
+
             for name in chunk_names:
                 val = variables[name]
-                
-                # 配置外部包
-                svar_ext = packet_ext.sim_vars.add()
-                svar_ext.name = name.replace('.', '_') if self.replace_dot else name
-                
+
                 # 配置看板包
                 svar_viz = packet_viz.sim_vars.add()
                 svar_viz.name = name
-                
+
                 # 类型推断与赋值
                 if isinstance(val, bool):
                     vt = ddm_pb2.DDMData.SimVar.Type.Value("Bool")
-                    svar_ext.type = vt; svar_viz.type = vt
-                    svar_ext.bool_value = 1.0 if val else 0.0
+                    svar_viz.type = vt
                     svar_viz.bool_value = 1.0 if val else 0.0
                 elif isinstance(val, int):
                     vt = ddm_pb2.DDMData.SimVar.Type.Value("Int")
-                    svar_ext.type = vt; svar_viz.type = vt
-                    svar_ext.int_value = float(val)
+                    svar_viz.type = vt
                     svar_viz.int_value = float(val)
                 elif isinstance(val, float):
                     vt = ddm_pb2.DDMData.SimVar.Type.Value("Double")
-                    svar_ext.type = vt; svar_viz.type = vt
-                    svar_ext.double_value = val
+                    svar_viz.type = vt
                     svar_viz.double_value = val
                 elif isinstance(val, str):
                     vt = ddm_pb2.DDMData.SimVar.Type.Value("String")
-                    svar_ext.type = vt; svar_viz.type = vt
-                    svar_ext.string_value = str(val)
+                    svar_viz.type = vt
                     svar_viz.string_value = str(val)
                     
-            # 广播发送
             try:
-                # 给外部系统
-                raw_ext = packet_ext.SerializeToString()
-                self.sock.sendto(base64.b64encode(raw_ext).decode('ascii').encode('ascii'), self.target_addr)
-                
-                # 给本地看板
                 raw_viz = packet_viz.SerializeToString()
+                self.last_viz_var_count = len(chunk_names)
+                self.last_viz_payload_bytes = len(raw_viz)
                 self.sock.sendto(base64.b64encode(raw_viz).decode('ascii').encode('ascii'), self.viz_addr)
-            except: pass
+                self.viz_send_count += 1
+            except Exception:
+                self.send_error_count += 1
 
     def send_injection_echo_to_viz(self, sim_time, variables, prefix="PE"):
         """Mirror external injected variables to the local dashboard for observability."""
@@ -350,8 +496,19 @@ class DDMCommManager:
         try:
             raw = packet.SerializeToString()
             self.sock.sendto(base64.b64encode(raw).decode('ascii').encode('ascii'), self.viz_addr)
+            self.viz_echo_send_count += 1
         except Exception:
             pass
+
+    def normalize_injection_echo_vars(self, variables, prefix="PE"):
+        normalized = {}
+        if not variables:
+            return normalized
+        for name, val in variables.items():
+            name_text = str(name)
+            out_name = name_text if name_text.startswith(('PE.', 'YC.')) else f"{prefix}.{name_text}"
+            normalized[out_name] = val
+        return normalized
 
 class FMUPlayer:
     def __init__(self, fmu_path, remote_ip="127.0.0.1", remote_port=8889, sim_id=None, sync_vars_file=None, control_port=8898, replace_dot=False, pause_file=None):
@@ -364,12 +521,31 @@ class FMUPlayer:
 
     def run(self, step_size=0.01, sim_time=float('inf'), sim_rate=1.0, sample_freq=0.0, init_params=None):
         md = self.processor.check_and_prepare()
-        if not md or not fmpy: return
+        if not md or not fmpy: return False
         self.comm.start_receiver()
         
         host_arch = "win64" if sys.maxsize > 2**32 else "win32"
         dll_path = os.path.abspath(os.path.join(self.processor.temp_dir, "binaries", host_arch))
         root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
+        blacklist_path, injection_blacklist = load_injection_blacklist(root_dir)
+        if injection_blacklist:
+            print(f"[*] Injection blacklist loaded: {len(injection_blacklist)} vars from {blacklist_path}", flush=True)
+        perf_log_path = os.path.join(root_dir, "fmu_worker_perf.log")
+
+        def append_perf_log(line):
+            try:
+                if os.path.exists(perf_log_path) and os.path.getsize(perf_log_path) > 10 * 1024 * 1024:
+                    bak = perf_log_path + ".1"
+                    try:
+                        if os.path.exists(bak): os.remove(bak)
+                    except Exception: pass
+                    try: os.replace(perf_log_path, bak)
+                    except Exception: pass
+                with open(perf_log_path, "a", encoding="utf-8") as f:
+                    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+            except Exception:
+                pass
+        append_perf_log(f"[SESSION][FMU] start fmu={os.path.basename(self.fmu_path)} pid={os.getpid()} step={step_size} sample_freq={sample_freq} sim_rate={sim_rate}")
         
         for p in [dll_path, root_dir]:
             if os.path.exists(p):
@@ -377,6 +553,9 @@ class FMUPlayer:
                 os.environ['PATH'] = p + os.pathsep + os.environ.get('PATH', '')
 
         orig_cwd = os.getcwd()
+        fmu_instance = None
+        run_ok = False
+        stop_requested = False
         try:
             if os.path.exists(dll_path):
                 os.chdir(dll_path)
@@ -513,10 +692,18 @@ class FMUPlayer:
             real_vr_map = {v.name: v.valueReference for v in v_real}
             int_vr_map = {v.name: v.valueReference for v in v_int}
             bool_vr_map = {v.name: v.valueReference for v in v_bool}
-            input_real_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Real') == 'Real'}
-            input_int_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Integer') == 'Integer'}
-            input_bool_vr_map = {v.name: v.valueReference for v in vars_list if getattr(v, 'type', 'Boolean') == 'Boolean'}
+
+            def is_runtime_settable(v):
+                causality = str(getattr(v, 'causality', '') or '').lower()
+                variability = str(getattr(v, 'variability', '') or '').lower()
+                return causality == 'input' or (causality == 'parameter' and variability == 'tunable')
+
+            injectable_vars = [v for v in vars_list if is_runtime_settable(v)]
+            input_real_vr_map = {v.name: v.valueReference for v in injectable_vars if getattr(v, 'type', 'Real') == 'Real'}
+            input_int_vr_map = {v.name: v.valueReference for v in injectable_vars if getattr(v, 'type', 'Integer') == 'Integer'}
+            input_bool_vr_map = {v.name: v.valueReference for v in injectable_vars if getattr(v, 'type', 'Boolean') == 'Boolean'}
             input_all_names = list(input_real_vr_map) + list(input_int_vr_map) + list(input_bool_vr_map)
+            print(f"[*] Runtime injectable variables: {len(input_all_names)} (Real={len(input_real_vr_map)}, Int={len(input_int_vr_map)}, Bool={len(input_bool_vr_map)})")
             input_fuzzy = {}
             for n in input_all_names:
                 for key in {normalize_var_key(n), normalize_var_key(n.split('.')[-1]), normalize_var_key(n.split(':')[-1])}:
@@ -542,6 +729,72 @@ class FMUPlayer:
             last_log_pct = -1
             paused = False
             last_injection_log_wall = 0.0
+            latest_telemetry_for_pe = {}
+            telemetry_ttl_sec = max(0.2, float(os.environ.get("FMUSOLVER_YC_MERGE_TTL_SEC", "3.0")))
+            telemetry_max_vars = max(1, int(os.environ.get("FMUSOLVER_YC_MERGE_MAX_VARS", "500")))
+            last_perf_log_wall = time.perf_counter()
+            control_cmd_count = 0
+            control_error_count = 0
+            recent_injections = []
+            last_perf_snapshot = ""
+            missing_input_cache = set()
+            last_applied_injection = None
+            viz_echo_cache = {}
+            viz_echo_last_send = 0.0
+            viz_echo_interval = max(0.05, float(os.environ.get("FMUSOLVER_VIZ_INJECTION_ECHO_INTERVAL", "0.2")))
+            pending_limited_injection = {}
+            limited_inject_freq = max(0.1, float(os.environ.get("FMUSOLVER_YC_INJECT_FREQ", str(min(5.0, sample_freq or 5.0)))))
+            limited_inject_interval = 1.0 / limited_inject_freq
+            last_limited_inject_wall = 0.0
+            ext_inject_grace_sim_sec = max(0.0, float(os.environ.get("FMUSOLVER_EXT_INJECT_GRACE_SIM_SEC", "2.0")))
+            ext_grace_logged = False
+            external_inject_state = {}
+            external_inject_min_interval = max(0.02, float(os.environ.get("FMUSOLVER_EXT_INJECT_MIN_INTERVAL", "0.2")))
+            sensitive_inject_min_interval = max(external_inject_min_interval, float(os.environ.get("FMUSOLVER_SENSITIVE_INJECT_MIN_INTERVAL", "1.0")))
+            external_inject_epsilon = max(0.0, float(os.environ.get("FMUSOLVER_EXT_INJECT_EPS", "1e-5")))
+            sensitive_inject_names = tuple(
+                item.strip() for item in os.environ.get(
+                    "FMUSOLVER_SENSITIVE_INJECT_NAMES",
+                    "ShelterRatio_CJinput,SolarAngle_CJinput,solar_CJinput"
+                ).split(',') if item.strip()
+            )
+            injection_stdout_interval = max(1.0, float(os.environ.get("FMUSOLVER_INJECTION_STDOUT_INTERVAL", "10.0")))
+            last_injection_stdout_wall = 0.0
+
+            def remember_injection(source, actual, kind, value, status):
+                recent_injections.append({
+                    "wall": time.strftime('%Y-%m-%d %H:%M:%S'),
+                    "sim_time": current_time,
+                    "source": str(source),
+                    "actual": str(actual or ""),
+                    "kind": kind,
+                    "value": repr(value),
+                    "status": status,
+                })
+                if len(recent_injections) > 20:
+                    del recent_injections[:len(recent_injections) - 20]
+
+            def should_apply_external_injection(source, actual, value):
+                if not str(source).startswith(("PE.", "YC.")):
+                    return True
+                now_state = time.perf_counter()
+                clean_source = strip_source_prefix(source)
+                is_sensitive = any(token in clean_source or token in str(actual or "") for token in sensitive_inject_names)
+                min_interval = sensitive_inject_min_interval if is_sensitive else external_inject_min_interval
+                key = str(actual or clean_source)
+                old_value, old_wall = external_inject_state.get(key, (None, 0.0))
+                try:
+                    changed = old_value is None or abs(float(value) - float(old_value)) > external_inject_epsilon
+                except Exception:
+                    changed = old_value != value
+                if not changed and now_state - old_wall < min_interval:
+                    remember_injection(source, actual, "Skipped", value, "unchanged_throttled")
+                    return False
+                if now_state - old_wall < min_interval:
+                    remember_injection(source, actual, "Skipped", value, "rate_limited")
+                    return False
+                external_inject_state[key] = (value, now_state)
+                return True
             
             print(f"[*] Simulation Loop Started. Step={step_size}s, Rate={sim_rate}x")
 
@@ -553,10 +806,13 @@ class FMUPlayer:
                         break
                     try:
                         cmd = json.loads(raw_cmd.decode('utf-8'))
+                        control_cmd_count += 1
                         if self.sim_id and cmd.get("sim_id") != self.sim_id:
                             self.comm.last_received_data = None
                             continue
-                        if cmd.get("exit"): break
+                        if cmd.get("exit"):
+                            stop_requested = True
+                            break
                         if "pause" in cmd:
                             paused = bool(cmd.get("pause"))
                             print(f"[*] Simulation {'Paused' if paused else 'Resumed'}", flush=True)
@@ -567,41 +823,110 @@ class FMUPlayer:
                             sim_rate = float(cmd["sim_rate"])
                             sim_wall_anchor = time.perf_counter()
                             sim_time_anchor = current_time
+                        if "sample_freq" in cmd:
+                            sample_freq = float(cmd["sample_freq"])
+                        if "yc_inject_freq" in cmd:
+                            limited_inject_freq = max(0.1, float(cmd["yc_inject_freq"]))
+                            limited_inject_interval = 1.0 / limited_inject_freq
                         injected_count = 0
                         missing_injection = []
                         injected_echo = {}
                         for k, v in cmd.items():
-                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq"):
+                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now"):
                                 continue
                             injected_echo[str(k)] = v
+                            is_rate_limited_external = str(k).startswith(("PE.", "YC."))
+                            if str(k).startswith("YC."):
+                                pe_name = strip_source_prefix(k)
+                                if should_forward_telemetry_to_pe(pe_name):
+                                    latest_telemetry_for_pe[pe_name] = (v, time.perf_counter())
+                                if len(latest_telemetry_for_pe) > telemetry_max_vars:
+                                    overflow = len(latest_telemetry_for_pe) - telemetry_max_vars
+                                    for old_name, _ in sorted(latest_telemetry_for_pe.items(), key=lambda item: item[1][1])[:overflow]:
+                                        latest_telemetry_for_pe.pop(old_name, None)
+                            if is_rate_limited_external and not cmd.get("__apply_yc_now"):
+                                pending_limited_injection[str(k)] = v
+                                continue
+                            if is_rate_limited_external and current_time < ext_inject_grace_sim_sec:
+                                pending_limited_injection[str(k)] = v
+                                continue
+                            if str(k) in missing_input_cache:
+                                continue
                             actual = resolve_input_name(k)
+                            if actual and actual in injection_blacklist:
+                                remember_injection(k, actual, "Skipped", v, "blacklisted")
+                                continue
+                            if actual and not should_apply_external_injection(k, actual, v):
+                                continue
                             if actual in input_real_vr_map:
-                                fmu_instance.setReal([input_real_vr_map[actual]], [float(v)])
-                                injected_count += 1
-                                if time.perf_counter() - last_injection_log_wall > 1.0:
-                                    print(f"[*] Injected Real {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                                try:
+                                    fmu_instance.setReal([input_real_vr_map[actual]], [float(v)])
+                                    injected_count += 1
+                                    remember_injection(k, actual, "Real", v, "applied")
+                                    last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Real", "value": repr(v), "sim_time": current_time}
+                                    if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
+                                        print(f"[*] Injected Real {strip_source_prefix(k)} <- {k} = {v}", flush=True); last_injection_stdout_wall = time.perf_counter()
+                                except Exception as set_e:
+                                    remember_injection(k, actual, "Real", v, f"setReal failed: {set_e}")
+                                    missing_injection.append(f"{k}->{actual} setReal failed: {set_e}")
                             elif actual in input_int_vr_map:
-                                fmu_instance.setInteger([input_int_vr_map[actual]], [int(v)])
-                                injected_count += 1
-                                if time.perf_counter() - last_injection_log_wall > 1.0:
-                                    print(f"[*] Injected Integer {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                                try:
+                                    fmu_instance.setInteger([input_int_vr_map[actual]], [int(v)])
+                                    injected_count += 1
+                                    remember_injection(k, actual, "Integer", v, "applied")
+                                    last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Integer", "value": repr(v), "sim_time": current_time}
+                                    if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
+                                        print(f"[*] Injected Integer {strip_source_prefix(k)} <- {k} = {v}", flush=True); last_injection_stdout_wall = time.perf_counter()
+                                except Exception as set_e:
+                                    remember_injection(k, actual, "Integer", v, f"setInteger failed: {set_e}")
+                                    missing_injection.append(f"{k}->{actual} setInteger failed: {set_e}")
                             elif actual in input_bool_vr_map:
-                                fmu_instance.setBoolean([input_bool_vr_map[actual]], [parse_bool_value(v)])
-                                injected_count += 1
-                                if time.perf_counter() - last_injection_log_wall > 1.0:
-                                    print(f"[*] Injected Boolean {actual}={v}", flush=True); last_injection_log_wall = time.perf_counter()
+                                try:
+                                    fmu_instance.setBoolean([input_bool_vr_map[actual]], [parse_bool_value(v)])
+                                    injected_count += 1
+                                    remember_injection(k, actual, "Boolean", v, "applied")
+                                    last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Boolean", "value": repr(v), "sim_time": current_time}
+                                    if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
+                                        print(f"[*] Injected Boolean {strip_source_prefix(k)} <- {k} = {v}", flush=True); last_injection_stdout_wall = time.perf_counter()
+                                except Exception as set_e:
+                                    remember_injection(k, actual, "Boolean", v, f"setBoolean failed: {set_e}")
+                                    missing_injection.append(f"{k}->{actual} setBoolean failed: {set_e}")
                             else:
+                                remember_injection(k, actual, "Unknown", v, "missing")
+                                missing_input_cache.add(str(k))
                                 missing_injection.append(str(k))
-                        if time.perf_counter() - last_injection_log_wall > 1.0:
-                            total_cmd = len([k for k in cmd if k not in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq")])
+                        if time.perf_counter() - last_injection_log_wall > 5.0:
+                            total_cmd = len([k for k in cmd if k not in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now")])
                             if missing_injection:
                                 print(f"[!] Injection summary: {injected_count}/{total_cmd} applied; missing: {', '.join(missing_injection[:8])}", flush=True)
                             elif injected_count:
                                 print(f"[*] Injection summary: {injected_count}/{total_cmd} applied", flush=True)
                             last_injection_log_wall = time.perf_counter()
-                        self.comm.send_injection_echo_to_viz(current_time, injected_echo)
+                        viz_echo_cache.update(self.comm.normalize_injection_echo_vars(injected_echo))
                     except Exception as e:
+                        control_error_count += 1
                         print(f"[!] Control command error: {e}", flush=True)
+                now_limited_inject = time.perf_counter()
+                if pending_limited_injection and current_time < ext_inject_grace_sim_sec:
+                    if not ext_grace_logged:
+                        print(f"[*] External PE/YC injection delayed until sim_time >= {ext_inject_grace_sim_sec:.2f}s for FMU startup stability.", flush=True)
+                        ext_grace_logged = True
+                elif pending_limited_injection and now_limited_inject - last_limited_inject_wall >= limited_inject_interval:
+                    apply_cmd = {"sim_id": self.sim_id or "", "__apply_yc_now": True}
+                    apply_cmd.update(pending_limited_injection)
+                    pending_limited_injection = {}
+                    last_limited_inject_wall = now_limited_inject
+                    try:
+                        self.comm.received_queue.put_nowait(json.dumps(apply_cmd).encode('utf-8'))
+                    except queue.Full:
+                        try: self.comm.received_queue.get_nowait()
+                        except Exception: pass
+                        try: self.comm.received_queue.put_nowait(json.dumps(apply_cmd).encode('utf-8'))
+                        except Exception: pass
+                if stop_requested:
+                    run_ok = True
+                    print("[*] Simulation exit requested.", flush=True)
+                    break
                 self.comm.last_received_data = None
 
                 if self.pause_file:
@@ -615,6 +940,12 @@ class FMUPlayer:
                     sim_wall_anchor = time.perf_counter()
                     sim_time_anchor = current_time
                     continue
+
+                now_echo = time.perf_counter()
+                if viz_echo_cache and now_echo - viz_echo_last_send >= viz_echo_interval:
+                    self.comm.send_injection_echo_to_viz(current_time, viz_echo_cache)
+                    viz_echo_cache.clear()
+                    viz_echo_last_send = now_echo
 
                 # doStep in FMPy may return None on success. Error handling is managed internally via exceptions.
                 fmu_instance.doStep(currentCommunicationPoint=current_time, communicationStepSize=step_size)
@@ -637,7 +968,12 @@ class FMUPlayer:
                     if v_bool:
                         vals = fmu_instance.getBoolean([v.valueReference for v in v_bool])
                         for v, val in zip(v_bool, vals): out[get_out_name(v.name)] = bool(val)
-                    self.comm.send_fmu_data(current_time, out)
+                    now_for_yc = time.perf_counter()
+                    stale_yc = [name for name, (_, ts) in latest_telemetry_for_pe.items() if now_for_yc - ts > telemetry_ttl_sec]
+                    for name in stale_yc:
+                        latest_telemetry_for_pe.pop(name, None)
+                    fresh_yc_for_pe = {name: value for name, (value, _) in latest_telemetry_for_pe.items()}
+                    self.comm.send_fmu_data(current_time, out, extra_external_variables=fresh_yc_for_pe)
 
                 # Keep logs tied to wall-clock time so high-speed simulation does not flood the GUI.
                 now_wall = time.perf_counter()
@@ -647,15 +983,60 @@ class FMUPlayer:
                     print(f"[Live] [{pct}%] Time: {current_time:6.2f}s | Sent {v_count} vars | Rate: {sim_rate:4.1f}x | Freq: {sample_freq:4.1f}Hz", flush=True)
                     last_log_wall = now_wall
                     last_log_pct = pct
+                if now_wall - last_perf_log_wall >= 5.0:
+                    last_perf_snapshot = (
+                        f"[PERF][FMU] sim={current_time:.2f}s control_recv={self.comm.recv_count} "
+                        f"control_cmd={control_cmd_count} control_err={control_error_count} "
+                        f"queue={self.comm.received_queue.qsize()}/{self.comm.received_queue.maxsize} "
+                        f"queue_drop={self.comm.recv_drop_count} yc_cache={len(latest_telemetry_for_pe)} ext_pending={len(pending_limited_injection)} ext_inj_freq={limited_inject_freq:.1f}Hz "
+                        f"ext_grace={ext_inject_grace_sim_sec:.1f}s yc_ttl={telemetry_ttl_sec:.1f}s yc_max={telemetry_max_vars} "
+                        f"pe_send={self.comm.ext_send_count} viz_send={self.comm.viz_send_count} "
+                        f"viz_skip={self.comm.viz_skip_count} viz_hz={self.comm.viz_send_max_hz:.1f} viz_echo={self.comm.viz_echo_send_count} send_err={self.comm.send_error_count} last_pe_vars={self.comm.last_ext_var_count} "
+                        f"last_pe_bytes={self.comm.last_ext_payload_bytes} "
+                        f"last_viz_vars={self.comm.last_viz_var_count} last_viz_bytes={self.comm.last_viz_payload_bytes}"
+                    )
+                    print(last_perf_snapshot, flush=True)
+                    append_perf_log(last_perf_snapshot)
+                    last_perf_log_wall = now_wall
 
                 current_time += step_size
                 if sim_rate > 0:
                     target_wall = sim_wall_anchor + (current_time - sim_time_anchor) / sim_rate
                     diff = target_wall - time.perf_counter()
                     if diff > 0.002: time.sleep(diff)
+            else:
+                run_ok = True
 
         except Exception as e:
             print(f"[!] Simulation Error: {e}")
+            print(traceback.format_exc(), flush=True)
+            try:
+                fatal_path = os.path.join(root_dir, "fmu_worker_runtime_fatal.log")
+                with open(fatal_path, "a", encoding="utf-8") as f:
+                    f.write(f"\n--- FMU Worker Fatal {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+                    f.write(f"error={e}\n")
+                    f.write(f"sim_time={locals().get('current_time', 'unknown')} step_size={step_size} sample_freq={sample_freq} sim_rate={sim_rate}\n")
+                    if last_perf_snapshot:
+                        f.write(last_perf_snapshot + "\n")
+                    f.write("Recent injections (oldest -> newest):\n")
+                    for item in recent_injections:
+                        f.write(json.dumps(item, ensure_ascii=False) + "\n")
+                    if last_applied_injection:
+                        f.write("Last applied injection before crash:\n")
+                        f.write(json.dumps(last_applied_injection, ensure_ascii=False) + "\n")
+                    f.write("Telemetry cache sample:\n")
+                    try:
+                        sample = {k: v for k, (v, _) in list(latest_telemetry_for_pe.items())[-30:]}
+                        f.write(json.dumps(sample, ensure_ascii=False, default=str) + "\n")
+                    except Exception:
+                        pass
+                    f.write(traceback.format_exc())
+            except Exception:
+                pass
+            if "0xe06d7363" in str(e) and last_applied_injection:
+                actual = last_applied_injection.get("actual")
+                append_injection_blacklist(blacklist_path, actual, f"Auto-added after FMU native exception at sim_time={last_applied_injection.get('sim_time')}: {e}")
+                print(f"[!] Auto-blacklisted injection variable after FMU native exception: {actual}", flush=True)
             # --- 深度诊断：如果是读取失败，尝试定位具体变量 ---
             if "fmi2GetReal" in str(e):
                 print("[*] Diagnostic: Checking which variable caused fmi2GetReal error...")
@@ -666,8 +1047,11 @@ class FMUPlayer:
                         print(f"[!] FAILED VARIABLE: {v.name} (VR={v.valueReference})")
         finally:
             os.chdir(orig_cwd)
-            try: fmu_instance.terminate(); fmu_instance.freeInstance()
+            try:
+                if fmu_instance is not None:
+                    fmu_instance.terminate(); fmu_instance.freeInstance()
             except: pass
+        return run_ok
 
 if __name__ == "__main__":
     import argparse
@@ -691,7 +1075,9 @@ if __name__ == "__main__":
     if args.params:
         try: init_params = json.loads(args.params)
         except: pass
-        
-    FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port, replace_dot=args.replace_dot, pause_file=args.pause_file).run(
+    start_parent_watchdog()
+
+    ok = FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id, sync_vars_file=args.sync_vars, control_port=args.control_port, replace_dot=args.replace_dot, pause_file=args.pause_file).run(
         step_size=args.step, sim_time=args.time, sim_rate=args.rate, sample_freq=args.freq, init_params=init_params
     )
+    sys.exit(0 if ok else 2)

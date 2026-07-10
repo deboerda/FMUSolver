@@ -10,6 +10,8 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
+APP_VERSION = "v26.0709"
+
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
@@ -112,6 +114,16 @@ QWidget#TabContainer {{
 QLabel#BrandLabel {{
     color: #111111;
     font-size: 15px;
+    font-weight: 800;
+}}
+
+QLabel#VersionBadge {{
+    color: #4B5563;
+    background: rgba(255,255,255,150);
+    border: 1px solid rgba(0,0,0,18);
+    border-radius: 8px;
+    padding: 2px 7px;
+    font-size: 10px;
     font-weight: 800;
 }}
 
@@ -886,6 +898,10 @@ class TitleBar(QWidget):
             self.brand_lbl = QLabel("FmuSolver")
             self.brand_lbl.setObjectName("BrandLabel")
             lay.addWidget(self.brand_lbl)
+            self.version_lbl = QLabel(APP_VERSION)
+            self.version_lbl.setObjectName("VersionBadge")
+            self.version_lbl.setToolTip(f"FmuSolver version {APP_VERSION}")
+            lay.addWidget(self.version_lbl)
             lay.addSpacing(12)
 
             t_lay = QVBoxLayout(); t_lay.setSpacing(2); t_lay.setContentsMargins(0, 10, 0, 10)
@@ -914,6 +930,9 @@ class TitleBar(QWidget):
             self.brand_lbl = QLabel("")
             self.brand_lbl.setObjectName("BrandLabel")
             lay.addWidget(self.brand_lbl)
+            self.version_lbl = QLabel("")
+            self.version_lbl.setObjectName("VersionBadge")
+            self.version_lbl.hide()
             
             self.title_lbl = QLabel(""); self.title_lbl.setObjectName("HeaderLabel")
             self.sub_lbl = QLabel(""); self.sub_lbl.setObjectName("SubHeaderLabel")
@@ -1379,6 +1398,10 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_proc = None
         self.current_sim_id = None
         self._yaoce_log_pos = 0
+        self.runtime_log_path = os.path.join(APP_DIR, "fmusolver_runtime.log")
+        self.last_ui_heartbeat = time.time()
+        self._runtime_log_last_size_check = 0.0
+        self._ui_log_throttle = {}
         self.gui_config_path = GUI_CONFIG_PATH
         self.gui_config = self._load_gui_config()
         self.default_sim_fmu   = self._resolve_sim_fmu()
@@ -1400,6 +1423,9 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.connect(self._reset_ui)
         self.sig_orbit_done.connect(self._orbit_done_ui)
         self.sig_export_ready.connect(lambda: self.btn_export.setEnabled(True))
+        self.ui_heartbeat_timer = QTimer(self)
+        self.ui_heartbeat_timer.timeout.connect(self._write_ui_heartbeat)
+        self.ui_heartbeat_timer.start(10000)
 
     def _cleanup_on_start(self):
         """ 清理旧的日志和临时文件，确保空间不膨胀 """
@@ -1508,6 +1534,21 @@ class FmuSolverGUI(QMainWindow):
         self.title_bar.led_dot.setStyleSheet(f"color: {dot_c}; font-size: 14px; margin-right: 4px;")
         self.title_bar.led_txt.setText(label)
 
+    def _kill_process_tree(self, proc):
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            if os.name == 'nt':
+                subprocess.call(['taskkill', '/F', '/T', '/PID', str(proc.pid)], creationflags=0x08000000)
+            else:
+                proc.terminate()
+                proc.wait(timeout=1)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
     def closeEvent(self, event):
         """退出时确保所有子进程都已关闭"""
         try:
@@ -1516,9 +1557,7 @@ class FmuSolverGUI(QMainWindow):
             pass
         try:
             for p in [self.visualizer_process, self.worker_process, self.orbit_proc, getattr(self, 'yaoce_proc', None)]:
-                if p and p.poll() is None:
-                    p.terminate()
-                    p.wait(timeout=1)
+                self._kill_process_tree(p)
         except: pass
         try:
             if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
@@ -1671,7 +1710,53 @@ class FmuSolverGUI(QMainWindow):
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTHONIOENCODING"] = "utf-8"
+        env["FMUSOLVER_PARENT_PID"] = str(os.getpid())
+        env.setdefault("FMUSOLVER_VIZ_SEND_HZ", "5.0")
+        env.setdefault("FMUSOLVER_EXT_INJECT_MIN_INTERVAL", "0.2")
+        env.setdefault("FMUSOLVER_SENSITIVE_INJECT_MIN_INTERVAL", "1.0")
+        env.setdefault("FMUSOLVER_INJECTION_STDOUT_INTERVAL", "10.0")
+        env.setdefault("FMUSOLVER_EXT_INJECT_GRACE_SIM_SEC", "2.0")
         return env
+
+    def _append_runtime_log(self, line):
+        try:
+            now = time.time()
+            if now - getattr(self, '_runtime_log_last_size_check', 0.0) > 30.0 and os.path.exists(self.runtime_log_path):
+                self._runtime_log_last_size_check = now
+                if os.path.getsize(self.runtime_log_path) > 10 * 1024 * 1024:
+                    bak = self.runtime_log_path + ".1"
+                    try:
+                        if os.path.exists(bak): os.remove(bak)
+                    except Exception: pass
+                    try: os.replace(self.runtime_log_path, bak)
+                    except Exception: pass
+            with open(self.runtime_log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+        except Exception:
+            pass
+
+    def _write_ui_heartbeat(self):
+        try:
+            proc_info = ""
+            if os.name == 'nt':
+                try:
+                    import ctypes
+                    class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                        _fields_ = [('cb', ctypes.c_ulong), ('PageFaultCount', ctypes.c_ulong), ('PeakWorkingSetSize', ctypes.c_size_t), ('WorkingSetSize', ctypes.c_size_t), ('QuotaPeakPagedPoolUsage', ctypes.c_size_t), ('QuotaPagedPoolUsage', ctypes.c_size_t), ('QuotaPeakNonPagedPoolUsage', ctypes.c_size_t), ('QuotaNonPagedPoolUsage', ctypes.c_size_t), ('PagefileUsage', ctypes.c_size_t), ('PeakPagefileUsage', ctypes.c_size_t)]
+                    counters = PROCESS_MEMORY_COUNTERS(); counters.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
+                    if ctypes.WinDLL('psapi').GetProcessMemoryInfo(ctypes.windll.kernel32.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+                        proc_info = f" ui_mem={counters.WorkingSetSize // (1024*1024)}MB"
+                except Exception:
+                    pass
+            self._append_runtime_log(
+                f"[HEARTBEAT][UI] worker_alive={bool(self.worker_process and self.worker_process.poll() is None)} "
+                f"yaoce_alive={bool(getattr(self, 'yaoce_proc', None) and self.yaoce_proc.poll() is None)} "
+                f"viz_alive={bool(self.visualizer_process and self.visualizer_process.poll() is None)} "
+                f"log_blocks={self.txt_log.document().blockCount() if hasattr(self, 'txt_log') else -1} "
+                f"yc_log_blocks={self.txt_yaoce_log.document().blockCount() if hasattr(self, 'txt_yaoce_log') else -1}{proc_info}"
+            )
+        except Exception:
+            pass
 
     def pick_theme(self):
         bg_color = self._open_color_dialog(QColor(240, 242, 246), "选择主背景颜色")
@@ -1754,6 +1839,7 @@ class FmuSolverGUI(QMainWindow):
         QWidget#TabContainer {{ background: transparent; border: none; }}
         QWidget#ContentStack {{ background: transparent; }}
         QLabel#BrandLabel, QLabel#HeaderLabel {{ color: {text_c}; font-size: 14px; font-weight: 800; }}
+        QLabel#VersionBadge {{ color: {text_c}; background: rgba(255,255,255,90); border: 1px solid rgba(255,255,255,70); border-radius: 8px; padding: 2px 7px; font-size: 10px; font-weight: 800; }}
         QLabel#SubHeaderLabel, QLabel#StatusText, QLabel#Muted, QLabel#ParamLabel {{ color: {text_c}; font-weight: 600; font-size: 12px; }}
         QLabel#StatusText {{ font-size: 11px; font-weight: 700; }}
         QLabel#SubHeaderLabel {{ font-size: 11px; opacity: 0.8; }}
@@ -2060,13 +2146,21 @@ class FmuSolverGUI(QMainWindow):
 
     def _append_log(self, widget, msg, tag="sys"):
         """Internal helper to append text to log widgets with timestamps and colors."""
+        msg_text = str(msg)
+        if ("[Live]" in msg_text or "[PERF]" in msg_text) and tag != "error":
+            key = (id(widget), msg_text.split(']', 1)[0] if ']' in msg_text else msg_text[:24])
+            now = time.time()
+            last = self._ui_log_throttle.get(key, 0.0)
+            if now - last < 2.0:
+                return
+            self._ui_log_throttle[key] = now
         ts = datetime.now().strftime("%H:%M:%S")
         color = "#8E8E93"
         if tag == "error": color = C_ERROR
         elif tag == "success": color = C_SUCCESS
         elif tag == "warn": color = C_WARNING
 
-        html_msg = f'<span style="color:#666;">[{ts}]</span> <span style="color:{color};">{msg}</span>'
+        html_msg = f'<span style="color:#666;">[{ts}]</span> <span style="color:{color};">{msg_text}</span>'
 
         widget.moveCursor(QTextCursor.End)
         widget.insertHtml(html_msg + "<br>")
@@ -2074,12 +2168,14 @@ class FmuSolverGUI(QMainWindow):
         widget.verticalScrollBar().setValue(widget.verticalScrollBar().maximum())
 
     def log(self, msg, tag="sys"):
+        self._append_runtime_log(f"[SIM_UI][{tag}] {msg}")
         self.sig_log.emit(str(msg), tag)
 
     def olog(self, msg, tag="sys"):
         self.sig_olog.emit(str(msg), tag)
 
     def ylog(self, msg, tag="sys"):
+        self._append_runtime_log(f"[YC_UI][{tag}] {msg}")
         self.sig_ylog.emit(str(msg), tag)
 
     def _decode_process_line(self, data):
@@ -2105,18 +2201,30 @@ class FmuSolverGUI(QMainWindow):
         
 
     def start_yaoce(self):
-        worker_cmd = [sys.executable]
-        if not getattr(sys, 'frozen', False): worker_cmd.append(os.path.abspath(__file__))
-        worker_cmd.extend(["--yaoceworker", self.yaoce_dir])
+        log_file = os.path.join(APP_DIR, "yaoce_run.log")
+        if getattr(sys, 'frozen', False):
+            yaoce_exe = os.path.join(APP_DIR, "YaoCe_LinkLayer64.exe")
+            if not os.path.exists(yaoce_exe):
+                yaoce_exe = os.path.join(APP_DIR, "YaoCe_LinkLayer32.exe")
+            worker_cmd = [yaoce_exe, self.yaoce_dir]
+        else:
+            # Source mode should launch the lightweight telemetry bridge directly.
+            # Starting this whole launcher again loads Qt/UI dependencies and can exhaust memory.
+            yaoce_main = os.path.join(APP_DIR, "yaocetest", "main.py")
+            worker_cmd = [sys.executable, "-u", yaoce_main, self.yaoce_dir]
         
         self.btn_yaoce_start.setEnabled(False)
         self.btn_yaoce_stop.setEnabled(True)
         
         self.ylog("===========================================", "sys")
         self.ylog(f"[*] 启动底层遥测子进程... CMD={worker_cmd}", "sys")
+        self.ylog(f"[*] 遥测运行日志: {log_file}", "sys")
+        if getattr(sys, 'frozen', False) and not os.path.exists(worker_cmd[0]):
+            self.ylog(f"[!] 遥测转发 EXE 不存在: {worker_cmd[0]}", "error")
+            self.stop_yaoce()
+            return
         
         # UI端主动清空老日志，避免被旧数据污染或截断判定干扰
-        log_file = os.path.join(APP_DIR, "yaoce_run.log")
         try:
             with open(log_file, "w", encoding="utf-8") as f: f.write("")
         except: pass
@@ -2127,10 +2235,20 @@ class FmuSolverGUI(QMainWindow):
             child_env = self._child_env()
             child_env["FMUSOLVER_PE_IP"] = self.ip_edit.edit.text().strip() or "127.0.0.1"
             child_env["FMUSOLVER_PE_PORT"] = self.port_edit.edit.text().strip() or "8889"
-            child_env["FMUSOLVER_LOCAL_INJECT_PORT"] = str(int(self.inj_port_edit.edit.text() or "9988"))
-            self.ylog(f"[*] 遥测与仿真统一转发到 PE: {child_env['FMUSOLVER_PE_IP']}:{child_env['FMUSOLVER_PE_PORT']}", "sys")
+            child_env["FMUSOLVER_LOCAL_INJECT_PORT"] = str(CONTROL_PORT)
+            child_env["FMUSOLVER_YC_INJECT_FREQ"] = str(min(5.0, float(self.freq_e.edit.text() or "50.0")))
+            child_env["FMUSOLVER_MERGE_TELEMETRY_VIA_WORKER"] = "1"
+            child_env.setdefault("FMUSOLVER_YC_RAW_LOG_SAMPLE", "5000")
+            child_env.setdefault("FMUSOLVER_YC_SEND_LOG_SAMPLE", "5000")
+            child_env.setdefault("FMUSOLVER_YC_LIVE_LOG_INTERVAL", "30")
+            child_env.setdefault("FMUSOLVER_YC_LOG_QUEUE_MAX", "200")
+            child_env["PYTHONUNBUFFERED"] = "1"
+            self.ylog(f"[*] 遥测将先注入 FMU Worker，并与仿真数据合包转发到 PE: {child_env['FMUSOLVER_PE_IP']}:{child_env['FMUSOLVER_PE_PORT']}", "sys")
             self.ylog(f"[*] 遥测同步注入到本机 FMU 监听端口: 127.0.0.1:{child_env['FMUSOLVER_LOCAL_INJECT_PORT']}", "sys")
-            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding='utf-8', errors='replace', bufsize=1, cwd=APP_DIR, env=child_env, creationflags=cf)
+            self._yaoce_log_handle = open(log_file, "a", encoding="utf-8", buffering=1)
+            self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=self._yaoce_log_handle, stderr=subprocess.STDOUT, cwd=APP_DIR, env=child_env, creationflags=cf)
+            self.ylog(f"[OK] 遥测子进程已启动: pid={self.yaoce_proc.pid} cwd={APP_DIR}", "info")
+            self.ylog(f"[*] 遥测诊断参数: merge_via_worker={child_env.get('FMUSOLVER_MERGE_TELEMETRY_VIA_WORKER')} data_q={child_env.get('FMUSOLVER_YC_DATA_QUEUE_MAX', '3000')} log_q={child_env.get('FMUSOLVER_YC_LOG_QUEUE_MAX', '2000')}", "sys")
             
             def poll_log():
                 if not hasattr(self, 'yaoce_proc') or not self.yaoce_proc: return
@@ -2143,9 +2261,12 @@ class FmuSolverGUI(QMainWindow):
                             new_data = f.read()
                             self._yaoce_log_pos = f.tell()
                             if new_data:
-                                for l in new_data.split('\n'):
-                                    l = l.strip()
-                                    if not l: continue
+                                lines = [l.strip() for l in new_data.split('\n') if l.strip()]
+                                dropped_lines = max(0, len(lines) - 120)
+                                if dropped_lines:
+                                    lines = lines[-120:]
+                                    self.ylog(f"[PERF][YAOCE_UI] 日志显示限流: 本轮省略 {dropped_lines} 行，完整内容仍在 yaoce_run.log", "info")
+                                for l in lines:
                                     tag = "sys"
                                     if "[SEND]" in l or "[TCP/UDP]" in l or "[RECV]" in l or "[OK]" in l or "[*]" in l: tag = "info"
                                     elif "[-]" in l: tag = "error"
@@ -2155,13 +2276,18 @@ class FmuSolverGUI(QMainWindow):
                     except: pass
                 
                 if self.yaoce_proc.poll() is None:
-                    QTimer.singleShot(200, poll_log)
+                    QTimer.singleShot(5000, poll_log)
                 else:
-                    self.ylog(f"[SYS] 转发引擎退出，退出码: {self.yaoce_proc.poll()}", "sys")
+                    rc = self.yaoce_proc.poll()
+                    self.ylog(f"[SYS] 转发引擎退出，退出码: {rc}，完整日志: {log_file}", "sys" if rc == 0 else "error")
+                    if hasattr(self, '_yaoce_log_handle') and self._yaoce_log_handle:
+                        try: self._yaoce_log_handle.close()
+                        except: pass
+                        self._yaoce_log_handle = None
                     self.btn_yaoce_start.setEnabled(True)
                     self.btn_yaoce_stop.setEnabled(False)
 
-            QTimer.singleShot(200, poll_log)
+            QTimer.singleShot(5000, poll_log)
         except Exception as e:
             self.ylog(f"[!] 独立子进程启动致命失败: {e}", "error")
             self.stop_yaoce()
@@ -2175,6 +2301,10 @@ class FmuSolverGUI(QMainWindow):
                 self.ylog("[*] 发送强制终止指令...", "error")
             except: pass
             self.yaoce_proc = None
+        if hasattr(self, '_yaoce_log_handle') and self._yaoce_log_handle:
+            try: self._yaoce_log_handle.close()
+            except: pass
+            self._yaoce_log_handle = None
         self.btn_yaoce_start.setEnabled(True)
         self.btn_yaoce_stop.setEnabled(False)
 
@@ -2257,6 +2387,7 @@ class FmuSolverGUI(QMainWindow):
         self._update_led("running")
         self.txt_log.clear()
         self.olog(f"[*] 启动仿真引擎 (ID: {self.current_sim_id}, Arch: {fmu_bit})...", "sys")
+        self.log(f"[*] Worker CMD={cmd}", "sys")
         
         try:
             # --- 可视化终端同步启动 ---
@@ -2265,6 +2396,7 @@ class FmuSolverGUI(QMainWindow):
 
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
             self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+            self.log(f"[OK] FMU Worker 已启动: pid={self.worker_process.pid} cwd={APP_DIR}", "info")
             QTimer.singleShot(2000, self.update_params) # 延迟2秒同步参数
             threading.Thread(target=self._read_worker_logs, daemon=True).start()
             
@@ -2279,9 +2411,12 @@ class FmuSolverGUI(QMainWindow):
         if not self.worker_process: return
         total_t = float(self.time_e.edit.text() or '86400.0')
         last_live_log_at = 0.0
+        last_perf_log_at = 0.0
+        last_injection_ui_log_at = 0.0
         for line in iter(self.worker_process.stdout.readline, b''):
             if not line: continue
             line_str = self._decode_process_line(line).strip()
+            self._append_runtime_log(f"[FMU_WORKER] {line_str}")
             pct_match = re.search(r'\[(\d+)%\]', line_str)
             if pct_match:
                 try:
@@ -2293,15 +2428,26 @@ class FmuSolverGUI(QMainWindow):
             is_live = "[Live]" in line_str
             now = time.time()
             if is_live:
-                if now - last_live_log_at >= 0.5:
+                if now - last_live_log_at >= 2.0:
                     self.sig_log.emit(line_str, "sys")
                     last_live_log_at = now
+            elif "[PERF][FMU]" in line_str:
+                if now - last_perf_log_at >= 30.0:
+                    self.sig_log.emit(line_str, "sys")
+                    last_perf_log_at = now
+            elif "Injected " in line_str or "Injection summary" in line_str:
+                if "[!]" in line_str or now - last_injection_ui_log_at >= 30.0:
+                    tag = "error" if "[!]" in line_str else "info"
+                    self.sig_log.emit(line_str, tag)
+                    last_injection_ui_log_at = now
             else:
                 tag = "info" if "[OK]" in line_str else ("error" if "[!]" in line_str else "sys")
                 self.sig_log.emit(line_str, tag)
         self.worker_process.stdout.close()
-        self.worker_process.wait()
-        self.sig_sim_prog.emit(100, f"仿真完成: 100% (总时长 {total_t:.0f}s)")
+        rc = self.worker_process.wait()
+        tag = "sys" if rc == 0 else "error"
+        self.sig_log.emit(f"[SYS] FMU Worker 退出，退出码: {rc}", tag)
+        self.sig_sim_prog.emit(100, f"仿真完成: 100% (总时长 {total_t:.0f}s)" if rc == 0 else f"仿真异常结束: rc={rc}")
         self.sig_reset_ui.emit()
 
 
@@ -2327,14 +2473,22 @@ class FmuSolverGUI(QMainWindow):
             
             python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
+            viz_env = self._child_env()
+            viz_env.setdefault("FMUSOLVER_VIZ_MAX_POINTS", "12000")
+            viz_env.setdefault("FMUSOLVER_VIZ_ACC_LIMIT", "8000")
+            viz_env.setdefault("FMUSOLVER_VIZ_PACKET_QUEUE_MAX", "20")
+            viz_env.setdefault("FMUSOLVER_VIZ_MAX_PACKETS_PER_TICK", "3")
+            viz_env.setdefault("FMUSOLVER_VIZ_MEMORY_SOFT_LIMIT_MB", "900")
+            viz_env.setdefault("OPENBLAS_NUM_THREADS", "1")
+            viz_env.setdefault("OMP_NUM_THREADS", "1")
             
             if os.path.exists(viz_exe):
                 self.log(f"[*] Launching Visualizer EXE: {viz_exe}", "sys")
-                self.visualizer_process = subprocess.Popen([viz_exe, "--port", "22345"], cwd=viz_dir, creationflags=cf)
+                self.visualizer_process = subprocess.Popen([viz_exe, "--port", "22345"], cwd=viz_dir, env=viz_env, creationflags=cf)
             elif os.path.exists(python_viz):
                 self.log(f"[*] Launching Visualizer Script: {python_viz}", "sys")
                 cf = 0x08000000 if os.name == 'nt' else 0
-                self.visualizer_process = subprocess.Popen([sys.executable, python_viz, "--port", "22345"], cwd=APP_DIR, creationflags=cf)
+                self.visualizer_process = subprocess.Popen([sys.executable, python_viz, "--port", "22345"], cwd=APP_DIR, env=viz_env, creationflags=cf)
             else:
                 self.log(f"[!] Visualizer NOT FOUND (EXE or Script)", "error")
         except Exception as e:
@@ -2421,12 +2575,14 @@ class FmuSolverGUI(QMainWindow):
 
     def update_params(self):
         if not self.worker_process: return
+        sample_freq = float(self.freq_e.edit.text() or '50.0')
         cmd = {
             "sim_id": getattr(self, 'current_sim_id', ""),
             "step_size": float(self.step_e.edit.text() or '0.02'), 
             "sim_time": float(self.time_e.edit.text() or '86400.0'), 
             "sim_rate": float(self.rate_e.edit.text() or '1.0'), 
-            "sample_freq": float(self.freq_e.edit.text() or '50.0')
+            "sample_freq": sample_freq,
+            "yc_inject_freq": min(5.0, sample_freq)
         }
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try: s.sendto(json.dumps(cmd).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
@@ -2487,23 +2643,9 @@ class FmuSolverGUI(QMainWindow):
             port = int(self.inj_port_edit.edit.text() or "9988")
         except: port = 9988
         
+        # Only listen to the explicit PE/manual injection port. Telemetry is bridged
+        # by YaoCe_LinkLayer directly to the FMU Worker to keep the UI out of the hot path.
         ports_to_listen = {port}
-        try:
-            config_ini = os.path.join(self.yaoce_dir, "config.ini")
-            if os.path.exists(config_ini):
-                import configparser
-                parser = configparser.ConfigParser()
-                parser.read(config_ini, encoding='utf-8-sig')
-                if 'Common' in parser:
-                    common = parser['Common']
-                    t1_ip = common.get('Target1_IP', '127.0.0.1').strip()
-                    if t1_ip in ('127.0.0.1', '0.0.0.0', 'localhost'):
-                        ports_to_listen.add(int(common.get('Target1_Port', '8888')))
-                    t2_ip = common.get('Target2_IP', '127.0.0.1').strip()
-                    if t2_ip in ('127.0.0.1', '0.0.0.0', 'localhost'):
-                        ports_to_listen.add(int(common.get('Target2_Port', '8890')))
-        except Exception as e:
-            print(f"[!] Error reading config.ini for ports: {e}")
 
         def safe_log(msg, tag):
             try:
@@ -2520,6 +2662,26 @@ class FmuSolverGUI(QMainWindow):
                 sock.settimeout(1.0)
                 fwd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 last_log_time = 0
+                last_perf_time = time.time()
+                recv_count = 0
+                fwd_count = 0
+                parse_error_count = 0
+                last_packet_bytes = 0
+                pending_var_cmd = {}
+                last_var_forward_time = 0.0
+                try:
+                    var_forward_freq = max(0.1, float(self.freq_e.edit.text() or "50.0"))
+                except Exception:
+                    var_forward_freq = 50.0
+                var_forward_interval = 1.0 / var_forward_freq
+
+                def forward_to_worker(payload):
+                    nonlocal fwd_count
+                    if self.worker_process and self.worker_process.poll() is None and payload:
+                        msg = {"sim_id": getattr(self, 'current_sim_id', "")}
+                        msg.update(payload)
+                        fwd_sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+                        fwd_count += 1
                 
                 try:
                     sock.bind((ip, listen_port))
@@ -2532,19 +2694,23 @@ class FmuSolverGUI(QMainWindow):
                 
                 while not stop_event.is_set():
                     try:
-                        data, addr = sock.recvfrom(4096)
+                        data, addr = sock.recvfrom(65535)
+                        recv_count += 1
+                        last_packet_bytes = len(data)
                         try:
                             raw_data = data.decode('utf-8', errors='ignore').strip()
                             now = time.time()
                             do_log = (now - last_log_time > 1.0)
                             
                             cmd = None
+                            cmd_from_protobuf = False
                             try:
                                 decoded = base64.b64decode(raw_data)
                                 if ddm_pb2 is not None:
                                     pb_data = ddm_pb2.DDMData()
                                     pb_data.ParseFromString(decoded)
                                     cmd = {}
+                                    cmd_from_protobuf = True
                                     type_names = getattr(ddm_pb2.DDMData.SimVar, 'Type', None)
                                     for v in pb_data.sim_vars:
                                         if type_names is not None:
@@ -2575,21 +2741,39 @@ class FmuSolverGUI(QMainWindow):
                                     pass
                             
                             if not cmd:
+                                parse_error_count += 1
                                 if do_log:
                                     safe_log(f"[!] [Port {listen_port}] 数据格式不正确 (非 Base64/Protobuf 且非 JSON)", "error")
                                     last_log_time = now
                                 continue
                             
-                            # 转发给 Worker
-                            if self.worker_process and self.worker_process.poll() is None:
-                                msg = {"sim_id": getattr(self, 'current_sim_id', "")}
+                            if cmd_from_protobuf:
+                                source_prefix = "PE." if listen_port == port else "YC."
+                                normalized_cmd = {}
                                 for k, v in cmd.items():
-                                    msg[str(k)] = v
-                                fwd_sock.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+                                    key = str(k)
+                                    normalized_cmd[key if key.startswith(("PE.", "YC.")) else source_prefix + key] = v
+                                cmd = normalized_cmd
+
+                            continuous_vars = {str(k): v for k, v in cmd.items() if str(k).startswith(("PE.", "YC."))}
+                            control_vars = {str(k): v for k, v in cmd.items() if not str(k).startswith(("PE.", "YC."))}
+                            if control_vars:
+                                forward_to_worker(control_vars)
+                            if continuous_vars:
+                                pending_var_cmd.update(continuous_vars)
+                            if pending_var_cmd and now - last_var_forward_time >= var_forward_interval:
+                                forward_to_worker(pending_var_cmd)
+                                pending_var_cmd.clear()
+                                last_var_forward_time = now
+                            if self.worker_process and self.worker_process.poll() is None:
                                 if do_log:
-                                    safe_log(f"[*] [Port {listen_port}] 已转发注入变量到 FMU Worker: {len(cmd)} vars", "info")
+                                    safe_log(f"[*] [Port {listen_port}] 已按 {var_forward_freq:.1f}Hz 节流转发 PE/YC 连续变量到 FMU Worker: {len(cmd)} vars", "info")
                                     last_log_time = now
+                            if now - last_perf_time >= 5.0:
+                                safe_log(f"[PERF][INJ:{listen_port}] recv={recv_count} fwd={fwd_count} parse_err={parse_error_count} last_bytes={last_packet_bytes}", "info")
+                                last_perf_time = now
                         except Exception as e:
+                            parse_error_count += 1
                             if time.time() - last_log_time > 1.0:
                                 safe_log(f"[!] [Port {listen_port}] 注入处理异常: {e}", "error")
                                 last_log_time = time.time()
@@ -2821,15 +3005,19 @@ if __name__ == "__main__":
             try: init_params_dict = json.loads(args.params)
             except: pass
         try:
-            from fmu_player import FMUPlayer
+            # Keep this dynamic so the GUI executable does not bundle heavy worker-only
+            # dependencies (fmpy/numpy). Normal packaged runs use FmuWorker64/32.exe.
+            import importlib
+            FMUPlayer = importlib.import_module("fmu_player").FMUPlayer
             player = FMUPlayer(args.fmu_path, args.ip, args.port, sim_id=args.sim_id,
                                sync_vars_file=args.sync_vars, control_port=args.control_port)
-            player.run(step_size=args.step, sim_time=args.time, sim_rate=args.rate,
-                       sample_freq=args.freq, init_params=init_params_dict)
+            ok = player.run(step_size=args.step, sim_time=args.time, sim_rate=args.rate,
+                            sample_freq=args.freq, init_params=init_params_dict)
         except Exception as e:
             with open(os.path.join(APP_DIR, "worker_fatal.log"), "w", encoding="utf-8") as f:
                 f.write(f"Worker Fatal Error ({datetime.now()}): {e}\n")
-        sys.exit(0)
+            ok = False
+        sys.exit(0 if ok else 2)
 
     elif len(sys.argv) > 1 and sys.argv[1] == "--yaoceworker":
         log_file  = os.path.join(APP_DIR, "yaoce_run.log")
