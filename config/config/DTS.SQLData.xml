@@ -1,0 +1,2676 @@
+<SQLDatas>
+	<!--Rate存数频率ms,SavingInterval分表的时间间隔（s）-->
+	<SQLSave Rate="1000" SavingInterval="86400"/>
+	<!--需要存入的变量-->
+	<SimVars>
+		<SQLDatabaseName Name="sim1">
+		<Var name="PowerLoad_A"/>
+		<Var name="Vbus_A"/>
+		<Var name="ISolar_A"/>
+		<Var name="Vbatt_A1"/>
+		<Var name="Vbatt_A2"/>
+		<Var name="Vbatt_A3"/>
+		<Var name="Vmea_A"/>
+		<Var name="ShuntNum_A"/>
+		<Var name="PowerLoad_B"/>
+		<Var name="Vbus_B"/>
+		<Var name="ISolar_B"/>
+		<Var name="Vbatt_B1"/>
+		<Var name="Vbatt_B2"/>
+		<Var name="Vbatt_B3"/>
+		<Var name="Vmea_B"/>
+		<Var name="ShuntNum_B"/>
+		<Var name="SOC_A1"/>
+		<Var name="SOC_A2"/>
+		<Var name="SOC_A3"/>
+		<Var name="DisChargeAh_A1"/>
+		<Var name="DisChargeAh_A2"/>
+		<Var name="DisChargeAh_A3"/>
+		<Var name="DisChargeAh_B1"/>
+		<Var name="DisChargeAh_B2"/>
+		<Var name="DisChargeAh_B3"/>
+		<Var name="ToSimulationTime[1]"/>
+		<Var name="ToSimulationTime[2]"/>
+		<Var name="ToSimulationTime[3]"/>
+		<Var name="ToSimulationTime[4]"/>
+		<Var name="ToSimulationTime[5]"/>
+		<Var name="ToSimulationTime[6]"/>
+		<Var name="ToSimulationTime[7]"/>
+		<Var name="ToOrbitPara_HXC[1]"/>
+		<Var name="ToOrbitPara_HXC[2]"/>
+		<Var name="ToOrbitPara_HXC[3]"/>
+		<Var name="ToOrbitPara_HXC[4]"/>
+		<Var name="ToOrbitPara_HXC[5]"/>
+		<Var name="ToOrbitPara_HXC[6]"/>
+		<Var name="ToSpare_HXC[1]"/>
+		<Var name="ToEbo_HXC[1]"/>
+		<Var name="ToEbo_HXC[2]"/>
+		<Var name="ToEbo_HXC[3]"/>
+		<Var name="ToHXC_angle[1]"/>
+		<Var name="ToHXC_angle[2]"/>
+		<Var name="Tojet_time[1]"/>
+		<Var name="Tojet_time[2]"/>
+		<Var name="Tojet_time[3]"/>
+		<Var name="Tojet_time[4]"/>
+		<Var name="Tojet_time[5]"/>
+		<Var name="Tojet_time[6]"/>
+		<Var name="Tojet_time[7]"/>
+		<Var name="Tojet_time[8]"/>
+		<Var name="Tojet_time[9]"/>
+		<Var name="Tojet_time[10]"/>
+		<Var name="Tojet_time[11]"/>
+		<Var name="Tojet_time[12]"/>
+		<Var name="Tojet_time[13]"/>
+		<Var name="Tojet_time[14]"/>
+		<Var name="Tojet_time[15]"/>
+		<Var name="Tojet_time[16]"/>
+		<Var name="Tojet_time[17]"/>
+		<Var name="Tojet_time[18]"/>
+		<Var name="Tojet_time[19]"/>
+		<Var name="Tojet_time[20]"/>
+		<Var name="Tojet_time[21]"/>
+		<Var name="Tojet_time[22]"/>
+		<Var name="Tojet_time[23]"/>
+		<Var name="Tojet_time[24]"/>
+		<Var name="Tojet_time[25]"/>
+		<Var name="Tojet_time[26]"/>
+		<Var name="Tojiontangle[1]"/>
+		<Var name="Tojiontangle[2]"/>
+		<Var name="Tojiontangle[3]"/>
+		<Var name="Tojiontangle[4]"/>
+		<Var name="Tojiontangle[5]"/>
+		<Var name="Tojiontangle[6]"/>
+		<Var name="Tojiontangle[7]"/>
+		<Var name="Tolumpedtankp[1]"/>
+		<Var name="Tolumpedtankp[2]"/>
+		<Var name="Tolumpedtankp[3]"/>
+		<Var name="Tolumpedtankp[4]"/>
+		<Var name="Tolumpedtankp[5]"/>
+		<Var name="Tolumpedtankp[6]"/>
+		<Var name="Togasbottlep[1]"/>
+		<Var name="Togasbottlep[2]"/>
+		<Var name="Togasbottlep[3]"/>
+		<Var name="Togasbottlep[4]"/>
+		<Var name="Togasbottlep[5]"/>
+		<Var name="Togasbottlep[6]"/>
+		<Var name="TolumpedtankML[1]"/>
+		<Var name="TolumpedtankML[2]"/>
+		<Var name="TolumpedtankML[3]"/>
+		<Var name="TolumpedtankML[4]"/>
+		<Var name="TolumpedtankML[5]"/>
+		<Var name="TolumpedtankML[6]"/>
+		<Var name="ToVSolar[1]"/>
+		<Var name="ToVSolar[2]"/>
+		<Var name="ToISolar[1]"/>
+		<Var name="ToISolar[2]"/>
+		<Var name="ToVbus[1]"/>
+		<Var name="ToVbus[2]"/>
+		<Var name="ToIbus[1]"/>
+		<Var name="ToIbus[2]"/>
+		<Var name="ToPLoad[1]"/>
+		<Var name="ToPLoad[2]"/>
+		<Var name="ToSOC"/>
+		<Var name="Tos_tem_HXC"/>
+		<Var name="Top_air_HXC"/>
+		<Var name="Tos_rhum_HXC"/>
+		<Var name="Tos_ppO2_HXC"/>
+		<Var name="Tos_ppCO2_HXC"/>
+		<Var name="ToT_n_HXC"/>
+		<Var name="ToT_z_HXC"/>
+		<Var name="ToInstructTime[1]"/>
+		<Var name="ToInstructTime[2]"/>
+		<Var name="ToInstructTime[3]"/>
+		<Var name="ToInstructCode"/>
+		<Var name="LoadStateTable[1, 1, 1]"/>
+<Var name="LoadStateTable[1, 1, 2]"/>
+<Var name="LoadStateTable[1, 2, 1]"/>
+<Var name="LoadStateTable[1, 2, 2]"/>
+<Var name="LoadStateTable[1, 3, 1]"/>
+<Var name="LoadStateTable[1, 3, 2]"/>
+<Var name="LoadStateTable[1, 4, 1]"/>
+<Var name="LoadStateTable[1, 4, 2]"/>
+<Var name="LoadStateTable[1, 5, 1]"/>
+<Var name="LoadStateTable[1, 5, 2]"/>
+<Var name="LoadStateTable[1, 6, 1]"/>
+<Var name="LoadStateTable[1, 6, 2]"/>
+<Var name="LoadStateTable[1, 7, 1]"/>
+<Var name="LoadStateTable[1, 7, 2]"/>
+<Var name="LoadStateTable[1, 8, 1]"/>
+<Var name="LoadStateTable[1, 8, 2]"/>
+<Var name="LoadStateTable[1, 9, 1]"/>
+<Var name="LoadStateTable[1, 9, 2]"/>
+<Var name="LoadStateTable[1, 10, 1]"/>
+<Var name="LoadStateTable[1, 10, 2]"/>
+<Var name="LoadStateTable[1, 11, 1]"/>
+<Var name="LoadStateTable[1, 11, 2]"/>
+<Var name="LoadStateTable[1, 12, 1]"/>
+<Var name="LoadStateTable[1, 12, 2]"/>
+<Var name="LoadStateTable[1, 13, 1]"/>
+<Var name="LoadStateTable[1, 13, 2]"/>
+<Var name="LoadStateTable[1, 14, 1]"/>
+<Var name="LoadStateTable[1, 14, 2]"/>
+<Var name="LoadStateTable[1, 15, 1]"/>
+<Var name="LoadStateTable[1, 15, 2]"/>
+<Var name="LoadStateTable[1, 16, 1]"/>
+<Var name="LoadStateTable[1, 16, 2]"/>
+<Var name="LoadStateTable[1, 17, 1]"/>
+<Var name="LoadStateTable[1, 17, 2]"/>
+<Var name="LoadStateTable[1, 18, 1]"/>
+<Var name="LoadStateTable[1, 18, 2]"/>
+<Var name="LoadStateTable[1, 19, 1]"/>
+<Var name="LoadStateTable[1, 19, 2]"/>
+<Var name="LoadStateTable[1, 20, 1]"/>
+<Var name="LoadStateTable[1, 20, 2]"/>
+<Var name="LoadStateTable[1, 21, 1]"/>
+<Var name="LoadStateTable[1, 21, 2]"/>
+<Var name="LoadStateTable[1, 22, 1]"/>
+<Var name="LoadStateTable[1, 22, 2]"/>
+<Var name="LoadStateTable[1, 23, 1]"/>
+<Var name="LoadStateTable[1, 23, 2]"/>
+<Var name="LoadStateTable[1, 24, 1]"/>
+<Var name="LoadStateTable[1, 24, 2]"/>
+<Var name="LoadStateTable[1, 25, 1]"/>
+<Var name="LoadStateTable[1, 25, 2]"/>
+<Var name="LoadStateTable[1, 26, 1]"/>
+<Var name="LoadStateTable[1, 26, 2]"/>
+<Var name="LoadStateTable[1, 27, 1]"/>
+<Var name="LoadStateTable[1, 27, 2]"/>
+<Var name="LoadStateTable[1, 28, 1]"/>
+<Var name="LoadStateTable[1, 28, 2]"/>
+<Var name="LoadStateTable[2, 1, 1]"/>
+<Var name="LoadStateTable[2, 1, 2]"/>
+<Var name="LoadStateTable[2, 2, 1]"/>
+<Var name="LoadStateTable[2, 2, 2]"/>
+<Var name="LoadStateTable[2, 3, 1]"/>
+<Var name="LoadStateTable[2, 3, 2]"/>
+<Var name="LoadStateTable[2, 4, 1]"/>
+<Var name="LoadStateTable[2, 4, 2]"/>
+<Var name="LoadStateTable[2, 5, 1]"/>
+<Var name="LoadStateTable[2, 5, 2]"/>
+<Var name="LoadStateTable[2, 6, 1]"/>
+<Var name="LoadStateTable[2, 6, 2]"/>
+<Var name="LoadStateTable[2, 7, 1]"/>
+<Var name="LoadStateTable[2, 7, 2]"/>
+<Var name="LoadStateTable[2, 8, 1]"/>
+<Var name="LoadStateTable[2, 8, 2]"/>
+<Var name="LoadStateTable[2, 9, 1]"/>
+<Var name="LoadStateTable[2, 9, 2]"/>
+<Var name="LoadStateTable[2, 10, 1]"/>
+<Var name="LoadStateTable[2, 10, 2]"/>
+<Var name="LoadStateTable[2, 11, 1]"/>
+<Var name="LoadStateTable[2, 11, 2]"/>
+<Var name="LoadStateTable[2, 12, 1]"/>
+<Var name="LoadStateTable[2, 12, 2]"/>
+<Var name="LoadStateTable[2, 13, 1]"/>
+<Var name="LoadStateTable[2, 13, 2]"/>
+<Var name="LoadStateTable[2, 14, 1]"/>
+<Var name="LoadStateTable[2, 14, 2]"/>
+<Var name="LoadStateTable[2, 15, 1]"/>
+<Var name="LoadStateTable[2, 15, 2]"/>
+<Var name="LoadStateTable[2, 16, 1]"/>
+<Var name="LoadStateTable[2, 16, 2]"/>
+<Var name="LoadStateTable[2, 17, 1]"/>
+<Var name="LoadStateTable[2, 17, 2]"/>
+<Var name="LoadStateTable[2, 18, 1]"/>
+<Var name="LoadStateTable[2, 18, 2]"/>
+<Var name="LoadStateTable[2, 19, 1]"/>
+<Var name="LoadStateTable[2, 19, 2]"/>
+<Var name="LoadStateTable[2, 20, 1]"/>
+<Var name="LoadStateTable[2, 20, 2]"/>
+<Var name="LoadStateTable[2, 21, 1]"/>
+<Var name="LoadStateTable[2, 21, 2]"/>
+<Var name="LoadStateTable[2, 22, 1]"/>
+<Var name="LoadStateTable[2, 22, 2]"/>
+<Var name="LoadStateTable[2, 23, 1]"/>
+<Var name="LoadStateTable[2, 23, 2]"/>
+<Var name="LoadStateTable[2, 24, 1]"/>
+<Var name="LoadStateTable[2, 24, 2]"/>
+<Var name="LoadStateTable[2, 25, 1]"/>
+<Var name="LoadStateTable[2, 25, 2]"/>
+<Var name="LoadStateTable[2, 26, 1]"/>
+<Var name="LoadStateTable[2, 26, 2]"/>
+<Var name="LoadStateTable[2, 27, 1]"/>
+<Var name="LoadStateTable[2, 27, 2]"/>
+<Var name="LoadStateTable[2, 28, 1]"/>
+<Var name="LoadStateTable[2, 28, 2]"/>
+<Var name="LoadStateTable[3, 1, 1]"/>
+<Var name="LoadStateTable[3, 1, 2]"/>
+<Var name="LoadStateTable[3, 2, 1]"/>
+<Var name="LoadStateTable[3, 2, 2]"/>
+<Var name="LoadStateTable[3, 3, 1]"/>
+<Var name="LoadStateTable[3, 3, 2]"/>
+<Var name="LoadStateTable[3, 4, 1]"/>
+<Var name="LoadStateTable[3, 4, 2]"/>
+<Var name="LoadStateTable[3, 5, 1]"/>
+<Var name="LoadStateTable[3, 5, 2]"/>
+<Var name="LoadStateTable[3, 6, 1]"/>
+<Var name="LoadStateTable[3, 6, 2]"/>
+<Var name="LoadStateTable[3, 7, 1]"/>
+<Var name="LoadStateTable[3, 7, 2]"/>
+<Var name="LoadStateTable[3, 8, 1]"/>
+<Var name="LoadStateTable[3, 8, 2]"/>
+<Var name="LoadStateTable[3, 9, 1]"/>
+<Var name="LoadStateTable[3, 9, 2]"/>
+<Var name="LoadStateTable[3, 10, 1]"/>
+<Var name="LoadStateTable[3, 10, 2]"/>
+<Var name="LoadStateTable[3, 11, 1]"/>
+<Var name="LoadStateTable[3, 11, 2]"/>
+<Var name="LoadStateTable[3, 12, 1]"/>
+<Var name="LoadStateTable[3, 12, 2]"/>
+<Var name="LoadStateTable[3, 13, 1]"/>
+<Var name="LoadStateTable[3, 13, 2]"/>
+<Var name="LoadStateTable[3, 14, 1]"/>
+<Var name="LoadStateTable[3, 14, 2]"/>
+<Var name="LoadStateTable[3, 15, 1]"/>
+<Var name="LoadStateTable[3, 15, 2]"/>
+<Var name="LoadStateTable[3, 16, 1]"/>
+<Var name="LoadStateTable[3, 16, 2]"/>
+<Var name="LoadStateTable[3, 17, 1]"/>
+<Var name="LoadStateTable[3, 17, 2]"/>
+<Var name="LoadStateTable[3, 18, 1]"/>
+<Var name="LoadStateTable[3, 18, 2]"/>
+<Var name="LoadStateTable[3, 19, 1]"/>
+<Var name="LoadStateTable[3, 19, 2]"/>
+<Var name="LoadStateTable[3, 20, 1]"/>
+<Var name="LoadStateTable[3, 20, 2]"/>
+<Var name="LoadStateTable[3, 21, 1]"/>
+<Var name="LoadStateTable[3, 21, 2]"/>
+<Var name="LoadStateTable[3, 22, 1]"/>
+<Var name="LoadStateTable[3, 22, 2]"/>
+<Var name="LoadStateTable[3, 23, 1]"/>
+<Var name="LoadStateTable[3, 23, 2]"/>
+<Var name="LoadStateTable[3, 24, 1]"/>
+<Var name="LoadStateTable[3, 24, 2]"/>
+<Var name="LoadStateTable[3, 25, 1]"/>
+<Var name="LoadStateTable[3, 25, 2]"/>
+<Var name="LoadStateTable[3, 26, 1]"/>
+<Var name="LoadStateTable[3, 26, 2]"/>
+<Var name="LoadStateTable[3, 27, 1]"/>
+<Var name="LoadStateTable[3, 27, 2]"/>
+<Var name="LoadStateTable[3, 28, 1]"/>
+<Var name="LoadStateTable[3, 28, 2]"/>
+<Var name="LoadStateTable[4, 1, 1]"/>
+<Var name="LoadStateTable[4, 1, 2]"/>
+<Var name="LoadStateTable[4, 2, 1]"/>
+<Var name="LoadStateTable[4, 2, 2]"/>
+<Var name="LoadStateTable[4, 3, 1]"/>
+<Var name="LoadStateTable[4, 3, 2]"/>
+<Var name="LoadStateTable[4, 4, 1]"/>
+<Var name="LoadStateTable[4, 4, 2]"/>
+<Var name="LoadStateTable[4, 5, 1]"/>
+<Var name="LoadStateTable[4, 5, 2]"/>
+<Var name="LoadStateTable[4, 6, 1]"/>
+<Var name="LoadStateTable[4, 6, 2]"/>
+<Var name="LoadStateTable[4, 7, 1]"/>
+<Var name="LoadStateTable[4, 7, 2]"/>
+<Var name="LoadStateTable[4, 8, 1]"/>
+<Var name="LoadStateTable[4, 8, 2]"/>
+<Var name="LoadStateTable[4, 9, 1]"/>
+<Var name="LoadStateTable[4, 9, 2]"/>
+<Var name="LoadStateTable[4, 10, 1]"/>
+<Var name="LoadStateTable[4, 10, 2]"/>
+<Var name="LoadStateTable[4, 11, 1]"/>
+<Var name="LoadStateTable[4, 11, 2]"/>
+<Var name="LoadStateTable[4, 12, 1]"/>
+<Var name="LoadStateTable[4, 12, 2]"/>
+<Var name="LoadStateTable[4, 13, 1]"/>
+<Var name="LoadStateTable[4, 13, 2]"/>
+<Var name="LoadStateTable[4, 14, 1]"/>
+<Var name="LoadStateTable[4, 14, 2]"/>
+<Var name="LoadStateTable[4, 15, 1]"/>
+<Var name="LoadStateTable[4, 15, 2]"/>
+<Var name="LoadStateTable[4, 16, 1]"/>
+<Var name="LoadStateTable[4, 16, 2]"/>
+<Var name="LoadStateTable[4, 17, 1]"/>
+<Var name="LoadStateTable[4, 17, 2]"/>
+<Var name="LoadStateTable[4, 18, 1]"/>
+<Var name="LoadStateTable[4, 18, 2]"/>
+<Var name="LoadStateTable[4, 19, 1]"/>
+<Var name="LoadStateTable[4, 19, 2]"/>
+<Var name="LoadStateTable[4, 20, 1]"/>
+<Var name="LoadStateTable[4, 20, 2]"/>
+<Var name="LoadStateTable[4, 21, 1]"/>
+<Var name="LoadStateTable[4, 21, 2]"/>
+<Var name="LoadStateTable[4, 22, 1]"/>
+<Var name="LoadStateTable[4, 22, 2]"/>
+<Var name="LoadStateTable[4, 23, 1]"/>
+<Var name="LoadStateTable[4, 23, 2]"/>
+<Var name="LoadStateTable[4, 24, 1]"/>
+<Var name="LoadStateTable[4, 24, 2]"/>
+<Var name="LoadStateTable[4, 25, 1]"/>
+<Var name="LoadStateTable[4, 25, 2]"/>
+<Var name="LoadStateTable[4, 26, 1]"/>
+<Var name="LoadStateTable[4, 26, 2]"/>
+<Var name="LoadStateTable[4, 27, 1]"/>
+<Var name="LoadStateTable[4, 27, 2]"/>
+<Var name="LoadStateTable[4, 28, 1]"/>
+<Var name="LoadStateTable[4, 28, 2]"/>
+<Var name="LoadStateTable[5, 1, 1]"/>
+<Var name="LoadStateTable[5, 1, 2]"/>
+<Var name="LoadStateTable[5, 2, 1]"/>
+<Var name="LoadStateTable[5, 2, 2]"/>
+<Var name="LoadStateTable[5, 3, 1]"/>
+<Var name="LoadStateTable[5, 3, 2]"/>
+<Var name="LoadStateTable[5, 4, 1]"/>
+<Var name="LoadStateTable[5, 4, 2]"/>
+<Var name="LoadStateTable[5, 5, 1]"/>
+<Var name="LoadStateTable[5, 5, 2]"/>
+<Var name="LoadStateTable[5, 6, 1]"/>
+<Var name="LoadStateTable[5, 6, 2]"/>
+<Var name="LoadStateTable[5, 7, 1]"/>
+<Var name="LoadStateTable[5, 7, 2]"/>
+<Var name="LoadStateTable[5, 8, 1]"/>
+<Var name="LoadStateTable[5, 8, 2]"/>
+<Var name="LoadStateTable[5, 9, 1]"/>
+<Var name="LoadStateTable[5, 9, 2]"/>
+<Var name="LoadStateTable[5, 10, 1]"/>
+<Var name="LoadStateTable[5, 10, 2]"/>
+<Var name="LoadStateTable[5, 11, 1]"/>
+<Var name="LoadStateTable[5, 11, 2]"/>
+<Var name="LoadStateTable[5, 12, 1]"/>
+<Var name="LoadStateTable[5, 12, 2]"/>
+<Var name="LoadStateTable[5, 13, 1]"/>
+<Var name="LoadStateTable[5, 13, 2]"/>
+<Var name="LoadStateTable[5, 14, 1]"/>
+<Var name="LoadStateTable[5, 14, 2]"/>
+<Var name="LoadStateTable[5, 15, 1]"/>
+<Var name="LoadStateTable[5, 15, 2]"/>
+<Var name="LoadStateTable[5, 16, 1]"/>
+<Var name="LoadStateTable[5, 16, 2]"/>
+<Var name="LoadStateTable[5, 17, 1]"/>
+<Var name="LoadStateTable[5, 17, 2]"/>
+<Var name="LoadStateTable[5, 18, 1]"/>
+<Var name="LoadStateTable[5, 18, 2]"/>
+<Var name="LoadStateTable[5, 19, 1]"/>
+<Var name="LoadStateTable[5, 19, 2]"/>
+<Var name="LoadStateTable[5, 20, 1]"/>
+<Var name="LoadStateTable[5, 20, 2]"/>
+<Var name="LoadStateTable[5, 21, 1]"/>
+<Var name="LoadStateTable[5, 21, 2]"/>
+<Var name="LoadStateTable[5, 22, 1]"/>
+<Var name="LoadStateTable[5, 22, 2]"/>
+<Var name="LoadStateTable[5, 23, 1]"/>
+<Var name="LoadStateTable[5, 23, 2]"/>
+<Var name="LoadStateTable[5, 24, 1]"/>
+<Var name="LoadStateTable[5, 24, 2]"/>
+<Var name="LoadStateTable[5, 25, 1]"/>
+<Var name="LoadStateTable[5, 25, 2]"/>
+<Var name="LoadStateTable[5, 26, 1]"/>
+<Var name="LoadStateTable[5, 26, 2]"/>
+<Var name="LoadStateTable[5, 27, 1]"/>
+<Var name="LoadStateTable[5, 27, 2]"/>
+<Var name="LoadStateTable[5, 28, 1]"/>
+<Var name="LoadStateTable[5, 28, 2]"/>
+<Var name="LoadStateTable[6, 1, 1]"/>
+<Var name="LoadStateTable[6, 1, 2]"/>
+<Var name="LoadStateTable[6, 2, 1]"/>
+<Var name="LoadStateTable[6, 2, 2]"/>
+<Var name="LoadStateTable[6, 3, 1]"/>
+<Var name="LoadStateTable[6, 3, 2]"/>
+<Var name="LoadStateTable[6, 4, 1]"/>
+<Var name="LoadStateTable[6, 4, 2]"/>
+<Var name="LoadStateTable[6, 5, 1]"/>
+<Var name="LoadStateTable[6, 5, 2]"/>
+<Var name="LoadStateTable[6, 6, 1]"/>
+<Var name="LoadStateTable[6, 6, 2]"/>
+<Var name="LoadStateTable[6, 7, 1]"/>
+<Var name="LoadStateTable[6, 7, 2]"/>
+<Var name="LoadStateTable[6, 8, 1]"/>
+<Var name="LoadStateTable[6, 8, 2]"/>
+<Var name="LoadStateTable[6, 9, 1]"/>
+<Var name="LoadStateTable[6, 9, 2]"/>
+<Var name="LoadStateTable[6, 10, 1]"/>
+<Var name="LoadStateTable[6, 10, 2]"/>
+<Var name="LoadStateTable[6, 11, 1]"/>
+<Var name="LoadStateTable[6, 11, 2]"/>
+<Var name="LoadStateTable[6, 12, 1]"/>
+<Var name="LoadStateTable[6, 12, 2]"/>
+<Var name="LoadStateTable[6, 13, 1]"/>
+<Var name="LoadStateTable[6, 13, 2]"/>
+<Var name="LoadStateTable[6, 14, 1]"/>
+<Var name="LoadStateTable[6, 14, 2]"/>
+<Var name="LoadStateTable[6, 15, 1]"/>
+<Var name="LoadStateTable[6, 15, 2]"/>
+<Var name="LoadStateTable[6, 16, 1]"/>
+<Var name="LoadStateTable[6, 16, 2]"/>
+<Var name="LoadStateTable[6, 17, 1]"/>
+<Var name="LoadStateTable[6, 17, 2]"/>
+<Var name="LoadStateTable[6, 18, 1]"/>
+<Var name="LoadStateTable[6, 18, 2]"/>
+<Var name="LoadStateTable[6, 19, 1]"/>
+<Var name="LoadStateTable[6, 19, 2]"/>
+<Var name="LoadStateTable[6, 20, 1]"/>
+<Var name="LoadStateTable[6, 20, 2]"/>
+<Var name="LoadStateTable[6, 21, 1]"/>
+<Var name="LoadStateTable[6, 21, 2]"/>
+<Var name="LoadStateTable[6, 22, 1]"/>
+<Var name="LoadStateTable[6, 22, 2]"/>
+<Var name="LoadStateTable[6, 23, 1]"/>
+<Var name="LoadStateTable[6, 23, 2]"/>
+<Var name="LoadStateTable[6, 24, 1]"/>
+<Var name="LoadStateTable[6, 24, 2]"/>
+<Var name="LoadStateTable[6, 25, 1]"/>
+<Var name="LoadStateTable[6, 25, 2]"/>
+<Var name="LoadStateTable[6, 26, 1]"/>
+<Var name="LoadStateTable[6, 26, 2]"/>
+<Var name="LoadStateTable[6, 27, 1]"/>
+<Var name="LoadStateTable[6, 27, 2]"/>
+<Var name="LoadStateTable[6, 28, 1]"/>
+<Var name="LoadStateTable[6, 28, 2]"/>
+<Var name="LoadStateTable[7, 1, 1]"/>
+<Var name="LoadStateTable[7, 1, 2]"/>
+<Var name="LoadStateTable[7, 2, 1]"/>
+<Var name="LoadStateTable[7, 2, 2]"/>
+<Var name="LoadStateTable[7, 3, 1]"/>
+<Var name="LoadStateTable[7, 3, 2]"/>
+<Var name="LoadStateTable[7, 4, 1]"/>
+<Var name="LoadStateTable[7, 4, 2]"/>
+<Var name="LoadStateTable[7, 5, 1]"/>
+<Var name="LoadStateTable[7, 5, 2]"/>
+<Var name="LoadStateTable[7, 6, 1]"/>
+<Var name="LoadStateTable[7, 6, 2]"/>
+<Var name="LoadStateTable[7, 7, 1]"/>
+<Var name="LoadStateTable[7, 7, 2]"/>
+<Var name="LoadStateTable[7, 8, 1]"/>
+<Var name="LoadStateTable[7, 8, 2]"/>
+<Var name="LoadStateTable[7, 9, 1]"/>
+<Var name="LoadStateTable[7, 9, 2]"/>
+<Var name="LoadStateTable[7, 10, 1]"/>
+<Var name="LoadStateTable[7, 10, 2]"/>
+<Var name="LoadStateTable[7, 11, 1]"/>
+<Var name="LoadStateTable[7, 11, 2]"/>
+<Var name="LoadStateTable[7, 12, 1]"/>
+<Var name="LoadStateTable[7, 12, 2]"/>
+<Var name="LoadStateTable[7, 13, 1]"/>
+<Var name="LoadStateTable[7, 13, 2]"/>
+<Var name="LoadStateTable[7, 14, 1]"/>
+<Var name="LoadStateTable[7, 14, 2]"/>
+<Var name="LoadStateTable[7, 15, 1]"/>
+<Var name="LoadStateTable[7, 15, 2]"/>
+<Var name="LoadStateTable[7, 16, 1]"/>
+<Var name="LoadStateTable[7, 16, 2]"/>
+<Var name="LoadStateTable[7, 17, 1]"/>
+<Var name="LoadStateTable[7, 17, 2]"/>
+<Var name="LoadStateTable[7, 18, 1]"/>
+<Var name="LoadStateTable[7, 18, 2]"/>
+<Var name="LoadStateTable[7, 19, 1]"/>
+<Var name="LoadStateTable[7, 19, 2]"/>
+<Var name="LoadStateTable[7, 20, 1]"/>
+<Var name="LoadStateTable[7, 20, 2]"/>
+<Var name="LoadStateTable[7, 21, 1]"/>
+<Var name="LoadStateTable[7, 21, 2]"/>
+<Var name="LoadStateTable[7, 22, 1]"/>
+<Var name="LoadStateTable[7, 22, 2]"/>
+<Var name="LoadStateTable[7, 23, 1]"/>
+<Var name="LoadStateTable[7, 23, 2]"/>
+<Var name="LoadStateTable[7, 24, 1]"/>
+<Var name="LoadStateTable[7, 24, 2]"/>
+<Var name="LoadStateTable[7, 25, 1]"/>
+<Var name="LoadStateTable[7, 25, 2]"/>
+<Var name="LoadStateTable[7, 26, 1]"/>
+<Var name="LoadStateTable[7, 26, 2]"/>
+<Var name="LoadStateTable[7, 27, 1]"/>
+<Var name="LoadStateTable[7, 27, 2]"/>
+<Var name="LoadStateTable[7, 28, 1]"/>
+<Var name="LoadStateTable[7, 28, 2]"/>
+<Var name="LoadStateTable[8, 1, 1]"/>
+<Var name="LoadStateTable[8, 1, 2]"/>
+<Var name="LoadStateTable[8, 2, 1]"/>
+<Var name="LoadStateTable[8, 2, 2]"/>
+<Var name="LoadStateTable[8, 3, 1]"/>
+<Var name="LoadStateTable[8, 3, 2]"/>
+<Var name="LoadStateTable[8, 4, 1]"/>
+<Var name="LoadStateTable[8, 4, 2]"/>
+<Var name="LoadStateTable[8, 5, 1]"/>
+<Var name="LoadStateTable[8, 5, 2]"/>
+<Var name="LoadStateTable[8, 6, 1]"/>
+<Var name="LoadStateTable[8, 6, 2]"/>
+<Var name="LoadStateTable[8, 7, 1]"/>
+<Var name="LoadStateTable[8, 7, 2]"/>
+<Var name="LoadStateTable[8, 8, 1]"/>
+<Var name="LoadStateTable[8, 8, 2]"/>
+<Var name="LoadStateTable[8, 9, 1]"/>
+<Var name="LoadStateTable[8, 9, 2]"/>
+<Var name="LoadStateTable[8, 10, 1]"/>
+<Var name="LoadStateTable[8, 10, 2]"/>
+<Var name="LoadStateTable[8, 11, 1]"/>
+<Var name="LoadStateTable[8, 11, 2]"/>
+<Var name="LoadStateTable[8, 12, 1]"/>
+<Var name="LoadStateTable[8, 12, 2]"/>
+<Var name="LoadStateTable[8, 13, 1]"/>
+<Var name="LoadStateTable[8, 13, 2]"/>
+<Var name="LoadStateTable[8, 14, 1]"/>
+<Var name="LoadStateTable[8, 14, 2]"/>
+<Var name="LoadStateTable[8, 15, 1]"/>
+<Var name="LoadStateTable[8, 15, 2]"/>
+<Var name="LoadStateTable[8, 16, 1]"/>
+<Var name="LoadStateTable[8, 16, 2]"/>
+<Var name="LoadStateTable[8, 17, 1]"/>
+<Var name="LoadStateTable[8, 17, 2]"/>
+<Var name="LoadStateTable[8, 18, 1]"/>
+<Var name="LoadStateTable[8, 18, 2]"/>
+<Var name="LoadStateTable[8, 19, 1]"/>
+<Var name="LoadStateTable[8, 19, 2]"/>
+<Var name="LoadStateTable[8, 20, 1]"/>
+<Var name="LoadStateTable[8, 20, 2]"/>
+<Var name="LoadStateTable[8, 21, 1]"/>
+<Var name="LoadStateTable[8, 21, 2]"/>
+<Var name="LoadStateTable[8, 22, 1]"/>
+<Var name="LoadStateTable[8, 22, 2]"/>
+<Var name="LoadStateTable[8, 23, 1]"/>
+<Var name="LoadStateTable[8, 23, 2]"/>
+<Var name="LoadStateTable[8, 24, 1]"/>
+<Var name="LoadStateTable[8, 24, 2]"/>
+<Var name="LoadStateTable[8, 25, 1]"/>
+<Var name="LoadStateTable[8, 25, 2]"/>
+<Var name="LoadStateTable[8, 26, 1]"/>
+<Var name="LoadStateTable[8, 26, 2]"/>
+<Var name="LoadStateTable[8, 27, 1]"/>
+<Var name="LoadStateTable[8, 27, 2]"/>
+<Var name="LoadStateTable[8, 28, 1]"/>
+<Var name="LoadStateTable[8, 28, 2]"/>
+<Var name="LoadStateTable[9, 1, 1]"/>
+<Var name="LoadStateTable[9, 1, 2]"/>
+<Var name="LoadStateTable[9, 2, 1]"/>
+<Var name="LoadStateTable[9, 2, 2]"/>
+<Var name="LoadStateTable[9, 3, 1]"/>
+<Var name="LoadStateTable[9, 3, 2]"/>
+<Var name="LoadStateTable[9, 4, 1]"/>
+<Var name="LoadStateTable[9, 4, 2]"/>
+<Var name="LoadStateTable[9, 5, 1]"/>
+<Var name="LoadStateTable[9, 5, 2]"/>
+<Var name="LoadStateTable[9, 6, 1]"/>
+<Var name="LoadStateTable[9, 6, 2]"/>
+<Var name="LoadStateTable[9, 7, 1]"/>
+<Var name="LoadStateTable[9, 7, 2]"/>
+<Var name="LoadStateTable[9, 8, 1]"/>
+<Var name="LoadStateTable[9, 8, 2]"/>
+<Var name="LoadStateTable[9, 9, 1]"/>
+<Var name="LoadStateTable[9, 9, 2]"/>
+<Var name="LoadStateTable[9, 10, 1]"/>
+<Var name="LoadStateTable[9, 10, 2]"/>
+<Var name="LoadStateTable[9, 11, 1]"/>
+<Var name="LoadStateTable[9, 11, 2]"/>
+<Var name="LoadStateTable[9, 12, 1]"/>
+<Var name="LoadStateTable[9, 12, 2]"/>
+<Var name="LoadStateTable[9, 13, 1]"/>
+<Var name="LoadStateTable[9, 13, 2]"/>
+<Var name="LoadStateTable[9, 14, 1]"/>
+<Var name="LoadStateTable[9, 14, 2]"/>
+<Var name="LoadStateTable[9, 15, 1]"/>
+<Var name="LoadStateTable[9, 15, 2]"/>
+<Var name="LoadStateTable[9, 16, 1]"/>
+<Var name="LoadStateTable[9, 16, 2]"/>
+<Var name="LoadStateTable[9, 17, 1]"/>
+<Var name="LoadStateTable[9, 17, 2]"/>
+<Var name="LoadStateTable[9, 18, 1]"/>
+<Var name="LoadStateTable[9, 18, 2]"/>
+<Var name="LoadStateTable[9, 19, 1]"/>
+<Var name="LoadStateTable[9, 19, 2]"/>
+<Var name="LoadStateTable[9, 20, 1]"/>
+<Var name="LoadStateTable[9, 20, 2]"/>
+<Var name="LoadStateTable[9, 21, 1]"/>
+<Var name="LoadStateTable[9, 21, 2]"/>
+<Var name="LoadStateTable[9, 22, 1]"/>
+<Var name="LoadStateTable[9, 22, 2]"/>
+<Var name="LoadStateTable[9, 23, 1]"/>
+<Var name="LoadStateTable[9, 23, 2]"/>
+<Var name="LoadStateTable[9, 24, 1]"/>
+<Var name="LoadStateTable[9, 24, 2]"/>
+<Var name="LoadStateTable[9, 25, 1]"/>
+<Var name="LoadStateTable[9, 25, 2]"/>
+<Var name="LoadStateTable[9, 26, 1]"/>
+<Var name="LoadStateTable[9, 26, 2]"/>
+<Var name="LoadStateTable[9, 27, 1]"/>
+<Var name="LoadStateTable[9, 27, 2]"/>
+<Var name="LoadStateTable[9, 28, 1]"/>
+<Var name="LoadStateTable[9, 28, 2]"/>
+<Var name="LoadStateTable[10, 1, 1]"/>
+<Var name="LoadStateTable[10, 1, 2]"/>
+<Var name="LoadStateTable[10, 2, 1]"/>
+<Var name="LoadStateTable[10, 2, 2]"/>
+<Var name="LoadStateTable[10, 3, 1]"/>
+<Var name="LoadStateTable[10, 3, 2]"/>
+<Var name="LoadStateTable[10, 4, 1]"/>
+<Var name="LoadStateTable[10, 4, 2]"/>
+<Var name="LoadStateTable[10, 5, 1]"/>
+<Var name="LoadStateTable[10, 5, 2]"/>
+<Var name="LoadStateTable[10, 6, 1]"/>
+<Var name="LoadStateTable[10, 6, 2]"/>
+<Var name="LoadStateTable[10, 7, 1]"/>
+<Var name="LoadStateTable[10, 7, 2]"/>
+<Var name="LoadStateTable[10, 8, 1]"/>
+<Var name="LoadStateTable[10, 8, 2]"/>
+<Var name="LoadStateTable[10, 9, 1]"/>
+<Var name="LoadStateTable[10, 9, 2]"/>
+<Var name="LoadStateTable[10, 10, 1]"/>
+<Var name="LoadStateTable[10, 10, 2]"/>
+<Var name="LoadStateTable[10, 11, 1]"/>
+<Var name="LoadStateTable[10, 11, 2]"/>
+<Var name="LoadStateTable[10, 12, 1]"/>
+<Var name="LoadStateTable[10, 12, 2]"/>
+<Var name="LoadStateTable[10, 13, 1]"/>
+<Var name="LoadStateTable[10, 13, 2]"/>
+<Var name="LoadStateTable[10, 14, 1]"/>
+<Var name="LoadStateTable[10, 14, 2]"/>
+<Var name="LoadStateTable[10, 15, 1]"/>
+<Var name="LoadStateTable[10, 15, 2]"/>
+<Var name="LoadStateTable[10, 16, 1]"/>
+<Var name="LoadStateTable[10, 16, 2]"/>
+<Var name="LoadStateTable[10, 17, 1]"/>
+<Var name="LoadStateTable[10, 17, 2]"/>
+<Var name="LoadStateTable[10, 18, 1]"/>
+<Var name="LoadStateTable[10, 18, 2]"/>
+<Var name="LoadStateTable[10, 19, 1]"/>
+<Var name="LoadStateTable[10, 19, 2]"/>
+<Var name="LoadStateTable[10, 20, 1]"/>
+<Var name="LoadStateTable[10, 20, 2]"/>
+<Var name="LoadStateTable[10, 21, 1]"/>
+<Var name="LoadStateTable[10, 21, 2]"/>
+<Var name="LoadStateTable[10, 22, 1]"/>
+<Var name="LoadStateTable[10, 22, 2]"/>
+<Var name="LoadStateTable[10, 23, 1]"/>
+<Var name="LoadStateTable[10, 23, 2]"/>
+<Var name="LoadStateTable[10, 24, 1]"/>
+<Var name="LoadStateTable[10, 24, 2]"/>
+<Var name="LoadStateTable[10, 25, 1]"/>
+<Var name="LoadStateTable[10, 25, 2]"/>
+<Var name="LoadStateTable[10, 26, 1]"/>
+<Var name="LoadStateTable[10, 26, 2]"/>
+<Var name="LoadStateTable[10, 27, 1]"/>
+<Var name="LoadStateTable[10, 27, 2]"/>
+<Var name="LoadStateTable[10, 28, 1]"/>
+<Var name="LoadStateTable[10, 28, 2]"/>
+</SQLDatabaseName>
+<SQLDatabaseName Name="sim2">
+<Var name="LoadStateTable[11, 1, 1]"/>
+<Var name="LoadStateTable[11, 1, 2]"/>
+<Var name="LoadStateTable[11, 2, 1]"/>
+<Var name="LoadStateTable[11, 2, 2]"/>
+<Var name="LoadStateTable[11, 3, 1]"/>
+<Var name="LoadStateTable[11, 3, 2]"/>
+<Var name="LoadStateTable[11, 4, 1]"/>
+<Var name="LoadStateTable[11, 4, 2]"/>
+<Var name="LoadStateTable[11, 5, 1]"/>
+<Var name="LoadStateTable[11, 5, 2]"/>
+<Var name="LoadStateTable[11, 6, 1]"/>
+<Var name="LoadStateTable[11, 6, 2]"/>
+<Var name="LoadStateTable[11, 7, 1]"/>
+<Var name="LoadStateTable[11, 7, 2]"/>
+<Var name="LoadStateTable[11, 8, 1]"/>
+<Var name="LoadStateTable[11, 8, 2]"/>
+<Var name="LoadStateTable[11, 9, 1]"/>
+<Var name="LoadStateTable[11, 9, 2]"/>
+<Var name="LoadStateTable[11, 10, 1]"/>
+<Var name="LoadStateTable[11, 10, 2]"/>
+<Var name="LoadStateTable[11, 11, 1]"/>
+<Var name="LoadStateTable[11, 11, 2]"/>
+<Var name="LoadStateTable[11, 12, 1]"/>
+<Var name="LoadStateTable[11, 12, 2]"/>
+<Var name="LoadStateTable[11, 13, 1]"/>
+<Var name="LoadStateTable[11, 13, 2]"/>
+<Var name="LoadStateTable[11, 14, 1]"/>
+<Var name="LoadStateTable[11, 14, 2]"/>
+<Var name="LoadStateTable[11, 15, 1]"/>
+<Var name="LoadStateTable[11, 15, 2]"/>
+<Var name="LoadStateTable[11, 16, 1]"/>
+<Var name="LoadStateTable[11, 16, 2]"/>
+<Var name="LoadStateTable[11, 17, 1]"/>
+<Var name="LoadStateTable[11, 17, 2]"/>
+<Var name="LoadStateTable[11, 18, 1]"/>
+<Var name="LoadStateTable[11, 18, 2]"/>
+<Var name="LoadStateTable[11, 19, 1]"/>
+<Var name="LoadStateTable[11, 19, 2]"/>
+<Var name="LoadStateTable[11, 20, 1]"/>
+<Var name="LoadStateTable[11, 20, 2]"/>
+<Var name="LoadStateTable[11, 21, 1]"/>
+<Var name="LoadStateTable[11, 21, 2]"/>
+<Var name="LoadStateTable[11, 22, 1]"/>
+<Var name="LoadStateTable[11, 22, 2]"/>
+<Var name="LoadStateTable[11, 23, 1]"/>
+<Var name="LoadStateTable[11, 23, 2]"/>
+<Var name="LoadStateTable[11, 24, 1]"/>
+<Var name="LoadStateTable[11, 24, 2]"/>
+<Var name="LoadStateTable[11, 25, 1]"/>
+<Var name="LoadStateTable[11, 25, 2]"/>
+<Var name="LoadStateTable[11, 26, 1]"/>
+<Var name="LoadStateTable[11, 26, 2]"/>
+<Var name="LoadStateTable[11, 27, 1]"/>
+<Var name="LoadStateTable[11, 27, 2]"/>
+<Var name="LoadStateTable[11, 28, 1]"/>
+<Var name="LoadStateTable[11, 28, 2]"/>
+<Var name="LoadStateTable[12, 1, 1]"/>
+<Var name="LoadStateTable[12, 1, 2]"/>
+<Var name="LoadStateTable[12, 2, 1]"/>
+<Var name="LoadStateTable[12, 2, 2]"/>
+<Var name="LoadStateTable[12, 3, 1]"/>
+<Var name="LoadStateTable[12, 3, 2]"/>
+<Var name="LoadStateTable[12, 4, 1]"/>
+<Var name="LoadStateTable[12, 4, 2]"/>
+<Var name="LoadStateTable[12, 5, 1]"/>
+<Var name="LoadStateTable[12, 5, 2]"/>
+<Var name="LoadStateTable[12, 6, 1]"/>
+<Var name="LoadStateTable[12, 6, 2]"/>
+<Var name="LoadStateTable[12, 7, 1]"/>
+<Var name="LoadStateTable[12, 7, 2]"/>
+<Var name="LoadStateTable[12, 8, 1]"/>
+<Var name="LoadStateTable[12, 8, 2]"/>
+<Var name="LoadStateTable[12, 9, 1]"/>
+<Var name="LoadStateTable[12, 9, 2]"/>
+<Var name="LoadStateTable[12, 10, 1]"/>
+<Var name="LoadStateTable[12, 10, 2]"/>
+<Var name="LoadStateTable[12, 11, 1]"/>
+<Var name="LoadStateTable[12, 11, 2]"/>
+<Var name="LoadStateTable[12, 12, 1]"/>
+<Var name="LoadStateTable[12, 12, 2]"/>
+<Var name="LoadStateTable[12, 13, 1]"/>
+<Var name="LoadStateTable[12, 13, 2]"/>
+<Var name="LoadStateTable[12, 14, 1]"/>
+<Var name="LoadStateTable[12, 14, 2]"/>
+<Var name="LoadStateTable[12, 15, 1]"/>
+<Var name="LoadStateTable[12, 15, 2]"/>
+<Var name="LoadStateTable[12, 16, 1]"/>
+<Var name="LoadStateTable[12, 16, 2]"/>
+<Var name="LoadStateTable[12, 17, 1]"/>
+<Var name="LoadStateTable[12, 17, 2]"/>
+<Var name="LoadStateTable[12, 18, 1]"/>
+<Var name="LoadStateTable[12, 18, 2]"/>
+<Var name="LoadStateTable[12, 19, 1]"/>
+<Var name="LoadStateTable[12, 19, 2]"/>
+<Var name="LoadStateTable[12, 20, 1]"/>
+<Var name="LoadStateTable[12, 20, 2]"/>
+<Var name="LoadStateTable[12, 21, 1]"/>
+<Var name="LoadStateTable[12, 21, 2]"/>
+<Var name="LoadStateTable[12, 22, 1]"/>
+<Var name="LoadStateTable[12, 22, 2]"/>
+<Var name="LoadStateTable[12, 23, 1]"/>
+<Var name="LoadStateTable[12, 23, 2]"/>
+<Var name="LoadStateTable[12, 24, 1]"/>
+<Var name="LoadStateTable[12, 24, 2]"/>
+<Var name="LoadStateTable[12, 25, 1]"/>
+<Var name="LoadStateTable[12, 25, 2]"/>
+<Var name="LoadStateTable[12, 26, 1]"/>
+<Var name="LoadStateTable[12, 26, 2]"/>
+<Var name="LoadStateTable[12, 27, 1]"/>
+<Var name="LoadStateTable[12, 27, 2]"/>
+<Var name="LoadStateTable[12, 28, 1]"/>
+<Var name="LoadStateTable[12, 28, 2]"/>
+<Var name="LoadStateTable[13, 1, 1]"/>
+<Var name="LoadStateTable[13, 1, 2]"/>
+<Var name="LoadStateTable[13, 2, 1]"/>
+<Var name="LoadStateTable[13, 2, 2]"/>
+<Var name="LoadStateTable[13, 3, 1]"/>
+<Var name="LoadStateTable[13, 3, 2]"/>
+<Var name="LoadStateTable[13, 4, 1]"/>
+<Var name="LoadStateTable[13, 4, 2]"/>
+<Var name="LoadStateTable[13, 5, 1]"/>
+<Var name="LoadStateTable[13, 5, 2]"/>
+<Var name="LoadStateTable[13, 6, 1]"/>
+<Var name="LoadStateTable[13, 6, 2]"/>
+<Var name="LoadStateTable[13, 7, 1]"/>
+<Var name="LoadStateTable[13, 7, 2]"/>
+<Var name="LoadStateTable[13, 8, 1]"/>
+<Var name="LoadStateTable[13, 8, 2]"/>
+<Var name="LoadStateTable[13, 9, 1]"/>
+<Var name="LoadStateTable[13, 9, 2]"/>
+<Var name="LoadStateTable[13, 10, 1]"/>
+<Var name="LoadStateTable[13, 10, 2]"/>
+<Var name="LoadStateTable[13, 11, 1]"/>
+<Var name="LoadStateTable[13, 11, 2]"/>
+<Var name="LoadStateTable[13, 12, 1]"/>
+<Var name="LoadStateTable[13, 12, 2]"/>
+<Var name="LoadStateTable[13, 13, 1]"/>
+<Var name="LoadStateTable[13, 13, 2]"/>
+<Var name="LoadStateTable[13, 14, 1]"/>
+<Var name="LoadStateTable[13, 14, 2]"/>
+<Var name="LoadStateTable[13, 15, 1]"/>
+<Var name="LoadStateTable[13, 15, 2]"/>
+<Var name="LoadStateTable[13, 16, 1]"/>
+<Var name="LoadStateTable[13, 16, 2]"/>
+<Var name="LoadStateTable[13, 17, 1]"/>
+<Var name="LoadStateTable[13, 17, 2]"/>
+<Var name="LoadStateTable[13, 18, 1]"/>
+<Var name="LoadStateTable[13, 18, 2]"/>
+<Var name="LoadStateTable[13, 19, 1]"/>
+<Var name="LoadStateTable[13, 19, 2]"/>
+<Var name="LoadStateTable[13, 20, 1]"/>
+<Var name="LoadStateTable[13, 20, 2]"/>
+<Var name="LoadStateTable[13, 21, 1]"/>
+<Var name="LoadStateTable[13, 21, 2]"/>
+<Var name="LoadStateTable[13, 22, 1]"/>
+<Var name="LoadStateTable[13, 22, 2]"/>
+<Var name="LoadStateTable[13, 23, 1]"/>
+<Var name="LoadStateTable[13, 23, 2]"/>
+<Var name="LoadStateTable[13, 24, 1]"/>
+<Var name="LoadStateTable[13, 24, 2]"/>
+<Var name="LoadStateTable[13, 25, 1]"/>
+<Var name="LoadStateTable[13, 25, 2]"/>
+<Var name="LoadStateTable[13, 26, 1]"/>
+<Var name="LoadStateTable[13, 26, 2]"/>
+<Var name="LoadStateTable[13, 27, 1]"/>
+<Var name="LoadStateTable[13, 27, 2]"/>
+<Var name="LoadStateTable[13, 28, 1]"/>
+<Var name="LoadStateTable[13, 28, 2]"/>
+<Var name="LoadStateTable[14, 1, 1]"/>
+<Var name="LoadStateTable[14, 1, 2]"/>
+<Var name="LoadStateTable[14, 2, 1]"/>
+<Var name="LoadStateTable[14, 2, 2]"/>
+<Var name="LoadStateTable[14, 3, 1]"/>
+<Var name="LoadStateTable[14, 3, 2]"/>
+<Var name="LoadStateTable[14, 4, 1]"/>
+<Var name="LoadStateTable[14, 4, 2]"/>
+<Var name="LoadStateTable[14, 5, 1]"/>
+<Var name="LoadStateTable[14, 5, 2]"/>
+<Var name="LoadStateTable[14, 6, 1]"/>
+<Var name="LoadStateTable[14, 6, 2]"/>
+<Var name="LoadStateTable[14, 7, 1]"/>
+<Var name="LoadStateTable[14, 7, 2]"/>
+<Var name="LoadStateTable[14, 8, 1]"/>
+<Var name="LoadStateTable[14, 8, 2]"/>
+<Var name="LoadStateTable[14, 9, 1]"/>
+<Var name="LoadStateTable[14, 9, 2]"/>
+<Var name="LoadStateTable[14, 10, 1]"/>
+<Var name="LoadStateTable[14, 10, 2]"/>
+<Var name="LoadStateTable[14, 11, 1]"/>
+<Var name="LoadStateTable[14, 11, 2]"/>
+<Var name="LoadStateTable[14, 12, 1]"/>
+<Var name="LoadStateTable[14, 12, 2]"/>
+<Var name="LoadStateTable[14, 13, 1]"/>
+<Var name="LoadStateTable[14, 13, 2]"/>
+<Var name="LoadStateTable[14, 14, 1]"/>
+<Var name="LoadStateTable[14, 14, 2]"/>
+<Var name="LoadStateTable[14, 15, 1]"/>
+<Var name="LoadStateTable[14, 15, 2]"/>
+<Var name="LoadStateTable[14, 16, 1]"/>
+<Var name="LoadStateTable[14, 16, 2]"/>
+<Var name="LoadStateTable[14, 17, 1]"/>
+<Var name="LoadStateTable[14, 17, 2]"/>
+<Var name="LoadStateTable[14, 18, 1]"/>
+<Var name="LoadStateTable[14, 18, 2]"/>
+<Var name="LoadStateTable[14, 19, 1]"/>
+<Var name="LoadStateTable[14, 19, 2]"/>
+<Var name="LoadStateTable[14, 20, 1]"/>
+<Var name="LoadStateTable[14, 20, 2]"/>
+<Var name="LoadStateTable[14, 21, 1]"/>
+<Var name="LoadStateTable[14, 21, 2]"/>
+<Var name="LoadStateTable[14, 22, 1]"/>
+<Var name="LoadStateTable[14, 22, 2]"/>
+<Var name="LoadStateTable[14, 23, 1]"/>
+<Var name="LoadStateTable[14, 23, 2]"/>
+<Var name="LoadStateTable[14, 24, 1]"/>
+<Var name="LoadStateTable[14, 24, 2]"/>
+<Var name="LoadStateTable[14, 25, 1]"/>
+<Var name="LoadStateTable[14, 25, 2]"/>
+<Var name="LoadStateTable[14, 26, 1]"/>
+<Var name="LoadStateTable[14, 26, 2]"/>
+<Var name="LoadStateTable[14, 27, 1]"/>
+<Var name="LoadStateTable[14, 27, 2]"/>
+<Var name="LoadStateTable[14, 28, 1]"/>
+<Var name="LoadStateTable[14, 28, 2]"/>
+<Var name="LoadStateTable[15, 1, 1]"/>
+<Var name="LoadStateTable[15, 1, 2]"/>
+<Var name="LoadStateTable[15, 2, 1]"/>
+<Var name="LoadStateTable[15, 2, 2]"/>
+<Var name="LoadStateTable[15, 3, 1]"/>
+<Var name="LoadStateTable[15, 3, 2]"/>
+<Var name="LoadStateTable[15, 4, 1]"/>
+<Var name="LoadStateTable[15, 4, 2]"/>
+<Var name="LoadStateTable[15, 5, 1]"/>
+<Var name="LoadStateTable[15, 5, 2]"/>
+<Var name="LoadStateTable[15, 6, 1]"/>
+<Var name="LoadStateTable[15, 6, 2]"/>
+<Var name="LoadStateTable[15, 7, 1]"/>
+<Var name="LoadStateTable[15, 7, 2]"/>
+<Var name="LoadStateTable[15, 8, 1]"/>
+<Var name="LoadStateTable[15, 8, 2]"/>
+<Var name="LoadStateTable[15, 9, 1]"/>
+<Var name="LoadStateTable[15, 9, 2]"/>
+<Var name="LoadStateTable[15, 10, 1]"/>
+<Var name="LoadStateTable[15, 10, 2]"/>
+<Var name="LoadStateTable[15, 11, 1]"/>
+<Var name="LoadStateTable[15, 11, 2]"/>
+<Var name="LoadStateTable[15, 12, 1]"/>
+<Var name="LoadStateTable[15, 12, 2]"/>
+<Var name="LoadStateTable[15, 13, 1]"/>
+<Var name="LoadStateTable[15, 13, 2]"/>
+<Var name="LoadStateTable[15, 14, 1]"/>
+<Var name="LoadStateTable[15, 14, 2]"/>
+<Var name="LoadStateTable[15, 15, 1]"/>
+<Var name="LoadStateTable[15, 15, 2]"/>
+<Var name="LoadStateTable[15, 16, 1]"/>
+<Var name="LoadStateTable[15, 16, 2]"/>
+<Var name="LoadStateTable[15, 17, 1]"/>
+<Var name="LoadStateTable[15, 17, 2]"/>
+<Var name="LoadStateTable[15, 18, 1]"/>
+<Var name="LoadStateTable[15, 18, 2]"/>
+<Var name="LoadStateTable[15, 19, 1]"/>
+<Var name="LoadStateTable[15, 19, 2]"/>
+<Var name="LoadStateTable[15, 20, 1]"/>
+<Var name="LoadStateTable[15, 20, 2]"/>
+<Var name="LoadStateTable[15, 21, 1]"/>
+<Var name="LoadStateTable[15, 21, 2]"/>
+<Var name="LoadStateTable[15, 22, 1]"/>
+<Var name="LoadStateTable[15, 22, 2]"/>
+<Var name="LoadStateTable[15, 23, 1]"/>
+<Var name="LoadStateTable[15, 23, 2]"/>
+<Var name="LoadStateTable[15, 24, 1]"/>
+<Var name="LoadStateTable[15, 24, 2]"/>
+<Var name="LoadStateTable[15, 25, 1]"/>
+<Var name="LoadStateTable[15, 25, 2]"/>
+<Var name="LoadStateTable[15, 26, 1]"/>
+<Var name="LoadStateTable[15, 26, 2]"/>
+<Var name="LoadStateTable[15, 27, 1]"/>
+<Var name="LoadStateTable[15, 27, 2]"/>
+<Var name="LoadStateTable[15, 28, 1]"/>
+<Var name="LoadStateTable[15, 28, 2]"/>
+<Var name="LoadStateTable[16, 1, 1]"/>
+<Var name="LoadStateTable[16, 1, 2]"/>
+<Var name="LoadStateTable[16, 2, 1]"/>
+<Var name="LoadStateTable[16, 2, 2]"/>
+<Var name="LoadStateTable[16, 3, 1]"/>
+<Var name="LoadStateTable[16, 3, 2]"/>
+<Var name="LoadStateTable[16, 4, 1]"/>
+<Var name="LoadStateTable[16, 4, 2]"/>
+<Var name="LoadStateTable[16, 5, 1]"/>
+<Var name="LoadStateTable[16, 5, 2]"/>
+<Var name="LoadStateTable[16, 6, 1]"/>
+<Var name="LoadStateTable[16, 6, 2]"/>
+<Var name="LoadStateTable[16, 7, 1]"/>
+<Var name="LoadStateTable[16, 7, 2]"/>
+<Var name="LoadStateTable[16, 8, 1]"/>
+<Var name="LoadStateTable[16, 8, 2]"/>
+<Var name="LoadStateTable[16, 9, 1]"/>
+<Var name="LoadStateTable[16, 9, 2]"/>
+<Var name="LoadStateTable[16, 10, 1]"/>
+<Var name="LoadStateTable[16, 10, 2]"/>
+<Var name="LoadStateTable[16, 11, 1]"/>
+<Var name="LoadStateTable[16, 11, 2]"/>
+<Var name="LoadStateTable[16, 12, 1]"/>
+<Var name="LoadStateTable[16, 12, 2]"/>
+<Var name="LoadStateTable[16, 13, 1]"/>
+<Var name="LoadStateTable[16, 13, 2]"/>
+<Var name="LoadStateTable[16, 14, 1]"/>
+<Var name="LoadStateTable[16, 14, 2]"/>
+<Var name="LoadStateTable[16, 15, 1]"/>
+<Var name="LoadStateTable[16, 15, 2]"/>
+<Var name="LoadStateTable[16, 16, 1]"/>
+<Var name="LoadStateTable[16, 16, 2]"/>
+<Var name="LoadStateTable[16, 17, 1]"/>
+<Var name="LoadStateTable[16, 17, 2]"/>
+<Var name="LoadStateTable[16, 18, 1]"/>
+<Var name="LoadStateTable[16, 18, 2]"/>
+<Var name="LoadStateTable[16, 19, 1]"/>
+<Var name="LoadStateTable[16, 19, 2]"/>
+<Var name="LoadStateTable[16, 20, 1]"/>
+<Var name="LoadStateTable[16, 20, 2]"/>
+<Var name="LoadStateTable[16, 21, 1]"/>
+<Var name="LoadStateTable[16, 21, 2]"/>
+<Var name="LoadStateTable[16, 22, 1]"/>
+<Var name="LoadStateTable[16, 22, 2]"/>
+<Var name="LoadStateTable[16, 23, 1]"/>
+<Var name="LoadStateTable[16, 23, 2]"/>
+<Var name="LoadStateTable[16, 24, 1]"/>
+<Var name="LoadStateTable[16, 24, 2]"/>
+<Var name="LoadStateTable[16, 25, 1]"/>
+<Var name="LoadStateTable[16, 25, 2]"/>
+<Var name="LoadStateTable[16, 26, 1]"/>
+<Var name="LoadStateTable[16, 26, 2]"/>
+<Var name="LoadStateTable[16, 27, 1]"/>
+<Var name="LoadStateTable[16, 27, 2]"/>
+<Var name="LoadStateTable[16, 28, 1]"/>
+<Var name="LoadStateTable[16, 28, 2]"/>
+<Var name="LoadStateTable[17, 1, 1]"/>
+<Var name="LoadStateTable[17, 1, 2]"/>
+<Var name="LoadStateTable[17, 2, 1]"/>
+<Var name="LoadStateTable[17, 2, 2]"/>
+<Var name="LoadStateTable[17, 3, 1]"/>
+<Var name="LoadStateTable[17, 3, 2]"/>
+<Var name="LoadStateTable[17, 4, 1]"/>
+<Var name="LoadStateTable[17, 4, 2]"/>
+<Var name="LoadStateTable[17, 5, 1]"/>
+<Var name="LoadStateTable[17, 5, 2]"/>
+<Var name="LoadStateTable[17, 6, 1]"/>
+<Var name="LoadStateTable[17, 6, 2]"/>
+<Var name="LoadStateTable[17, 7, 1]"/>
+<Var name="LoadStateTable[17, 7, 2]"/>
+<Var name="LoadStateTable[17, 8, 1]"/>
+<Var name="LoadStateTable[17, 8, 2]"/>
+<Var name="LoadStateTable[17, 9, 1]"/>
+<Var name="LoadStateTable[17, 9, 2]"/>
+<Var name="LoadStateTable[17, 10, 1]"/>
+<Var name="LoadStateTable[17, 10, 2]"/>
+<Var name="LoadStateTable[17, 11, 1]"/>
+<Var name="LoadStateTable[17, 11, 2]"/>
+<Var name="LoadStateTable[17, 12, 1]"/>
+<Var name="LoadStateTable[17, 12, 2]"/>
+<Var name="LoadStateTable[17, 13, 1]"/>
+<Var name="LoadStateTable[17, 13, 2]"/>
+<Var name="LoadStateTable[17, 14, 1]"/>
+<Var name="LoadStateTable[17, 14, 2]"/>
+<Var name="LoadStateTable[17, 15, 1]"/>
+<Var name="LoadStateTable[17, 15, 2]"/>
+<Var name="LoadStateTable[17, 16, 1]"/>
+<Var name="LoadStateTable[17, 16, 2]"/>
+<Var name="LoadStateTable[17, 17, 1]"/>
+<Var name="LoadStateTable[17, 17, 2]"/>
+<Var name="LoadStateTable[17, 18, 1]"/>
+<Var name="LoadStateTable[17, 18, 2]"/>
+<Var name="LoadStateTable[17, 19, 1]"/>
+<Var name="LoadStateTable[17, 19, 2]"/>
+<Var name="LoadStateTable[17, 20, 1]"/>
+<Var name="LoadStateTable[17, 20, 2]"/>
+<Var name="LoadStateTable[17, 21, 1]"/>
+<Var name="LoadStateTable[17, 21, 2]"/>
+<Var name="LoadStateTable[17, 22, 1]"/>
+<Var name="LoadStateTable[17, 22, 2]"/>
+<Var name="LoadStateTable[17, 23, 1]"/>
+<Var name="LoadStateTable[17, 23, 2]"/>
+<Var name="LoadStateTable[17, 24, 1]"/>
+<Var name="LoadStateTable[17, 24, 2]"/>
+<Var name="LoadStateTable[17, 25, 1]"/>
+<Var name="LoadStateTable[17, 25, 2]"/>
+<Var name="LoadStateTable[17, 26, 1]"/>
+<Var name="LoadStateTable[17, 26, 2]"/>
+<Var name="LoadStateTable[17, 27, 1]"/>
+<Var name="LoadStateTable[17, 27, 2]"/>
+<Var name="LoadStateTable[17, 28, 1]"/>
+<Var name="LoadStateTable[17, 28, 2]"/>
+<Var name="LoadStateTable[18, 1, 1]"/>
+<Var name="LoadStateTable[18, 1, 2]"/>
+<Var name="LoadStateTable[18, 2, 1]"/>
+<Var name="LoadStateTable[18, 2, 2]"/>
+<Var name="LoadStateTable[18, 3, 1]"/>
+<Var name="LoadStateTable[18, 3, 2]"/>
+<Var name="LoadStateTable[18, 4, 1]"/>
+<Var name="LoadStateTable[18, 4, 2]"/>
+<Var name="LoadStateTable[18, 5, 1]"/>
+<Var name="LoadStateTable[18, 5, 2]"/>
+<Var name="LoadStateTable[18, 6, 1]"/>
+<Var name="LoadStateTable[18, 6, 2]"/>
+<Var name="LoadStateTable[18, 7, 1]"/>
+<Var name="LoadStateTable[18, 7, 2]"/>
+<Var name="LoadStateTable[18, 8, 1]"/>
+<Var name="LoadStateTable[18, 8, 2]"/>
+<Var name="LoadStateTable[18, 9, 1]"/>
+<Var name="LoadStateTable[18, 9, 2]"/>
+<Var name="LoadStateTable[18, 10, 1]"/>
+<Var name="LoadStateTable[18, 10, 2]"/>
+<Var name="LoadStateTable[18, 11, 1]"/>
+<Var name="LoadStateTable[18, 11, 2]"/>
+<Var name="LoadStateTable[18, 12, 1]"/>
+<Var name="LoadStateTable[18, 12, 2]"/>
+<Var name="LoadStateTable[18, 13, 1]"/>
+<Var name="LoadStateTable[18, 13, 2]"/>
+<Var name="LoadStateTable[18, 14, 1]"/>
+<Var name="LoadStateTable[18, 14, 2]"/>
+<Var name="LoadStateTable[18, 15, 1]"/>
+<Var name="LoadStateTable[18, 15, 2]"/>
+<Var name="LoadStateTable[18, 16, 1]"/>
+<Var name="LoadStateTable[18, 16, 2]"/>
+<Var name="LoadStateTable[18, 17, 1]"/>
+<Var name="LoadStateTable[18, 17, 2]"/>
+<Var name="LoadStateTable[18, 18, 1]"/>
+<Var name="LoadStateTable[18, 18, 2]"/>
+<Var name="LoadStateTable[18, 19, 1]"/>
+<Var name="LoadStateTable[18, 19, 2]"/>
+<Var name="LoadStateTable[18, 20, 1]"/>
+<Var name="LoadStateTable[18, 20, 2]"/>
+<Var name="LoadStateTable[18, 21, 1]"/>
+<Var name="LoadStateTable[18, 21, 2]"/>
+<Var name="LoadStateTable[18, 22, 1]"/>
+<Var name="LoadStateTable[18, 22, 2]"/>
+<Var name="LoadStateTable[18, 23, 1]"/>
+<Var name="LoadStateTable[18, 23, 2]"/>
+<Var name="LoadStateTable[18, 24, 1]"/>
+<Var name="LoadStateTable[18, 24, 2]"/>
+<Var name="LoadStateTable[18, 25, 1]"/>
+<Var name="LoadStateTable[18, 25, 2]"/>
+<Var name="LoadStateTable[18, 26, 1]"/>
+<Var name="LoadStateTable[18, 26, 2]"/>
+<Var name="LoadStateTable[18, 27, 1]"/>
+<Var name="LoadStateTable[18, 27, 2]"/>
+<Var name="LoadStateTable[18, 28, 1]"/>
+<Var name="LoadStateTable[18, 28, 2]"/>
+<Var name="LoadStateTable[19, 1, 1]"/>
+<Var name="LoadStateTable[19, 1, 2]"/>
+<Var name="LoadStateTable[19, 2, 1]"/>
+<Var name="LoadStateTable[19, 2, 2]"/>
+<Var name="LoadStateTable[19, 3, 1]"/>
+<Var name="LoadStateTable[19, 3, 2]"/>
+<Var name="LoadStateTable[19, 4, 1]"/>
+<Var name="LoadStateTable[19, 4, 2]"/>
+<Var name="LoadStateTable[19, 5, 1]"/>
+<Var name="LoadStateTable[19, 5, 2]"/>
+<Var name="LoadStateTable[19, 6, 1]"/>
+<Var name="LoadStateTable[19, 6, 2]"/>
+<Var name="LoadStateTable[19, 7, 1]"/>
+<Var name="LoadStateTable[19, 7, 2]"/>
+<Var name="LoadStateTable[19, 8, 1]"/>
+<Var name="LoadStateTable[19, 8, 2]"/>
+<Var name="LoadStateTable[19, 9, 1]"/>
+<Var name="LoadStateTable[19, 9, 2]"/>
+<Var name="LoadStateTable[19, 10, 1]"/>
+<Var name="LoadStateTable[19, 10, 2]"/>
+<Var name="LoadStateTable[19, 11, 1]"/>
+<Var name="LoadStateTable[19, 11, 2]"/>
+<Var name="LoadStateTable[19, 12, 1]"/>
+<Var name="LoadStateTable[19, 12, 2]"/>
+<Var name="LoadStateTable[19, 13, 1]"/>
+<Var name="LoadStateTable[19, 13, 2]"/>
+<Var name="LoadStateTable[19, 14, 1]"/>
+<Var name="LoadStateTable[19, 14, 2]"/>
+<Var name="LoadStateTable[19, 15, 1]"/>
+<Var name="LoadStateTable[19, 15, 2]"/>
+<Var name="LoadStateTable[19, 16, 1]"/>
+<Var name="LoadStateTable[19, 16, 2]"/>
+<Var name="LoadStateTable[19, 17, 1]"/>
+<Var name="LoadStateTable[19, 17, 2]"/>
+<Var name="LoadStateTable[19, 18, 1]"/>
+<Var name="LoadStateTable[19, 18, 2]"/>
+<Var name="LoadStateTable[19, 19, 1]"/>
+<Var name="LoadStateTable[19, 19, 2]"/>
+<Var name="LoadStateTable[19, 20, 1]"/>
+<Var name="LoadStateTable[19, 20, 2]"/>
+<Var name="LoadStateTable[19, 21, 1]"/>
+<Var name="LoadStateTable[19, 21, 2]"/>
+<Var name="LoadStateTable[19, 22, 1]"/>
+<Var name="LoadStateTable[19, 22, 2]"/>
+<Var name="LoadStateTable[19, 23, 1]"/>
+<Var name="LoadStateTable[19, 23, 2]"/>
+<Var name="LoadStateTable[19, 24, 1]"/>
+<Var name="LoadStateTable[19, 24, 2]"/>
+<Var name="LoadStateTable[19, 25, 1]"/>
+<Var name="LoadStateTable[19, 25, 2]"/>
+<Var name="LoadStateTable[19, 26, 1]"/>
+<Var name="LoadStateTable[19, 26, 2]"/>
+<Var name="LoadStateTable[19, 27, 1]"/>
+<Var name="LoadStateTable[19, 27, 2]"/>
+<Var name="LoadStateTable[19, 28, 1]"/>
+<Var name="LoadStateTable[19, 28, 2]"/>
+<Var name="LoadStateTable[20, 1, 1]"/>
+<Var name="LoadStateTable[20, 1, 2]"/>
+<Var name="LoadStateTable[20, 2, 1]"/>
+<Var name="LoadStateTable[20, 2, 2]"/>
+<Var name="LoadStateTable[20, 3, 1]"/>
+<Var name="LoadStateTable[20, 3, 2]"/>
+<Var name="LoadStateTable[20, 4, 1]"/>
+<Var name="LoadStateTable[20, 4, 2]"/>
+<Var name="LoadStateTable[20, 5, 1]"/>
+<Var name="LoadStateTable[20, 5, 2]"/>
+<Var name="LoadStateTable[20, 6, 1]"/>
+<Var name="LoadStateTable[20, 6, 2]"/>
+<Var name="LoadStateTable[20, 7, 1]"/>
+<Var name="LoadStateTable[20, 7, 2]"/>
+<Var name="LoadStateTable[20, 8, 1]"/>
+<Var name="LoadStateTable[20, 8, 2]"/>
+<Var name="LoadStateTable[20, 9, 1]"/>
+<Var name="LoadStateTable[20, 9, 2]"/>
+<Var name="LoadStateTable[20, 10, 1]"/>
+<Var name="LoadStateTable[20, 10, 2]"/>
+<Var name="LoadStateTable[20, 11, 1]"/>
+<Var name="LoadStateTable[20, 11, 2]"/>
+<Var name="LoadStateTable[20, 12, 1]"/>
+<Var name="LoadStateTable[20, 12, 2]"/>
+<Var name="LoadStateTable[20, 13, 1]"/>
+<Var name="LoadStateTable[20, 13, 2]"/>
+<Var name="LoadStateTable[20, 14, 1]"/>
+<Var name="LoadStateTable[20, 14, 2]"/>
+<Var name="LoadStateTable[20, 15, 1]"/>
+<Var name="LoadStateTable[20, 15, 2]"/>
+<Var name="LoadStateTable[20, 16, 1]"/>
+<Var name="LoadStateTable[20, 16, 2]"/>
+<Var name="LoadStateTable[20, 17, 1]"/>
+<Var name="LoadStateTable[20, 17, 2]"/>
+<Var name="LoadStateTable[20, 18, 1]"/>
+<Var name="LoadStateTable[20, 18, 2]"/>
+<Var name="LoadStateTable[20, 19, 1]"/>
+<Var name="LoadStateTable[20, 19, 2]"/>
+<Var name="LoadStateTable[20, 20, 1]"/>
+<Var name="LoadStateTable[20, 20, 2]"/>
+<Var name="LoadStateTable[20, 21, 1]"/>
+<Var name="LoadStateTable[20, 21, 2]"/>
+<Var name="LoadStateTable[20, 22, 1]"/>
+<Var name="LoadStateTable[20, 22, 2]"/>
+<Var name="LoadStateTable[20, 23, 1]"/>
+<Var name="LoadStateTable[20, 23, 2]"/>
+<Var name="LoadStateTable[20, 24, 1]"/>
+<Var name="LoadStateTable[20, 24, 2]"/>
+<Var name="LoadStateTable[20, 25, 1]"/>
+<Var name="LoadStateTable[20, 25, 2]"/>
+<Var name="LoadStateTable[20, 26, 1]"/>
+<Var name="LoadStateTable[20, 26, 2]"/>
+<Var name="LoadStateTable[20, 27, 1]"/>
+<Var name="LoadStateTable[20, 27, 2]"/>
+<Var name="LoadStateTable[20, 28, 1]"/>
+<Var name="LoadStateTable[20, 28, 2]"/>
+
+		</SQLDatabaseName>
+	</SimVars>
+	<TmVars>
+		<SQLDatabaseName Name="tm1">
+			<Param code="DGBH1" parId="B006" desc="核心舱总压"/>
+			<Param code="DGBH2" parId="B007" desc="核心舱氧分压"/>
+			<Param code="DGBH3" parId="B008" desc="核心舱CO2分压"/>
+			<Param code="DGBH4" parId="B009" desc="核心舱温度"/>
+			<Param code="DGBH5" parId="B00A" desc="核心舱湿度"/>
+			 <Param code="DGBH9" parId="B00E" desc="氮瓶压力a"/>
+			 <Param code="DGBH10" parId="B00F" desc="氮瓶压力b"/>
+			 <Param code="DGBH11" parId="B010" desc="氧瓶压力a"/>
+			 <Param code="DGBH12" parId="B011" desc="氧瓶压力b"/>
+			 <Param code="DGBH13" parId="B012" desc="舱内循环风机a转速"/>
+			 <Param code="DGBH14" parId="B013" desc="舱内循环风机b转速"/>
+			 <Param code="DGBH18" parId="B017" desc="内回路泵组件a转速"/>
+			 <Param code="DGBH19" parId="B018" desc="内回路泵组件b转速"/>
+			 <Param code="DGBH20" parId="B019" desc="泵出口压力a"/>
+			 <Param code="DGBH21" parId="B01A" desc="泵出口压力b"/>
+			 <Param code="DGBH22" parId="B01B" desc="泵入口压力"/>
+			 <Param code="DCBH1141" parId="B6A3" desc="出舱泄压阀a状态"/>
+			 <Param code="DCBH1142" parId="B6A4" desc="出舱泄压阀b状态"/>
+			 <Param code="DCBH1143" parId="B6A5" desc="内置复压阀状态"/>
+			 <Param code="DCBH1144" parId="B6A6" desc="节点舱总压"/>
+			 <Param code="DCBH1145" parId="B6A7" desc="节点舱氧分压"/>
+			 <Param code="DCBH1146" parId="B6A8" desc="节点舱CO2分压"/>
+			 <Param code="DCBH1147" parId="B6A9" desc="节点舱温度"/>
+			 <Param code="DCBH1148" parId="B6AA" desc="节点舱湿度"/>
+			 <Param code="DCRH7145" parId="R27F" desc="外回路控温值"/>
+			 <Param code="DCRH7146" parId="R280" desc="中温回路控温值"/>
+			 <Param code="DCRH1407" parId="R1D8" desc="接收的外回路泵a供电状态"/>
+			 <Param code="DCRH1408" parId="R1D9" desc="接收的外回路泵b供电状态"/>
+			 <Param code="DCRH1409" parId="R1DA" desc="接收的外回路泵c供电状态"/>
+			 <Param code="DGRH20" parId="R014" desc="中温回路流量"/>
+			 <Param code="DGRH16" parId="R010" desc="中温泵组a压力a"/>
+			 <Param code="DGRH17" parId="R011" desc="中温泵组a压力b"/>
+			 <Param code="DCRH1392" parId="R1C9" desc="自锁阀a开屏蔽状态"/>
+			 <Param code="DCRH1393" parId="R1CA" desc="自锁阀b开屏蔽状态"/>
+			 <Param code="DCRH1394" parId="R1CB" desc="自锁阀c开屏蔽状态"/>
+			 <Param code="DCRH1395" parId="R1CC" desc="自锁阀d开屏蔽状态"/>
+			 <Param code="DCRH1396" parId="R1CD" desc="自锁阀e开屏蔽状态"/>
+			 <Param code="DCRH1397" parId="R1CE" desc="自锁阀f开屏蔽状态"/>
+			 <Param code="DCRH1398" parId="R1CF" desc="自锁阀g开屏蔽状态"/>
+			 <Param code="DCRH1399" parId="R1D0" desc="自锁阀h开屏蔽状态"/>
+			 <Param code="DCRH1400" parId="R1D1" desc="自锁阀i开屏蔽状态"/>
+			 <Param code="DCRH1401" parId="R1D2" desc="自锁阀j开屏蔽状态"/>
+			 <Param code="DCRH1402" parId="R1D3" desc="自锁阀k开屏蔽状态"/>
+			 <Param code="DCRH1403" parId="R1D4" desc="自锁阀l开屏蔽状态"/>
+				<Param code="DGKH1064" parId="K040" desc="轨控关机方式"/>
+			 <Param code="DGKH1065" parId="K041" desc="轨控开关机标志"/>
+			 <Param code="DGKH1066" parId="K042" desc="轨控单次开机时间"/>
+			 <Param code="DGKH1067" parId="K043" desc="转停控原因"/>
+			  <Param code="DCKH8005" parId="K24F" desc="轨道角速度ω0"/>
+			 <Param code="DCKH8006" parId="K250" desc="轨道长半轴a"/>
+			 <Param code="DCKH8007" parId="K251" desc="轨道偏心率e"/>
+			 <Param code="DCKH8008" parId="K252" desc="轨道倾角I"/>
+			 <Param code="DCKH8009" parId="K253" desc="轨道升交点赤经Ω"/>
+			 <Param code="DCKH8010" parId="K254" desc="轨道近地点幅角ω"/>
+			 <Param code="DCKH8011" parId="K255" desc="辐角u"/>
+			 <Param code="DCKH8012" parId="K256" desc="轨道真近点角f"/>
+			 <Param code="DCKH8013" parId="K257" desc="地心距"/>
+			  <Param code="DCKH8014" parId="K258" desc="船下点经度"/>
+			 <Param code="DCKH8015" parId="K259" desc="船下点纬度"/>
+			 <Param parId="K00E" desc="滚动姿态角度估值" code="DCKH1014" />
+			<Param parId="K00F" desc="俯仰姿态角度估值" code="DCKH1015" />
+			 <Param parId="K010" desc="偏航姿态角度估值" code="DCKH1016" />
+			 <Param parId="K0CB" desc="左帆板(H)转角信息" code="DCKH2057" />
+			<Param parId="K0D1" desc="右帆板(H)转角信息" code="DCKH2063" />  
+			 <Param parId="K38E" desc="参考姿态相对轨道系四元数  (矢量1)" code="DCKH11056" />
+			  <Param parId="K38F" desc="参考姿态相对轨道系四元数  (矢量2)" code="DCKH11057" />
+			  <Param parId="K390" desc="参考姿态相对轨道系四元数  (矢量3)" code="DCKH11058" />
+			  <Param parId="K391" desc="参考姿态相对轨道系四元数  (矢量4)" code="DCKH11059" />
+			  <Param parId="K392" desc="参考姿态相对惯性系四元数  (矢量1)" code="DCKH11060" />
+			  <Param parId="K393" desc="参考姿态相对惯性系四元数  (矢量2)" code="DCKH11061" />
+			  <Param parId="K394" desc="参考姿态相对惯性系四元数  (矢量3)" code="DCKH11062" />
+			  <Param parId="K395" desc="参考姿态相对惯性系四元数  (矢量4)" code="DCKH11063" />
+			 <Param parId="P0DD" desc="出入境状态标志" code="DGSH34_D7" /> 
+			  <Param code="DCKH9029" parId="K29C" desc="惯性姿态四元数Q1"/>
+			 <Param code="DCKH9030" parId="K29D" desc="惯性姿态四元数Q2"/>
+			 <Param code="DCKH9031" parId="K29E" desc="惯性姿态四元数Q3"/>
+			 <Param code="DCKH9032" parId="K29F" desc="惯性姿态四元数Q4"/>
+			 <Param code="DCKH9033" parId="K2A0" desc="惯性角速度ωx"/>
+			 <Param code="DCKH9034" parId="K2A1" desc="惯性角速度ωy"/>
+			 <Param code="DCKH9035" parId="K2A2" desc="惯性角速度ωz"/>
+			  <Param code="DCKH11005" parId="K35B" desc="CMG合成角动量Hx"/>
+			 <Param code="DCKH11006" parId="K35C" desc="CMG合成角动量Hy"/>
+			 <Param code="DCKH11007" parId="K35D" desc="CMG合成角动量Hz"/>
+			 <Param code="DCKH11008" parId="K35E" desc="CMG系统角动量"/>
+			 <Param code="DCKH11009" parId="K35F" desc="奇异测度JD"/>
+			 <Param code="DCKH11010" parId="K360" desc="CMG卸载标志（33H：不卸载；CCH：卸载）"/>
+			 <Param code="DCKH11011" parId="K361" desc="CMG转喷气原因"/>
+			 <Param code="DCNH81" parId="N04D" desc="第1路方阵电压-A"/>
+			 <Param code="DCNH82" parId="N04E" desc="第2路方阵电压-A"/>
+			 <Param code="DCNH83" parId="N04F" desc="第3路方阵电压-A"/>
+			 <Param code="DCNH84" parId="N050" desc="第4路方阵电压-A"/>
+			 <Param code="DCNH85" parId="N051" desc="第5路方阵电压-A"/>
+			 <Param code="DCNH86" parId="N052" desc="第6路方阵电压-A"/>
+			 <Param code="DCNH87" parId="N053" desc="第7路方阵电压-A"/>
+			 <Param code="DCNH88" parId="N054" desc="第8路方阵电压-A"/>
+			 <Param code="DCNH89" parId="N055" desc="第9路方阵电压-A"/>
+			 <Param code="DCNH90" parId="N056" desc="第10路方阵电压-A"/>
+			 <Param code="DCNH91" parId="N057" desc="第11路方阵电压-A"/>
+			 <Param code="DCNH92" parId="N058" desc="第12路方阵电压-A"/>
+			 <Param code="DCNH93" parId="N059" desc="第13路方阵电压-A"/>
+			 <Param code="DCNH94" parId="N05A" desc="第14路方阵电压-A"/>
+			 <Param code="DCNH95" parId="N05B" desc="第15路方阵电压-A"/>
+			 <Param code="DCNH96" parId="N05C" desc="第1组方阵输出电流-A"/>
+			 <Param code="DCNH97" parId="N05D" desc="第2组方阵输出电流-A"/>
+			 <Param code="DCNH98" parId="N05E" desc="第3组方阵输出电流-A"/>
+			 <Param code="DCNH99" parId="N05F" desc="分流调节器a输出电流"/>
+			 <Param code="DCNH111" parId="N06B" desc="母线滤波a母线电压1"/>
+			 <Param code="DCNH113" parId="N06D" desc="母线滤波a母线输出电流"/>
+			 <Param code="DCNH114" parId="N06E" desc="母线滤波a系统MEA控制信号"/>
+			 <Param code="DCNH229" parId="N0E3" desc="太阳翼a电池电路温度1"/>
+			 <Param code="DCNH230" parId="N0E4" desc="太阳翼a电池电路温度2"/>
+			 <Param code="DCNH231" parId="N0E5" desc="太阳翼a电池电路温度3"/> 
+			 <Param code="DCNH271" parId="N10B" desc="充放电a充电恒压基准1"/>
+			 <Param code="DCNH272" parId="N10C" desc="充放电a充电恒压基准2"/>
+			 <Param code="DCNH273" parId="N10D" desc="充放电a充电恒压基准3"/>
+			 <Param code="DCNH274" parId="N10E" desc="电池组a电压1"/>
+			 <Param code="DCNH275" parId="N10F" desc="电池组a电压2"/>
+			 <Param code="DCNH276" parId="N110" desc="电池组a电压3"/> 
+			 <Param code="DCNH277" parId="N111" desc="电池组a充放电电流"/>
+			 <Param code="DCNH296" parId="N124" desc="充放电a充电模块1输出电流"/>
+			 <Param code="DCNH297" parId="N125" desc="充放电a充电模块2输出电流"/>
+			 <Param code="DCNH299" parId="N127" desc="充放电a充电模块1恒流基准"/>
+			 <Param code="DCNH300" parId="N128" desc="充放电a充电模块2恒流基准"/>
+			 <Param code="DCNH415" parId="N19B" desc="充放电a进出影标志"/>
+			 <Param code="DCNH416" parId="N19C" desc="电池组aAh系数"/>
+			 <Param code="DCNH417" parId="N19D" desc="电池组aAh容量"/>
+			 <Param code="DCNH418" parId="N19E" desc="电池组aAh清零圈数"/>
+			 <Param code="DCNH532" parId="N200" desc="充放电a注入恒流基准"/>
+			 <Param code="DCNH533" parId="N201" desc="充放电a注入单体充电恒压控制点"/>
+			 <Param code="DCNH534" parId="N202" desc="充放电a注入电池组充电恒压控制点"/>
+			 <Param code="DCNH591" parId="N235" desc="充放电b充电恒压基准1"/>
+			 <Param code="DCNH592" parId="N236" desc="充放电b充电恒压基准2"/>
+			 <Param code="DCNH593" parId="N237" desc="充放电b充电恒压基准3"/>
+			 <Param code="DCNH594" parId="N238" desc="电池组b电压1"/>
+			 <Param code="DCNH595" parId="N239" desc="电池组b电压2"/>
+			 <Param code="DCNH596" parId="N23A" desc="电池组b电压3"/>
+			 <Param code="DCNH597" parId="N23B" desc="电池组b充放电电流"/>
+			 <Param code="DCNH616" parId="N24E" desc="充放电b充电模块1输出电流"/>
+			 <Param code="DCNH617" parId="N24F" desc="充放电b充电模块2输出电流"/>
+			 <Param code="DCNH619" parId="N251" desc="充放电b充电模块1恒流基准"/>
+			 <Param code="DCNH620" parId="N252" desc="充放电b充电模块2恒流基准"/>
+			 <Param code="DCNH735" parId="N2C5" desc="充放电b进出影标志"/>
+			 <Param code="DCNH736" parId="N2C6" desc="电池组bAh系数"/>
+			 <Param code="DCNH737" parId="N2C7" desc="电池组bAh容量"/>
+			 <Param code="DCNH738" parId="N2C8" desc="电池组bAh清零圈数"/>
+			 <Param code="DCNH852" parId="N32A" desc="充放电b注入恒流基准"/>
+			 <Param code="DCNH853" parId="N32B" desc="充放电b注入单体充电恒压控制点"/>
+			 <Param code="DCNH854" parId="N32C" desc="充放电b注入电池组充电恒压控制点"/>
+			 <Param code="DCNH881" parId="N345" desc="充放电c充电恒压基准1"/>
+			 <Param code="DCNH882" parId="N346" desc="充放电c充电恒压基准2"/>
+			 <Param code="DCNH883" parId="N347" desc="充放电c充电恒压基准3"/>
+			 <Param code="DCNH884" parId="N348" desc="电池组c电压1"/>
+			 <Param code="DCNH885" parId="N349" desc="电池组c电压2"/>
+			 <Param code="DCNH886" parId="N34A" desc="电池组c电压3"/>
+			 <Param code="DCNH887" parId="N34B" desc="电池组c充放电电流"/>
+			 <Param code="DCNH906" parId="N35E" desc="充放电c充电模块1输出电流"/>
+			 <Param code="DCNH907" parId="N35F" desc="充放电c充电模块2输出电流"/> 
+			 <Param code="DCNH909" parId="N361" desc="充放电c充电模块1恒流基准"/>
+			 <Param code="DCNH910" parId="N362" desc="充放电c充电模块2恒流基准"/>
+			 <Param code="DCNH1025" parId="N3D5" desc="充放电c进出影标志"/>
+			 <Param code="DCNH1026" parId="N3D6" desc="电池组cAh系数"/>
+			 <Param code="DCNH1027" parId="N3D7" desc="电池组cAh容量"/>
+			 <Param code="DCNH1028" parId="N3D8" desc="电池组cAh清零圈数"/> 
+			 <Param code="DCNH1142" parId="N43A" desc="充放电c注入恒流基准"/>
+			 <Param code="DCNH1143" parId="N43B" desc="充放电c注入单体充电恒压控制点"/>
+			 <Param code="DCNH1144" parId="N43C" desc="充放电c注入电池组充电恒压控制点"/>
+			 <Param code="DCNH1481" parId="N4B2" desc="第1路方阵电压-B"/>
+			 <Param code="DCNH1482" parId="N4B3" desc="第2路方阵电压-B"/>
+			 <Param code="DCNH1483" parId="N4B4" desc="第3路方阵电压-B"/>
+			 <Param code="DCNH1484" parId="N4B5" desc="第4路方阵电压-B"/>
+			 <Param code="DCNH1485" parId="N4B6" desc="第5路方阵电压-B"/>
+			 <Param code="DCNH1486" parId="N4B7" desc="第6路方阵电压-B"/>
+			 <Param code="DCNH1487" parId="N4B8" desc="第7路方阵电压-B"/>
+			 <Param code="DCNH1488" parId="N4B9" desc="第8路方阵电压-B"/>
+			 <Param code="DCNH1489" parId="N4BA" desc="第9路方阵电压-B"/>
+			 <Param code="DCNH1490" parId="N4BB" desc="第10路方阵电压-B"/>
+			 <Param code="DCNH1491" parId="N4BC" desc="第11路方阵电压-B"/>
+			 <Param code="DCNH1492" parId="N4BD" desc="第12路方阵电压-B"/>
+			 <Param code="DCNH1493" parId="N4BE" desc="第13路方阵电压-B"/>
+			 <Param code="DCNH1494" parId="N4BF" desc="第14路方阵电压-B"/>
+			 <Param code="DCNH1495" parId="N4C0" desc="第15路方阵电压-B"/>
+			 <Param code="DCNH1496" parId="N4C1" desc="第1组方阵输出电流-B"/>
+			 <Param code="DCNH1497" parId="N4C2" desc="第2组方阵输出电流-B"/>
+			 <Param code="DCNH1498" parId="N4C3" desc="第3组方阵输出电流-B"/>
+			 <Param code="DCNH1499" parId="N4C4" desc="分流调节器b输出电流"/>
+			 <Param code="DCNH1511" parId="N4D0" desc="母线滤波b母线电压1"/>
+			 <Param code="DCNH1513" parId="N4D2" desc="母线滤波b母线输出电流"/>
+			 <Param code="DCNH1514" parId="N4D3" desc="母线滤波b系统MEA控制信号"/>
+			 <Param code="DCNH1671" parId="N570" desc="充放电d充电恒压基准1"/>
+			 <Param code="DCNH1672" parId="N571" desc="充放电d充电恒压基准2"/>
+			 <Param code="DCNH1673" parId="N572" desc="充放电d充电恒压基准3"/>
+			 <Param code="DCNH1674" parId="N573" desc="电池组d电压1"/>
+			 <Param code="DCNH1675" parId="N574" desc="电池组d电压2"/>
+			 <Param code="DCNH1676" parId="N575" desc="电池组d电压3"/>
+			 <Param code="DCNH1677" parId="N576" desc="电池组d充放电电流"/>
+			 <Param code="DCNH1696" parId="N589" desc="充放电d充电模块1输出电流"/>
+			 <Param code="DCNH1697" parId="N58A" desc="充放电d充电模块2输出电流"/>
+			 <Param code="DCNH1699" parId="N58C" desc="充放电d充电模块1恒流基准"/>
+			 <Param code="DCNH1700" parId="N58D" desc="充放电d充电模块2恒流基准"/> 
+			 <Param code="DCNH1815" parId="N600" desc="充放电d进出影标志"/>
+			 <Param code="DCNH1816" parId="N601" desc="电池组dAh系数"/>
+			 <Param code="DCNH1817" parId="N602" desc="电池组dAh容量"/>
+			 <Param code="DCNH1818" parId="N603" desc="电池组dAh清零圈数"/> 
+			 <Param code="DCNH1932" parId="N665" desc="充放电d注入恒流基准"/>
+			 <Param code="DCNH1933" parId="N666" desc="充放电d注入单体充电恒压控制点"/>
+			 <Param code="DCNH1934" parId="N667" desc="充放电d注入电池组充电恒压控制点"/> 
+			 <Param code="DCNH1991" parId="N69A" desc="充放电e充电恒压基准1"/>
+			 <Param code="DCNH1992" parId="N69B" desc="充放电e充电恒压基准2"/>
+			 <Param code="DCNH1993" parId="N69C" desc="充放电e充电恒压基准3"/>
+			 <Param code="DCNH1994" parId="N69D" desc="电池组e电压1"/>
+			 <Param code="DCNH1995" parId="N69E" desc="电池组e电压2"/>
+			 <Param code="DCNH1996" parId="N69F" desc="电池组e电压3"/>
+			 <Param code="DCNH1997" parId="N6A0" desc="电池组e充放电电流"/>
+			 <Param code="DCNH2016" parId="N6B3" desc="充放电e充电模块1输出电流"/>
+			 <Param code="DCNH2017" parId="N6B4" desc="充放电e充电模块2输出电流"/> 
+			 <Param code="DCNH2019" parId="N6B6" desc="充放电e充电模块1恒流基准"/>
+			 <Param code="DCNH2020" parId="N6B7" desc="充放电e充电模块2恒流基准"/> 
+			 <Param code="DCNH2135" parId="N72A" desc="充放电e进出影标志"/>
+			 <Param code="DCNH2136" parId="N72B" desc="电池组eAh系数"/>
+			 <Param code="DCNH2137" parId="N72C" desc="电池组eAh容量"/>
+			 <Param code="DCNH2138" parId="N72D" desc="电池组eAh清零圈数"/> 
+			 <Param code="DCNH2252" parId="N78F" desc="充放电e注入恒流基准"/>
+			 <Param code="DCNH2253" parId="N790" desc="充放电e注入单体充电恒压控制点"/>
+			 <Param code="DCNH2254" parId="N791" desc="充放电e注入电池组充电恒压控制点"/> 
+			 <Param code="DCNH2281" parId="N7AA" desc="充放电f充电恒压基准1"/>
+			 <Param code="DCNH2282" parId="N7AB" desc="充放电f充电恒压基准2"/>
+			 <Param code="DCNH2283" parId="N7AC" desc="充放电f充电恒压基准3"/>
+			 <Param code="DCNH2284" parId="N7AD" desc="电池组f电压1"/>
+			 <Param code="DCNH2285" parId="N7AE" desc="电池组f电压2"/>
+			 <Param code="DCNH2286" parId="N7AF" desc="电池组f电压3"/>
+			 <Param code="DCNH2287" parId="N7B0" desc="电池组f充放电电流"/>
+			 <Param code="DCNH2306" parId="N7C3" desc="充放电f充电模块1输出电流"/>
+			 <Param code="DCNH2307" parId="N7C4" desc="充放电f充电模块2输出电流"/> 
+			 <Param code="DCNH2309" parId="N7C6" desc="充放电f充电模块1恒流基准"/>
+			 <Param code="DCNH2310" parId="N7C7" desc="充放电f充电模块2恒流基准"/> 
+			 <Param code="DCNH2425" parId="N83A" desc="充放电f进出影标志"/>
+			 <Param code="DCNH2426" parId="N83B" desc="电池组fAh系数"/>
+			 <Param code="DCNH2427" parId="N83C" desc="电池组fAh容量"/>
+			 <Param code="DCNH2428" parId="N83D" desc="电池组fAh清零圈数"/> 
+			 <Param code="DCNH2542" parId="N89F" desc="充放电f注入恒流基准"/>
+			 <Param code="DCNH2543" parId="N8A0" desc="充放电f注入单体充电恒压控制点"/>
+			 <Param code="DCNH2544" parId="N8A1" desc="充放电f注入电池组充电恒压控制点"/>
+			 <Param code="DCVH1" parId="V898" desc="母控aK1指母状态"/>
+			 <Param code="DCVH2" parId="V899" desc="母控aK2供控Ia状态"/>
+			 <Param code="DCVH3" parId="V89A" desc="母控aK3供控Ib状态"/>
+			 <Param code="DCVH4" parId="V89B" desc="母控aK4供控Ic状态"/>
+			 <Param code="DCVH5" parId="V89C" desc="母控aK5供控II状态"/>
+			 <Param code="DCVH6" parId="V89D" desc="母控aK6功控Ia状态"/>
+			 <Param code="DCVH7" parId="V89E" desc="母控aK7功控Ic状态"/>
+			 <Param code="DCVH8" parId="V89F" desc="母控aK8功控Ie状态"/>
+			 <Param code="DCVH9" parId="V8A0" desc="母控aK9功控Ig状态"/>
+			 <Param code="DCVH10" parId="V8A1" desc="母控aK10功控Ii状态"/>
+			 <Param code="DCVH11" parId="V8A2" desc="母控aK11功控Ik状态"/>
+			 <Param code="DCVH12" parId="V8A3" desc="母控aK12功控Im状态"/>
+			 <Param code="DCVH13" parId="V8A4" desc="母控aK13状态"/>
+			 <Param code="DCVH14" parId="V8A5" desc="母控aK14并网IIIa状态"/>
+			 <Param code="DCVH15" parId="V8A6" desc="母控aK15并网IIIb状态"/>
+			 <Param code="DCVH16" parId="V8A7" desc="母控aK16状态"/>
+			 <Param code="DCVH17" parId="V8A8" desc="母控aK17并网IIb状态"/>
+			 <Param code="DCVH18" parId="V8A9" desc="母控aK18并网Ia状态"/>
+			 <Param code="DCVH19" parId="V8AA" desc="母切bK1HB正状态"/>
+			 <Param code="DCVH20" parId="V8AB" desc="母切bK1HB负状态"/>
+			 <Param code="DCVH21" parId="V8AC" desc="母控a母切bK2正状态"/>
+			 <Param code="DCVH22" parId="V8AD" desc="母控a母切bK2负状态"/>
+			 <Param code="DCVH23" parId="V8AE" desc="母控a母切aK2正状态"/>
+			 <Param code="DCVH24" parId="V8AF" desc="母控a母切aK2负状态"/>
+			 <Param code="DCVH25" parId="V8B0" desc="母切bK3IIB正状态"/>
+			 <Param code="DCVH26" parId="V8B1" desc="母切bK3IIB负状态"/>
+			 <Param code="DCVH27" parId="V8B2" desc="母切bK4IB正状态"/>
+			 <Param code="DCVH28" parId="V8B3" desc="母切bK4IB负状态"/>
+			 <Param code="DCVH29" parId="V8B4" desc="母切bK5正状态"/>
+			 <Param code="DCVH30" parId="V8B5" desc="母切bK5负状态"/>
+			 <Param code="DCVH31" parId="V8B6" desc="母切bK6IB往IIB正状态"/>
+			 <Param code="DCVH32" parId="V8B7" desc="母切bK6IB往IIB负状态"/>
+			 <Param code="DCVH33" parId="V8B8" desc="母切bK7IIB往IB正状态"/>
+			 <Param code="DCVH34" parId="V8B9" desc="母切bK7IIB往IB负状态"/>
+			 <Param code="DCVH35" parId="V8BA" desc="母切bK8并网Ib状态"/>
+			 <Param code="DCVH101" parId="V8DA" desc="母控bK1指母状态"/>
+			 <Param code="DCVH102" parId="V8DB" desc="母控bK2供控Ia状态"/>
+			 <Param code="DCVH103" parId="V8DC" desc="母控bK3供控Ib状态"/>
+			 <Param code="DCVH104" parId="V8DD" desc="母控bK4供控Ic状态"/>
+			 <Param code="DCVH105" parId="V8DE" desc="母控bK5供控II状态"/>
+			 <Param code="DCVH106" parId="V8DF" desc="母控bK6功控Ib状态"/>
+			 <Param code="DCVH107" parId="V8E0" desc="母控bK7功控Id状态"/>
+			 <Param code="DCVH108" parId="V8E1" desc="母控bK8功控If状态"/>
+			 <Param code="DCVH109" parId="V8E2" desc="母控bK9功控Ih状态"/>
+			 <Param code="DCVH110" parId="V8E3" desc="母控bK10功控Ij状态"/>
+			 <Param code="DCVH111" parId="V8E4" desc="母控bK11功控Il状态"/>
+			 <Param code="DCVH112" parId="V8E5" desc="母控bK12功控In状态"/>
+			 <Param code="DCVH113" parId="V8E6" desc="母控bK13状态"/>
+			 <Param code="DCVH114" parId="V8E7" desc="母控bK14并网IIIa状态"/>
+			 <Param code="DCVH115" parId="V8E8" desc="母控bK15并网IIIb状态"/>
+			 <Param code="DCVH116" parId="V8E9" desc="母控bK16功控III状态"/>
+			 <Param code="DCVH117" parId="V8EA" desc="母控bK17并网IIb状态"/>
+			 <Param code="DCVH118" parId="V8EB" desc="母控bK18并网Ib状态"/>
+			 <Param code="DCVH119" parId="V8EC" desc="母切aK1HA正状态"/>
+			 <Param code="DCVH120" parId="V8ED" desc="母切aK1HA负状态"/>
+			 <Param code="DCVH121" parId="V8EE" desc="母控b母切aK2正状态"/>
+			 <Param code="DCVH122" parId="V8EF" desc="母控b母切aK2负状态"/>
+			 <Param code="DCVH123" parId="V8F0" desc="母控b母切bK2正状态"/>
+			 <Param code="DCVH124" parId="V8F1" desc="母控b母切bK2负状态"/>
+			 <Param code="DCVH125" parId="V8F2" desc="母切aK3IA正状态"/>
+			 <Param code="DCVH126" parId="V8F3" desc="母切aK3IA负状态"/>
+			 <Param code="DCVH127" parId="V8F4" desc="母切aK4IIA正状态"/>
+			 <Param code="DCVH128" parId="V8F5" desc="母切aK4IIA负状态"/>
+			 <Param code="DCVH129" parId="V8F6" desc="母切aK5正状态"/>
+			 <Param code="DCVH130" parId="V8F7" desc="母切aK5负状态"/>
+			 <Param code="DCVH131" parId="V8F8" desc="母切aK6IIA往IA正状态"/>
+			 <Param code="DCVH132" parId="V8F9" desc="母切aK6IIA往IA负状态"/>
+			 <Param code="DCVH133" parId="V8FA" desc="母切aK7IA往IIA正状态"/>
+			 <Param code="DCVH134" parId="V8FB" desc="母切aK7IA往IIA负状态"/>
+			 <Param code="DCVH135" parId="V8FC" desc="母切aK8并网Ia状态"/>
+			 <Param code="DCVH201" parId="V91C" desc="功控Ia100W1通断状态"/>
+			 <Param code="DCVH202" parId="V91D" desc="功控Ia100W2通断状态"/>
+			 <Param code="DCVH203" parId="V91E" desc="功控Ia100W3通断状态"/>
+			 <Param code="DCVH204" parId="V91F" desc="功控Ia100W4通断状态"/>
+			 <Param code="DCVH205" parId="V920" desc="功控Ia100W5通断状态"/>
+			 <Param code="DCVH206" parId="V921" desc="功控Ia300W1通断状态"/>
+			 <Param code="DCVH207" parId="V922" desc="功控Ia1kW1通断状态"/>
+			 <Param code="DCVH208" parId="V923" desc="功控Ia状态预留1"/>
+			 <Param code="DCVH209" parId="V924" desc="功控Ia100W6通断状态"/>
+			 <Param code="DCVH210" parId="V925" desc="功控Ia100W7通断状态"/>
+			 <Param code="DCVH211" parId="V926" desc="功控Ia100W8通断状态"/>
+			 <Param code="DCVH212" parId="V927" desc="功控Ia100W9通断状态"/>
+			 <Param code="DCVH213" parId="V928" desc="功控Ia100W10通断状态"/>
+			 <Param code="DCVH214" parId="V929" desc="功控Ia300W2通断状态"/>
+			 <Param code="DCVH215" parId="V92A" desc="功控Ia1kW2通断状态"/>
+			 <Param code="DCVH216" parId="V92B" desc="功控Ia状态预留2"/>
+			 <Param code="DCVH217" parId="V92C" desc="功控Ia100W11通断状态"/>
+			 <Param code="DCVH218" parId="V92D" desc="离线检测单元通断状态1"/>
+			 <Param code="DCVH219" parId="V92E" desc="离线检测单元通断状态2"/>
+			 <Param code="DCVH220" parId="V92F" desc="功控Ia100W14通断状态"/>
+			 <Param code="DCVH221" parId="V930" desc="功控Ia100W15通断状态"/>
+			 <Param code="DCVH222" parId="V931" desc="功控Ia300W3通断状态"/>
+			 <Param code="DCVH223" parId="V932" desc="功控Ia1kW3通断状态"/>
+			 <Param code="DCVH224" parId="V933" desc="功控Ia状态预留3"/>
+			 <Param code="DCVH225" parId="V934" desc="功控Ia100W16通断状态"/>
+			 <Param code="DCVH226" parId="V935" desc="功控Ia100W17通断状态"/>
+			 <Param code="DCVH227" parId="V936" desc="功控Ia100W18通断状态"/>
+			 <Param code="DCVH228" parId="V937" desc="功控Ia100W19通断状态"/>
+			 <Param code="DCVH229" parId="V938" desc="功控Ia100W20通断状态"/>
+			 <Param code="DCVH230" parId="V939" desc="功控Ia300W4通断状态"/>
+			 <Param code="DCVH231" parId="V93A" desc="功控Ia1kW4通断状态"/>
+			 <Param code="DCVH232" parId="V93B" desc="功控Ia状态预留4"/>
+			 <Param code="DCVH233" parId="V93C" desc="功控Ia100W1保护状态"/>
+			 <Param code="DCVH234" parId="V93D" desc="功控Ia100W2保护状态"/>
+			 <Param code="DCVH235" parId="V93E" desc="功控Ia100W3保护状态"/>
+			 <Param code="DCVH236" parId="V93F" desc="功控Ia100W4保护状态"/>
+			 <Param code="DCVH237" parId="V940" desc="功控Ia100W5保护状态"/>
+			 <Param code="DCVH238" parId="V941" desc="功控Ia300W1保护状态"/>
+			 <Param code="DCVH239" parId="V942" desc="功控Ia1kW1保护状态"/>
+			 <Param code="DCVH240" parId="V943" desc="功控Ia状态预留5"/>
+			 <Param code="DCVH241" parId="V944" desc="功控Ia100W6保护状态"/>
+			 <Param code="DCVH242" parId="V945" desc="功控Ia100W7保护状态"/>
+			 <Param code="DCVH243" parId="V946" desc="功控Ia100W8保护状态"/>
+			 <Param code="DCVH244" parId="V947" desc="功控Ia100W9保护状态"/>
+			 <Param code="DCVH245" parId="V948" desc="功控Ia100W10保护状态"/>
+			 <Param code="DCVH246" parId="V949" desc="功控Ia300W2保护状态"/>
+			 <Param code="DCVH247" parId="V94A" desc="功控Ia1kW2保护状态"/>
+			 <Param code="DCVH248" parId="V94B" desc="功控Ia状态预留6"/>
+			 <Param code="DCVH249" parId="V94C" desc="功控Ia100W11保护状态"/>
+			 <Param code="DCVH250" parId="V94D" desc="功控Ia100W12保护状态"/>
+			 <Param code="DCVH251" parId="V94E" desc="功控Ia100W13保护状态"/>
+			 <Param code="DCVH252" parId="V94F" desc="功控Ia100W14保护状态"/>
+			 <Param code="DCVH253" parId="V950" desc="功控Ia100W15保护状态"/>
+			 <Param code="DCVH254" parId="V951" desc="功控Ia300W3保护状态"/>
+			 <Param code="DCVH255" parId="V952" desc="功控Ia1kW3保护状态"/>
+			 <Param code="DCVH256" parId="V953" desc="功控Ia状态预留7"/>
+			 <Param code="DCVH257" parId="V954" desc="功控Ia100W16保护状态"/>
+			 <Param code="DCVH258" parId="V955" desc="功控Ia100W17保护状态"/>
+			 <Param code="DCVH259" parId="V956" desc="功控Ia100W18保护状态"/>
+			 <Param code="DCVH260" parId="V957" desc="功控Ia100W19保护状态"/>
+			 <Param code="DCVH261" parId="V958" desc="功控Ia100W20保护状态"/>
+			 <Param code="DCVH262" parId="V959" desc="功控Ia300W4保护状态"/>
+			 <Param code="DCVH263" parId="V95A" desc="功控Ia1kW4保护状态"/>
+			 <Param code="DCVH264" parId="V95B" desc="功控Ia状态预留8"/>
+			 <Param code="DCVH265" parId="V95C" desc="功控Ia输入总电流"/>
+			 <Param code="DCVH266" parId="V95D" desc="功控Ia1kW1温度"/>
+			 <Param code="DCVH267" parId="V95E" desc="功控Ia1kW2温度"/>
+			 <Param code="DCVH268" parId="V95F" desc="功控Ia1kW3温度"/>
+			 <Param code="DCVH269" parId="V960" desc="功控Ia1kW4温度"/>
+			 <Param code="DCVH301" parId="V975" desc="功控Ib100W1通断状态"/>
+			 <Param code="DCVH302" parId="V976" desc="功控Ib100W2通断状态"/>
+			 <Param code="DCVH303" parId="V977" desc="功控Ib100W3通断状态"/>
+			 <Param code="DCVH304" parId="V978" desc="功控Ib100W4通断状态"/>
+			 <Param code="DCVH305" parId="V979" desc="功控Ib100W5通断状态"/>
+			 <Param code="DCVH306" parId="V97A" desc="功控Ib300W1通断状态"/>
+			 <Param code="DCVH307" parId="V97B" desc="功控Ib1kW1通断状态"/>
+			 <Param code="DCVH308" parId="V97C" desc="功控Ib状态预留1"/>
+			 <Param code="DCVH309" parId="V97D" desc="功控Ib100W6通断状态"/>
+			 <Param code="DCVH310" parId="V97E" desc="泛光灯电源d"/>
+			 <Param code="DCVH311" parId="V97F" desc="功控Ib100W8通断状态"/>
+			 <Param code="DCVH312" parId="V980" desc="功控Ib100W9通断状态"/>
+			 <Param code="DCVH313" parId="V981" desc="功控Ib100W10通断状态"/>
+			 <Param code="DCVH314" parId="V982" desc="功控Ib300W2通断状态"/>
+			 <Param code="DCVH315" parId="V983" desc="功控Ib1kW2通断状态"/>
+			 <Param code="DCVH316" parId="V984" desc="功控Ib状态预留2"/>
+			 <Param code="DCVH317" parId="V985" desc="功控Ib100W11通断状态"/>
+			 <Param code="DCVH318" parId="V986" desc="功控Ib100W12通断状态"/>
+			 <Param code="DCVH319" parId="V987" desc="功控Ib100W13通断状态"/>
+			 <Param code="DCVH320" parId="V988" desc="功控Ib100W14通断状态"/>
+			 <Param code="DCVH321" parId="V989" desc="功控Ib100W15通断状态"/>
+			 <Param code="DCVH322" parId="V98A" desc="功控Ib300W3通断状态"/>
+			 <Param code="DCVH323" parId="V98B" desc="功控Ib1kW3通断状态"/>
+			 <Param code="DCVH324" parId="V98C" desc="功控Ib状态预留3"/>
+			 <Param code="DCVH325" parId="V98D" desc="功控Ib100W16通断状态"/>
+			 <Param code="DCVH326" parId="V98E" desc="功控Ib100W17通断状态"/>
+			 <Param code="DCVH327" parId="V98F" desc="功控Ib100W18通断状态"/>
+			 <Param code="DCVH328" parId="V990" desc="功控Ib100W19通断状态"/>
+			 <Param code="DCVH329" parId="V991" desc="功控Ib100W20通断状态"/>
+			 <Param code="DCVH330" parId="V992" desc="功控Ib300W4通断状态"/>
+			 <Param code="DCVH331" parId="V993" desc="功控Ib1kW4通断状态"/>
+			 <Param code="DCVH332" parId="V994" desc="功控Ib状态预留4"/>
+			 <Param code="DCVH333" parId="V995" desc="功控Ib100W1保护状态"/>
+			 <Param code="DCVH334" parId="V996" desc="功控Ib100W2保护状态"/>
+			 <Param code="DCVH335" parId="V997" desc="功控Ib100W3保护状态"/>
+			 <Param code="DCVH336" parId="V998" desc="功控Ib100W4保护状态"/>
+			 <Param code="DCVH337" parId="V999" desc="功控Ib100W5保护状态"/>
+			 <Param code="DCVH338" parId="V99A" desc="功控Ib300W1保护状态"/>
+			 <Param code="DCVH339" parId="V99B" desc="功控Ib1kW1保护状态"/>
+			 <Param code="DCVH340" parId="V99C" desc="功控Ib状态预留5"/>
+			 <Param code="DCVH341" parId="V99D" desc="功控Ib100W6保护状态"/>
+			 <Param code="DCVH342" parId="V99E" desc="功控Ib100W7保护状态"/>
+			 <Param code="DCVH343" parId="V99F" desc="功控Ib100W8保护状态"/>
+			 <Param code="DCVH344" parId="V9A0" desc="功控Ib100W9保护状态"/>
+			 <Param code="DCVH345" parId="V9A1" desc="功控Ib100W10保护状态"/>
+			 <Param code="DCVH346" parId="V9A2" desc="功控Ib300W2保护状态"/>
+			 <Param code="DCVH347" parId="V9A3" desc="功控Ib1kW2保护状态"/>
+			 <Param code="DCVH348" parId="V9A4" desc="功控Ib状态预留6"/>
+			 <Param code="DCVH349" parId="V9A5" desc="功控Ib100W11保护状态"/>
+			 <Param code="DCVH350" parId="V9A6" desc="功控Ib100W12保护状态"/>
+			 <Param code="DCVH351" parId="V9A7" desc="功控Ib100W13保护状态"/>
+			 <Param code="DCVH352" parId="V9A8" desc="功控Ib100W14保护状态"/>
+			 <Param code="DCVH353" parId="V9A9" desc="功控Ib100W15保护状态"/>
+			 <Param code="DCVH354" parId="V9AA" desc="功控Ib300W3保护状态"/>
+			 <Param code="DCVH355" parId="V9AB" desc="功控Ib1kW3保护状态"/>
+			 <Param code="DCVH356" parId="V9AC" desc="功控Ib状态预留7"/>
+			 <Param code="DCVH357" parId="V9AD" desc="功控Ib100W16保护状态"/>
+			 <Param code="DCVH358" parId="V9AE" desc="功控Ib100W17保护状态"/>
+			 <Param code="DCVH359" parId="V9AF" desc="功控Ib100W18保护状态"/>
+			 <Param code="DCVH360" parId="V9B0" desc="功控Ib100W19保护状态"/>
+			 <Param code="DCVH361" parId="V9B1" desc="功控Ib100W20保护状态"/>
+			 <Param code="DCVH362" parId="V9B2" desc="功控Ib300W4保护状态"/>
+			 <Param code="DCVH363" parId="V9B3" desc="功控Ib1kW4保护状态"/>
+			 <Param code="DCVH364" parId="V9B4" desc="功控Ib状态预留8"/>
+			 <Param code="DCVH365" parId="V9B5" desc="功控Ib输入总电流"/>
+			 <Param code="DCVH366" parId="V9B6" desc="功控Ib1kW1温度"/>
+			 <Param code="DCVH367" parId="V9B7" desc="功控Ib1kW2温度"/>
+			 <Param code="DCVH368" parId="V9B8" desc="功控Ib1kW3温度"/>
+			 <Param code="DCVH369" parId="V9B9" desc="功控Ib1kW4温度"/>
+			 <Param code="DCVH401" parId="V9CE" desc="功控Ic100W1通断状态"/>
+			 <Param code="DCVH402" parId="V9CF" desc="功控Ic100W2通断状态"/>
+			 <Param code="DCVH403" parId="V9D0" desc="功控Ic100W3通断状态"/>
+			 <Param code="DCVH404" parId="V9D1" desc="功控Ic100W4通断状态"/>
+			 <Param code="DCVH405" parId="V9D2" desc="功控Ic100W5通断状态"/>
+			 <Param code="DCVH406" parId="V9D3" desc="功控Ic300W1通断状态"/>
+			 <Param code="DCVH407" parId="V9D4" desc="功控Ic1kW1通断状态"/>
+			 <Param code="DCVH408" parId="V9D5" desc="功控Ic状态预留1"/>
+			 <Param code="DCVH409" parId="V9D6" desc="功控Ic100W6通断状态"/>
+			 <Param code="DCVH410" parId="V9D7" desc="智能显示器a通断状态"/>
+			 <Param code="DCVH411" parId="V9D8" desc="仪表计算机 a通断状态"/>
+			 <Param code="DCVH412" parId="V9D9" desc="功控Ic100W9通断状态"/>
+			 <Param code="DCVH413" parId="V9DA" desc="泛光灯电源e"/>
+			 <Param code="DCVH414" parId="V9DB" desc="功控Ic300W2通断状态"/>
+			 <Param code="DCVH415" parId="V9DC" desc="功控Ic1kW2通断状态"/>
+			 <Param code="DCVH416" parId="V9DD" desc="功控Ic状态预留2"/>
+			 <Param code="DCVH417" parId="V9DE" desc="功控Ic100W11通断状态"/>
+			 <Param code="DCVH418" parId="V9DF" desc="功控Ic100W12通断状态"/>
+			 <Param code="DCVH419" parId="V9E0" desc="功控Ic100W13通断状态"/>
+			 <Param code="DCVH420" parId="V9E1" desc="功控Ic100W14通断状态"/>
+			 <Param code="DCVH421" parId="V9E2" desc="功控Ic100W15通断状态"/>
+			 <Param code="DCVH422" parId="V9E3" desc="功控Ic300W3通断状态"/>
+			 <Param code="DCVH423" parId="V9E4" desc="功控Ic1kW3通断状态"/>
+			 <Param code="DCVH424" parId="V9E5" desc="功控Ic状态预留3"/>
+			 <Param code="DCVH425" parId="V9E6" desc="泛光灯电源c"/>
+			 <Param code="DCVH426" parId="V9E7" desc="功控Ic100W17通断状态"/>
+			 <Param code="DCVH427" parId="V9E8" desc="功控Ic100W18通断状态"/>
+			 <Param code="DCVH428" parId="V9E9" desc="功控Ic100W19通断状态"/>
+			 <Param code="DCVH429" parId="V9EA" desc="功控Ic100W20通断状态"/>
+			 <Param code="DCVH430" parId="V9EB" desc="功控Ic300W4通断状态"/>
+			 <Param code="DCVH431" parId="V9EC" desc="功控Ic1kW4通断状态"/>
+			 <Param code="DCVH432" parId="V9ED" desc="功控Ic状态预留4"/>
+			 <Param code="DCVH433" parId="V9EE" desc="功控Ic100W1保护状态"/>
+			 <Param code="DCVH434" parId="V9EF" desc="功控Ic100W2保护状态"/>
+			 <Param code="DCVH435" parId="V9F0" desc="功控Ic100W3保护状态"/>
+			 <Param code="DCVH436" parId="V9F1" desc="功控Ic100W4保护状态"/>
+			 <Param code="DCVH437" parId="V9F2" desc="功控Ic100W5保护状态"/>
+			 <Param code="DCVH438" parId="V9F3" desc="功控Ic300W1保护状态"/>
+			 <Param code="DCVH439" parId="V9F4" desc="功控Ic1kW1保护状态"/>
+			 <Param code="DCVH440" parId="V9F5" desc="功控Ic状态预留5"/>
+			 <Param code="DCVH441" parId="V9F6" desc="功控Ic100W6保护状态"/>
+			 <Param code="DCVH442" parId="V9F7" desc="功控Ic100W7保护状态"/>
+			 <Param code="DCVH443" parId="V9F8" desc="功控Ic100W8保护状态"/>
+			 <Param code="DCVH444" parId="V9F9" desc="功控Ic100W9保护状态"/>
+			 <Param code="DCVH445" parId="V9FA" desc="功控Ic100W10保护状态"/>
+			 <Param code="DCVH446" parId="V9FB" desc="功控Ic300W2保护状态"/>
+			 <Param code="DCVH447" parId="V9FC" desc="功控Ic1kW2保护状态"/>
+			 <Param code="DCVH448" parId="V9FD" desc="功控Ic状态预留6"/>
+			 <Param code="DCVH449" parId="V9FE" desc="功控Ic100W11保护状态"/>
+			 <Param code="DCVH450" parId="V9FF" desc="功控Ic100W12保护状态"/>
+			 <Param code="DCVH451" parId="VA00" desc="功控Ic100W13保护状态"/>
+			 <Param code="DCVH452" parId="VA01" desc="功控Ic100W14保护状态"/>
+			 <Param code="DCVH453" parId="VA02" desc="功控Ic100W15保护状态"/>
+			 <Param code="DCVH454" parId="VA03" desc="功控Ic300W3保护状态"/>
+			 <Param code="DCVH455" parId="VA04" desc="功控Ic1kW3保护状态"/>
+			 <Param code="DCVH456" parId="VA05" desc="功控Ic状态预留7"/>
+			 <Param code="DCVH457" parId="VA06" desc="功控Ic100W16保护状态"/>
+			 <Param code="DCVH458" parId="VA07" desc="功控Ic100W17保护状态"/>
+			 <Param code="DCVH459" parId="VA08" desc="功控Ic100W18保护状态"/>
+			 <Param code="DCVH460" parId="VA09" desc="功控Ic100W19保护状态"/>
+			 <Param code="DCVH461" parId="VA0A" desc="功控Ic100W20保护状态"/>
+			 <Param code="DCVH462" parId="VA0B" desc="功控Ic300W4保护状态"/>
+			 <Param code="DCVH463" parId="VA0C" desc="功控Ic1kW4保护状态"/>
+			 <Param code="DCVH464" parId="VA0D" desc="功控Ic状态预留8"/>
+			 <Param code="DCVH465" parId="VA0E" desc="功控Ic输入总电流"/>
+			 <Param code="DCVH466" parId="VA0F" desc="功控Ic1kW1温度"/>
+			 <Param code="DCVH467" parId="VA10" desc="功控Ic1kW2温度"/>
+			 <Param code="DCVH468" parId="VA11" desc="功控Ic1kW3温度"/>
+			 <Param code="DCVH469" parId="VA12" desc="功控Ic1kW4温度"/>
+			 <Param code="DCVH501" parId="VA27" desc="功控Id100W1通断状态"/>
+			 <Param code="DCVH502" parId="VA28" desc="功控Id100W2通断状态"/>
+			 <Param code="DCVH503" parId="VA29" desc="功控Id100W3通断状态"/>
+			 <Param code="DCVH504" parId="VA2A" desc="功控Id100W4通断状态"/>
+			 <Param code="DCVH505" parId="VA2B" desc="功控Id100W5通断状态"/>
+			 <Param code="DCVH506" parId="VA2C" desc="功控Id300W1通断状态"/>
+			 <Param code="DCVH507" parId="VA2D" desc="功控Id1kW1通断状态"/>
+			 <Param code="DCVH508" parId="VA2E" desc="功控Id状态预留1"/>
+			 <Param code="DCVH509" parId="VA2F" desc="智能显示器b通断状态"/>
+			 <Param code="DCVH510" parId="VA30" desc="综合显示单元通断状态"/>
+			 <Param code="DCVH511" parId="VA31" desc="仪表计算机b通断状态"/>
+			 <Param code="DCVH512" parId="VA32" desc="泛光灯电源f"/>
+			 <Param code="DCVH513" parId="VA33" desc="功控Id100W10通断状态"/>
+			 <Param code="DCVH514" parId="VA34" desc="功控Id300W2通断状态"/>
+			 <Param code="DCVH515" parId="VA35" desc="功控Id1kW2通断状态"/>
+			 <Param code="DCVH516" parId="VA36" desc="功控Id状态预留2"/>
+			 <Param code="DCVH517" parId="VA37" desc="功控Id100W11通断状态"/>
+			 <Param code="DCVH518" parId="VA38" desc="功控Id100W12通断状态"/>
+			 <Param code="DCVH519" parId="VA39" desc="功控Id100W13通断状态"/>
+			 <Param code="DCVH520" parId="VA3A" desc="功控Id100W14通断状态"/>
+			 <Param code="DCVH521" parId="VA3B" desc="功控Id100W15通断状态"/>
+			 <Param code="DCVH522" parId="VA3C" desc="功控Id300W3通断状态"/>
+			 <Param code="DCVH523" parId="VA3D" desc="功控Id1kW3通断状态"/>
+			 <Param code="DCVH524" parId="VA3E" desc="功控Id状态预留3"/>
+			 <Param code="DCVH525" parId="VA3F" desc="功控Id100W16通断状态"/>
+			 <Param code="DCVH526" parId="VA40" desc="舱内照明电源d"/>
+			 <Param code="DCVH527" parId="VA41" desc="功控Id100W18通断状态"/>
+			 <Param code="DCVH528" parId="VA42" desc="功控Id100W19通断状态"/>
+			 <Param code="DCVH529" parId="VA43" desc="功控Id100W20通断状态"/>
+			 <Param code="DCVH530" parId="VA44" desc="功控Id300W4通断状态"/>
+			 <Param code="DCVH531" parId="VA45" desc="功控Id1kW4通断状态"/>
+			 <Param code="DCVH532" parId="VA46" desc="功控Id状态预留4"/>
+			 <Param code="DCVH533" parId="VA47" desc="功控Id100W1保护状态"/>
+			 <Param code="DCVH534" parId="VA48" desc="功控Id100W2保护状态"/>
+			 <Param code="DCVH535" parId="VA49" desc="功控Id100W3保护状态"/>
+			 <Param code="DCVH536" parId="VA4A" desc="功控Id100W4保护状态"/>
+			 <Param code="DCVH537" parId="VA4B" desc="功控Id100W5保护状态"/>
+			 <Param code="DCVH538" parId="VA4C" desc="功控Id300W1保护状态"/>
+			 <Param code="DCVH539" parId="VA4D" desc="功控Id1kW1保护状态"/>
+			 <Param code="DCVH540" parId="VA4E" desc="功控Id状态预留5"/>
+			 <Param code="DCVH541" parId="VA4F" desc="功控Id100W6保护状态"/>
+			 <Param code="DCVH542" parId="VA50" desc="功控Id100W7保护状态"/>
+			 <Param code="DCVH543" parId="VA51" desc="功控Id100W8保护状态"/>
+			 <Param code="DCVH544" parId="VA52" desc="功控Id100W9保护状态"/>
+			 <Param code="DCVH545" parId="VA53" desc="功控Id100W10保护状态"/>
+			 <Param code="DCVH546" parId="VA54" desc="功控Id300W2保护状态"/>
+			 <Param code="DCVH547" parId="VA55" desc="功控Id1kW2保护状态"/>
+			 <Param code="DCVH548" parId="VA56" desc="功控Id状态预留6"/>
+			 <Param code="DCVH549" parId="VA57" desc="功控Id100W11保护状态"/>
+			 <Param code="DCVH550" parId="VA58" desc="功控Id100W12保护状态"/>
+			 <Param code="DCVH551" parId="VA59" desc="功控Id100W13保护状态"/>
+			 <Param code="DCVH552" parId="VA5A" desc="功控Id100W14保护状态"/>
+			 <Param code="DCVH553" parId="VA5B" desc="功控Id100W15保护状态"/>
+			 <Param code="DCVH554" parId="VA5C" desc="功控Id300W3保护状态"/>
+			 <Param code="DCVH555" parId="VA5D" desc="功控Id1kW3保护状态"/>
+			 <Param code="DCVH556" parId="VA5E" desc="功控Id状态预留7"/>
+			 <Param code="DCVH557" parId="VA5F" desc="功控Id100W16保护状态"/>
+			 <Param code="DCVH558" parId="VA60" desc="功控Id100W17保护状态"/>
+			 <Param code="DCVH559" parId="VA61" desc="功控Id100W18保护状态"/>
+			 <Param code="DCVH560" parId="VA62" desc="功控Id100W19保护状态"/>
+			 <Param code="DCVH561" parId="VA63" desc="功控Id100W20保护状态"/>
+			 <Param code="DCVH562" parId="VA64" desc="功控Id300W4保护状态"/>
+			 <Param code="DCVH563" parId="VA65" desc="功控Id1kW4保护状态"/>
+			 <Param code="DCVH564" parId="VA66" desc="功控Id状态预留8"/>
+			 <Param code="DCVH565" parId="VA67" desc="功控Id输入总电流"/>
+			 <Param code="DCVH566" parId="VA68" desc="功控Id1kW1温度"/>
+			 <Param code="DCVH567" parId="VA69" desc="功控Id1kW2温度"/>
+			 <Param code="DCVH568" parId="VA6A" desc="功控Id1kW3温度"/>
+			 <Param code="DCVH569" parId="VA6B" desc="功控Id1kW4温度"/>
+			 <Param code="DCVH601" parId="VA80" desc="功控Ie100W1通断状态"/>
+			 <Param code="DCVH602" parId="VA81" desc="功控Ie100W2通断状态"/>
+			 <Param code="DCVH603" parId="VA82" desc="功控Ie100W3通断状态"/>
+			 <Param code="DCVH604" parId="VA83" desc="智能显示器c通断状态"/>
+			 <Param code="DCVH605" parId="VA84" desc="功控Ie100W5通断状态"/>
+			 <Param code="DCVH606" parId="VA85" desc="功控Ie300W1通断状态"/>
+			 <Param code="DCVH607" parId="VA86" desc="功控Ie1kW1通断状态"/>
+			 <Param code="DCVH608" parId="VA87" desc="功控Ie状态预留1"/>
+			 <Param code="DCVH609" parId="VA88" desc="功控Ie100W6通断状态"/>
+			 <Param code="DCVH610" parId="VA89" desc="功控Ie100W7通断状态"/>
+			 <Param code="DCVH611" parId="VA8A" desc="功控Ie100W8通断状态"/>
+			 <Param code="DCVH612" parId="VA8B" desc="功控Ie100W9通断状态"/>
+			 <Param code="DCVH613" parId="VA8C" desc="功控Ie100W10通断状态"/>
+			 <Param code="DCVH614" parId="VA8D" desc="功控Ie300W2通断状态"/>
+			 <Param code="DCVH615" parId="VA8E" desc="功控Ie1kW2通断状态"/>
+			 <Param code="DCVH616" parId="VA8F" desc="功控Ie状态预留2"/>
+			 <Param code="DCVH617" parId="VA90" desc="功控Ie100W11通断状态"/>
+			 <Param code="DCVH618" parId="VA91" desc="功控Ie100W12通断状态"/>
+			 <Param code="DCVH619" parId="VA92" desc="功控Ie100W13通断状态"/>
+			 <Param code="DCVH620" parId="VA93" desc="功控Ie100W14通断状态"/>
+			 <Param code="DCVH621" parId="VA94" desc="功控Ie100W15通断状态"/>
+			 <Param code="DCVH622" parId="VA95" desc="功控Ie300W3通断状态"/>
+			 <Param code="DCVH623" parId="VA96" desc="功控Ie1kW3通断状态"/>
+			 <Param code="DCVH624" parId="VA97" desc="功控Ie状态预留3"/>
+			 <Param code="DCVH625" parId="VA98" desc="功控Ie100W16通断状态"/>
+			 <Param code="DCVH626" parId="VA99" desc="功控Ie100W17通断状态"/>
+			 <Param code="DCVH627" parId="VA9A" desc="功控Ie100W18通断状态"/>
+			 <Param code="DCVH628" parId="VA9B" desc="功控Ie100W19通断状态"/>
+			 <Param code="DCVH629" parId="VA9C" desc="功控Ie100W20通断状态"/>
+			 <Param code="DCVH630" parId="VA9D" desc="功控Ie300W4通断状态"/>
+			 <Param code="DCVH631" parId="VA9E" desc="功控Ie1kW4通断状态"/>
+			 <Param code="DCVH632" parId="VA9F" desc="功控Ie状态预留4"/>
+			 <Param code="DCVH633" parId="VAA0" desc="功控Ie100W1保护状态"/>
+			 <Param code="DCVH634" parId="VAA1" desc="功控Ie100W2保护状态"/>
+			 <Param code="DCVH635" parId="VAA2" desc="功控Ie100W3保护状态"/>
+			 <Param code="DCVH636" parId="VAA3" desc="功控Ie100W4保护状态"/>
+			 <Param code="DCVH637" parId="VAA4" desc="功控Ie100W5保护状态"/>
+			 <Param code="DCVH638" parId="VAA5" desc="功控Ie300W1保护状态"/>
+			 <Param code="DCVH639" parId="VAA6" desc="功控Ie1kW1保护状态"/>
+			 <Param code="DCVH640" parId="VAA7" desc="功控Ie状态预留5"/>
+			 <Param code="DCVH641" parId="VAA8" desc="功控Ie100W6保护状态"/>
+			 <Param code="DCVH642" parId="VAA9" desc="功控Ie100W7保护状态"/>
+			 <Param code="DCVH643" parId="VAAA" desc="功控Ie100W8保护状态"/>
+			 <Param code="DCVH644" parId="VAAB" desc="功控Ie100W9保护状态"/>
+			 <Param code="DCVH645" parId="VAAC" desc="功控Ie100W10保护状态"/>
+			 <Param code="DCVH646" parId="VAAD" desc="功控Ie300W2保护状态"/>
+			 <Param code="DCVH647" parId="VAAE" desc="功控Ie1kW2保护状态"/>
+			 <Param code="DCVH648" parId="VAAF" desc="功控Ie状态预留6"/>
+			 <Param code="DCVH649" parId="VAB0" desc="功控Ie100W11保护状态"/>
+			 <Param code="DCVH650" parId="VAB1" desc="功控Ie100W12保护状态"/>
+			 <Param code="DCVH651" parId="VAB2" desc="功控Ie100W13保护状态"/>
+			 <Param code="DCVH652" parId="VAB3" desc="功控Ie100W14保护状态"/>
+			 <Param code="DCVH653" parId="VAB4" desc="功控Ie100W15保护状态"/>
+			 <Param code="DCVH654" parId="VAB5" desc="功控Ie300W3保护状态"/>
+			 <Param code="DCVH655" parId="VAB6" desc="功控Ie1kW3保护状态"/>
+			 <Param code="DCVH656" parId="VAB7" desc="功控Ie状态预留7"/>
+			 <Param code="DCVH657" parId="VAB8" desc="功控Ie100W16保护状态"/>
+			 <Param code="DCVH658" parId="VAB9" desc="功控Ie100W17保护状态"/>
+			 <Param code="DCVH659" parId="VABA" desc="功控Ie100W18保护状态"/>
+			 <Param code="DCVH660" parId="VABB" desc="功控Ie100W19保护状态"/>
+			 <Param code="DCVH661" parId="VABC" desc="功控Ie100W20保护状态"/>
+			 <Param code="DCVH662" parId="VABD" desc="功控Ie300W4保护状态"/>
+			 <Param code="DCVH663" parId="VABE" desc="功控Ie1kW4保护状态"/>
+			 <Param code="DCVH664" parId="VABF" desc="功控Ie状态预留8"/>
+			 <Param code="DCVH665" parId="VAC0" desc="功控Ie输入总电流"/>
+			 <Param code="DCVH666" parId="VAC1" desc="功控Ie1kW1温度"/>
+			 <Param code="DCVH667" parId="VAC2" desc="功控Ie1kW2温度"/>
+			 <Param code="DCVH668" parId="VAC3" desc="功控Ie1kW3温度"/>
+			 <Param code="DCVH669" parId="VAC4" desc="功控Ie1kW4温度"/>
+			 <Param code="DCVH701" parId="VAD9" desc="功控If100W1通断状态"/>
+			 <Param code="DCVH702" parId="VADA" desc="功控If100W2通断状态"/>
+			 <Param code="DCVH703" parId="VADB" desc="功控If100W3通断状态"/>
+			 <Param code="DCVH704" parId="VADC" desc="功控If100W4通断状态"/>
+			 <Param code="DCVH705" parId="VADD" desc="功控If100W5通断状态"/>
+			 <Param code="DCVH706" parId="VADE" desc="功控If300W1通断状态"/>
+			 <Param code="DCVH707" parId="VADF" desc="功控If1kW1通断状态"/>
+			 <Param code="DCVH708" parId="VAE0" desc="功控If状态预留1"/>
+			 <Param code="DCVH709" parId="VAE1" desc="功控If100W6通断状态"/>
+			 <Param code="DCVH710" parId="VAE2" desc="功控If100W7通断状态"/>
+			 <Param code="DCVH711" parId="VAE3" desc="功控If100W8通断状态"/>
+			 <Param code="DCVH712" parId="VAE4" desc="功控If100W9通断状态"/>
+			 <Param code="DCVH713" parId="VAE5" desc="功控If100W10通断状态"/>
+			 <Param code="DCVH714" parId="VAE6" desc="功控If300W2通断状态"/>
+			 <Param code="DCVH715" parId="VAE7" desc="功控If1kW2通断状态"/>
+			 <Param code="DCVH716" parId="VAE8" desc="功控If状态预留2"/>
+			 <Param code="DCVH717" parId="VAE9" desc="功控If100W11通断状态"/>
+			 <Param code="DCVH718" parId="VAEA" desc="功控If100W12通断状态"/>
+			 <Param code="DCVH719" parId="VAEB" desc="功控If100W13通断状态"/>
+			 <Param code="DCVH720" parId="VAEC" desc="功控If100W14通断状态"/>
+			 <Param code="DCVH721" parId="VAED" desc="功控If100W15通断状态"/>
+			 <Param code="DCVH722" parId="VAEE" desc="功控If300W3通断状态"/>
+			 <Param code="DCVH723" parId="VAEF" desc="功控If1kW3通断状态"/>
+			 <Param code="DCVH724" parId="VAF0" desc="功控If状态预留3"/>
+			 <Param code="DCVH725" parId="VAF1" desc="功控If100W16通断状态"/>
+			 <Param code="DCVH726" parId="VAF2" desc="功控If100W17通断状态"/>
+			 <Param code="DCVH727" parId="VAF3" desc="功控If100W18通断状态"/>
+			 <Param code="DCVH728" parId="VAF4" desc="功控If100W19通断状态"/>
+			 <Param code="DCVH729" parId="VAF5" desc="功控If100W20通断状态"/>
+			 <Param code="DCVH730" parId="VAF6" desc="功控If300W4通断状态"/>
+			 <Param code="DCVH731" parId="VAF7" desc="功控If1kW4通断状态"/>
+			 <Param code="DCVH732" parId="VAF8" desc="功控If状态预留4"/>
+			 <Param code="DCVH733" parId="VAF9" desc="功控If100W1保护状态"/>
+			 <Param code="DCVH734" parId="VAFA" desc="功控If100W2保护状态"/>
+			 <Param code="DCVH735" parId="VAFB" desc="功控If100W3保护状态"/>
+			 <Param code="DCVH736" parId="VAFC" desc="功控If100W4保护状态"/>
+			 <Param code="DCVH737" parId="VAFD" desc="功控If100W5保护状态"/>
+			 <Param code="DCVH738" parId="VAFE" desc="功控If300W1保护状态"/>
+			 <Param code="DCVH739" parId="VAFF" desc="功控If1kW1保护状态"/>
+			 <Param code="DCVH740" parId="VB00" desc="功控If状态预留5"/>
+			 <Param code="DCVH741" parId="VB01" desc="功控If100W6保护状态"/>
+			 <Param code="DCVH742" parId="VB02" desc="功控If100W7保护状态"/>
+			 <Param code="DCVH743" parId="VB03" desc="功控If100W8保护状态"/>
+			 <Param code="DCVH744" parId="VB04" desc="功控If100W9保护状态"/>
+			 <Param code="DCVH745" parId="VB05" desc="功控If100W10保护状态"/>
+			 <Param code="DCVH746" parId="VB06" desc="功控If300W2保护状态"/>
+			 <Param code="DCVH747" parId="VB07" desc="功控If1kW2保护状态"/>
+			 <Param code="DCVH748" parId="VB08" desc="功控If状态预留6"/>
+			 <Param code="DCVH749" parId="VB09" desc="功控If100W11保护状态"/>
+			 <Param code="DCVH750" parId="VB0A" desc="功控If100W12保护状态"/>
+			 <Param code="DCVH751" parId="VB0B" desc="功控If100W13保护状态"/>
+			 <Param code="DCVH752" parId="VB0C" desc="功控If100W14保护状态"/>
+			 <Param code="DCVH753" parId="VB0D" desc="功控If100W15保护状态"/>
+			 <Param code="DCVH754" parId="VB0E" desc="功控If300W3保护状态"/>
+			 <Param code="DCVH755" parId="VB0F" desc="功控If1kW3保护状态"/>
+			 <Param code="DCVH756" parId="VB10" desc="功控If状态预留7"/>
+			 <Param code="DCVH757" parId="VB11" desc="功控If100W16保护状态"/>
+			 <Param code="DCVH758" parId="VB12" desc="功控If100W17保护状态"/>
+			 <Param code="DCVH759" parId="VB13" desc="功控If100W18保护状态"/>
+			 <Param code="DCVH760" parId="VB14" desc="功控If100W19保护状态"/>
+			 <Param code="DCVH761" parId="VB15" desc="功控If100W20保护状态"/>
+			 <Param code="DCVH762" parId="VB16" desc="功控If300W4保护状态"/>
+			 <Param code="DCVH763" parId="VB17" desc="功控If1kW4保护状态"/>
+			 <Param code="DCVH764" parId="VB18" desc="功控If状态预留8"/>
+			 <Param code="DCVH765" parId="VB19" desc="功控If输入总电流"/>
+			 <Param code="DCVH766" parId="VB1A" desc="功控If1kW1温度"/>
+			 <Param code="DCVH767" parId="VB1B" desc="功控If1kW2温度"/>
+			 <Param code="DCVH768" parId="VB1C" desc="功控If1kW3温度"/>
+			 <Param code="DCVH769" parId="VB1D" desc="功控If1kW4温度"/>
+			 <Param code="DCVH801" parId="VB32" desc="功控Ig100W1通断状态"/>
+			 <Param code="DCVH802" parId="VB33" desc="功控Ig100W2通断状态"/>
+			 <Param code="DCVH803" parId="VB34" desc="功控Ig100W3通断状态"/>
+			 <Param code="DCVH804" parId="VB35" desc="功控Ig100W4通断状态"/>
+			 <Param code="DCVH805" parId="VB36" desc="功控Ig100W5通断状态"/>
+			 <Param code="DCVH806" parId="VB37" desc="功控Ig300W1通断状态"/>
+			 <Param code="DCVH807" parId="VB38" desc="功控Ig1kW1通断状态"/>
+			 <Param code="DCVH808" parId="VB39" desc="功控Ig状态预留1"/>
+			 <Param code="DCVH809" parId="VB3A" desc="功控Ig100W6通断状态"/>
+			 <Param code="DCVH810" parId="VB3B" desc="功控Ig100W7通断状态"/>
+			 <Param code="DCVH811" parId="VB3C" desc="功控Ig100W8通断状态"/>
+			 <Param code="DCVH812" parId="VB3D" desc="泛光灯电源i"/>
+			 <Param code="DCVH813" parId="VB3E" desc="功控Ig100W10通断状态"/>
+			 <Param code="DCVH814" parId="VB3F" desc="功控Ig300W2通断状态"/>
+			 <Param code="DCVH815" parId="VB40" desc="功控Ig1kW2通断状态"/>
+			 <Param code="DCVH816" parId="VB41" desc="功控Ig状态预留2"/>
+			 <Param code="DCVH817" parId="VB42" desc="功控Ig100W11通断状态"/>
+			 <Param code="DCVH818" parId="VB43" desc="功控Ig100W12通断状态"/>
+			 <Param code="DCVH819" parId="VB44" desc="功控Ig100W13通断状态"/>
+			 <Param code="DCVH820" parId="VB45" desc="功控Ig100W14通断状态"/>
+			 <Param code="DCVH821" parId="VB46" desc="功控Ig100W15通断状态"/>
+			 <Param code="DCVH822" parId="VB47" desc="功控Ig300W3通断状态"/>
+			 <Param code="DCVH823" parId="VB48" desc="功控Ig1kW3通断状态"/>
+			 <Param code="DCVH824" parId="VB49" desc="功控Ig状态预留3"/>
+			 <Param code="DCVH825" parId="VB4A" desc="功控Ig100W16通断状态"/>
+			 <Param code="DCVH826" parId="VB4B" desc="舱内照明电源c"/>
+			 <Param code="DCVH827" parId="VB4C" desc="功控Ig100W18通断状态"/>
+			 <Param code="DCVH828" parId="VB4D" desc="功控Ig100W19通断状态"/>
+			 <Param code="DCVH829" parId="VB4E" desc="功控Ig100W20通断状态"/>
+			 <Param code="DCVH830" parId="VB4F" desc="功控Ig300W4通断状态"/>
+			 <Param code="DCVH831" parId="VB50" desc="功控Ig1kW4通断状态"/>
+			 <Param code="DCVH832" parId="VB51" desc="功控Ig状态预留4"/>
+			 <Param code="DCVH833" parId="VB52" desc="功控Ig100W1保护状态"/>
+			 <Param code="DCVH834" parId="VB53" desc="功控Ig100W2保护状态"/>
+			 <Param code="DCVH835" parId="VB54" desc="功控Ig100W3保护状态"/>
+			 <Param code="DCVH836" parId="VB55" desc="功控Ig100W4保护状态"/>
+			 <Param code="DCVH837" parId="VB56" desc="功控Ig100W5保护状态"/>
+			 <Param code="DCVH838" parId="VB57" desc="功控Ig300W1保护状态"/>
+			 <Param code="DCVH839" parId="VB58" desc="功控Ig1kW1保护状态"/>
+			 <Param code="DCVH840" parId="VB59" desc="功控Ig状态预留5"/>
+			 <Param code="DCVH841" parId="VB5A" desc="功控Ig100W6保护状态"/>
+			 <Param code="DCVH842" parId="VB5B" desc="功控Ig100W7保护状态"/>
+			 <Param code="DCVH843" parId="VB5C" desc="功控Ig100W8保护状态"/>
+			 <Param code="DCVH844" parId="VB5D" desc="功控Ig100W9保护状态"/>
+			 <Param code="DCVH845" parId="VB5E" desc="功控Ig100W10保护状态"/>
+			 <Param code="DCVH846" parId="VB5F" desc="功控Ig300W2保护状态"/>
+			 <Param code="DCVH847" parId="VB60" desc="功控Ig1kW2保护状态"/>
+			 <Param code="DCVH848" parId="VB61" desc="功控Ig状态预留6"/>
+			 <Param code="DCVH849" parId="VB62" desc="功控Ig100W11保护状态"/>
+			 <Param code="DCVH850" parId="VB63" desc="功控Ig100W12保护状态"/>
+			 <Param code="DCVH851" parId="VB64" desc="功控Ig100W13保护状态"/>
+			 <Param code="DCVH852" parId="VB65" desc="功控Ig100W14保护状态"/>
+			 <Param code="DCVH853" parId="VB66" desc="功控Ig100W15保护状态"/>
+			 <Param code="DCVH854" parId="VB67" desc="功控Ig300W3保护状态"/>
+			 <Param code="DCVH855" parId="VB68" desc="功控Ig1kW3保护状态"/>
+			 <Param code="DCVH856" parId="VB69" desc="功控Ig状态预留7"/>
+			 <Param code="DCVH857" parId="VB6A" desc="功控Ig100W16保护状态"/>
+			 <Param code="DCVH858" parId="VB6B" desc="功控Ig100W17保护状态"/>
+			 <Param code="DCVH859" parId="VB6C" desc="功控Ig100W18保护状态"/>
+			 <Param code="DCVH860" parId="VB6D" desc="功控Ig100W19保护状态"/>
+			 <Param code="DCVH861" parId="VB6E" desc="功控Ig100W20保护状态"/>
+			 <Param code="DCVH862" parId="VB6F" desc="功控Ig300W4保护状态"/>
+			 <Param code="DCVH863" parId="VB70" desc="功控Ig1kW4保护状态"/>
+			 <Param code="DCVH864" parId="VB71" desc="功控Ig状态预留8"/>
+			 <Param code="DCVH865" parId="VB72" desc="功控Ig输入总电流"/>
+			 <Param code="DCVH866" parId="VB73" desc="功控Ig1kW1温度"/>
+			 <Param code="DCVH867" parId="VB74" desc="功控Ig1kW2温度"/>
+			 <Param code="DCVH868" parId="VB75" desc="功控Ig1kW3温度"/>
+			 <Param code="DCVH869" parId="VB76" desc="功控Ig1kW4温度"/>
+			 <Param code="DCVH901" parId="VB8B" desc="功控Ih100W1通断状态"/>
+			 <Param code="DCVH902" parId="VB8C" desc="功控Ih100W2通断状态"/>
+			 <Param code="DCVH903" parId="VB8D" desc="功控Ih100W3通断状态"/>
+			 <Param code="DCVH904" parId="VB8E" desc="功控Ih100W4通断状态"/>
+			 <Param code="DCVH905" parId="VB8F" desc="功控Ih100W5通断状态"/>
+			 <Param code="DCVH906" parId="VB90" desc="功控Ih300W1通断状态"/>
+			 <Param code="DCVH907" parId="VB91" desc="功控Ih1kW1通断状态"/>
+			 <Param code="DCVH908" parId="VB92" desc="功控Ih状态预留1"/>
+			 <Param code="DCVH909" parId="VB93" desc="功控Ih100W6通断状态"/>
+			 <Param code="DCVH910" parId="VB94" desc="功控Ih100W7通断状态"/>
+			 <Param code="DCVH911" parId="VB95" desc="功控Ih100W8通断状态"/>
+			 <Param code="DCVH912" parId="VB96" desc="功控Ih100W9通断状态"/>
+			 <Param code="DCVH913" parId="VB97" desc="泛光灯电源j"/>
+			 <Param code="DCVH914" parId="VB98" desc="功控Ih300W2通断状态"/>
+			 <Param code="DCVH915" parId="VB99" desc="功控Ih1kW2通断状态"/>
+			 <Param code="DCVH916" parId="VB9A" desc="功控Ih状态预留2"/>
+			 <Param code="DCVH917" parId="VB9B" desc="功控Ih100W11通断状态"/>
+			 <Param code="DCVH918" parId="VB9C" desc="功控Ih100W12通断状态"/>
+			 <Param code="DCVH919" parId="VB9D" desc="功控Ih100W13通断状态"/>
+			 <Param code="DCVH920" parId="VB9E" desc="功控Ih100W14通断状态"/>
+			 <Param code="DCVH921" parId="VB9F" desc="功控Ih100W15通断状态"/>
+			 <Param code="DCVH922" parId="VBA0" desc="功控Ih300W3通断状态"/>
+			 <Param code="DCVH923" parId="VBA1" desc="功控Ih1kW3通断状态"/>
+			 <Param code="DCVH924" parId="VBA2" desc="功控Ih状态预留3"/>
+			 <Param code="DCVH925" parId="VBA3" desc="功控Ih100W16通断状态"/>
+			 <Param code="DCVH926" parId="VBA4" desc="功控Ih100W17通断状态"/>
+			 <Param code="DCVH927" parId="VBA5" desc="功控Ih100W18通断状态"/>
+			 <Param code="DCVH928" parId="VBA6" desc="功控Ih100W19通断状态"/>
+			 <Param code="DCVH929" parId="VBA7" desc="功控Ih100W20通断状态"/>
+			 <Param code="DCVH930" parId="VBA8" desc="功控Ih300W4通断状态"/>
+			 <Param code="DCVH931" parId="VBA9" desc="功控Ih1kW4通断状态"/>
+			 <Param code="DCVH932" parId="VBAA" desc="功控Ih状态预留4"/>
+			 <Param code="DCVH933" parId="VBAB" desc="功控Ih100W1保护状态"/>
+			 <Param code="DCVH934" parId="VBAC" desc="功控Ih100W2保护状态"/>
+			 <Param code="DCVH935" parId="VBAD" desc="功控Ih100W3保护状态"/>
+			 <Param code="DCVH936" parId="VBAE" desc="功控Ih100W4保护状态"/>
+			 <Param code="DCVH937" parId="VBAF" desc="功控Ih100W5保护状态"/>
+			 <Param code="DCVH938" parId="VBB0" desc="功控Ih300W1保护状态"/>
+			 <Param code="DCVH939" parId="VBB1" desc="功控Ih1kW1保护状态"/>
+			 <Param code="DCVH940" parId="VBB2" desc="功控Ih状态预留5"/>
+			 <Param code="DCVH941" parId="VBB3" desc="功控Ih100W6保护状态"/>
+			 <Param code="DCVH942" parId="VBB4" desc="功控Ih100W7保护状态"/>
+			 <Param code="DCVH943" parId="VBB5" desc="功控Ih100W8保护状态"/>
+			 <Param code="DCVH944" parId="VBB6" desc="功控Ih100W9保护状态"/>
+			 <Param code="DCVH945" parId="VBB7" desc="功控Ih100W10保护状态"/>
+			 <Param code="DCVH946" parId="VBB8" desc="功控Ih300W2保护状态"/>
+			 <Param code="DCVH947" parId="VBB9" desc="功控Ih1kW2保护状态"/>
+			 <Param code="DCVH948" parId="VBBA" desc="功控Ih状态预留6"/>
+			 <Param code="DCVH949" parId="VBBB" desc="功控Ih100W11保护状态"/>
+			 <Param code="DCVH950" parId="VBBC" desc="功控Ih100W12保护状态"/>
+			 <Param code="DCVH951" parId="VBBD" desc="功控Ih100W13保护状态"/>
+			 <Param code="DCVH952" parId="VBBE" desc="功控Ih100W14保护状态"/>
+			 <Param code="DCVH953" parId="VBBF" desc="功控Ih100W15保护状态"/>
+			 <Param code="DCVH954" parId="VBC0" desc="功控Ih300W3保护状态"/>
+			 <Param code="DCVH955" parId="VBC1" desc="功控Ih1kW3保护状态"/>
+			 <Param code="DCVH956" parId="VBC2" desc="功控Ih状态预留7"/>
+			 <Param code="DCVH957" parId="VBC3" desc="功控Ih100W16保护状态"/>
+			 <Param code="DCVH958" parId="VBC4" desc="功控Ih100W17保护状态"/>
+			 <Param code="DCVH959" parId="VBC5" desc="功控Ih100W18保护状态"/>
+			 <Param code="DCVH960" parId="VBC6" desc="功控Ih100W19保护状态"/>
+			 <Param code="DCVH961" parId="VBC7" desc="功控Ih100W20保护状态"/>
+			 <Param code="DCVH962" parId="VBC8" desc="功控Ih300W4保护状态"/>
+			 <Param code="DCVH963" parId="VBC9" desc="功控Ih1kW4保护状态"/>
+			 <Param code="DCVH964" parId="VBCA" desc="功控Ih状态预留8"/>
+			 <Param code="DCVH965" parId="VBCB" desc="功控Ih输入总电流"/>
+			 <Param code="DCVH966" parId="VBCC" desc="功控Ih1kW1温度"/>
+			 <Param code="DCVH967" parId="VBCD" desc="功控Ih1kW2温度"/>
+			 <Param code="DCVH968" parId="VBCE" desc="功控Ih1kW3温度"/>
+			 <Param code="DCVH969" parId="VBCF" desc="功控Ih1kW4温度"/>
+		</SQLDatabaseName>
+		<SQLDatabaseName Name="tm2">
+			 <Param code="DCVH1001" parId="VBE4" desc="功控Ii100W1通断状态"/>
+			 <Param code="DCVH1002" parId="VBE5" desc="功控Ii100W2通断状态"/>
+			 <Param code="DCVH1003" parId="VBE6" desc="功控Ii100W3通断状态"/>
+			 <Param code="DCVH1004" parId="VBE7" desc="功控Ii100W4通断状态"/>
+			 <Param code="DCVH1005" parId="VBE8" desc="功控Ii100W5通断状态"/>
+			 <Param code="DCVH1006" parId="VBE9" desc="功控Ii300W1通断状态"/>
+			 <Param code="DCVH1007" parId="VBEA" desc="功控Ii1kW1通断状态"/>
+			 <Param code="DCVH1008" parId="VBEB" desc="功控Ii状态预留1"/>
+			 <Param code="DCVH1009" parId="VBEC" desc="功控Ii100W6通断状态"/>
+			 <Param code="DCVH1010" parId="VBED" desc="功控Ii100W7通断状态"/>
+			 <Param code="DCVH1011" parId="VBEE" desc="功控Ii100W8通断状态"/>
+			 <Param code="DCVH1012" parId="VBEF" desc="泛光灯电源g"/>
+			 <Param code="DCVH1013" parId="VBF0" desc="功控Ii100W10通断状态"/>
+			 <Param code="DCVH1014" parId="VBF1" desc="功控Ii300W2通断状态"/>
+			 <Param code="DCVH1015" parId="VBF2" desc="功控Ii1kW2通断状态"/>
+			 <Param code="DCVH1016" parId="VBF3" desc="功控Ii状态预留2"/>
+			 <Param code="DCVH1017" parId="VBF4" desc="功控Ii100W11通断状态"/>
+			 <Param code="DCVH1018" parId="VBF5" desc="功控Ii100W12通断状态"/>
+			 <Param code="DCVH1019" parId="VBF6" desc="功控Ii100W13通断状态"/>
+			 <Param code="DCVH1020" parId="VBF7" desc="功控Ii100W14通断状态"/>
+			 <Param code="DCVH1021" parId="VBF8" desc="功控Ii100W15通断状态"/>
+			 <Param code="DCVH1022" parId="VBF9" desc="功控Ii300W3通断状态"/>
+			 <Param code="DCVH1023" parId="VBFA" desc="功控Ii1kW3通断状态"/>
+			 <Param code="DCVH1024" parId="VBFB" desc="功控Ii状态预留3"/>
+			 <Param code="DCVH1025" parId="VBFC" desc="功控Ii100W16通断状态"/>
+			 <Param code="DCVH1026" parId="VBFD" desc="功控Ii100W17通断状态"/>
+			 <Param code="DCVH1027" parId="VBFE" desc="功控Ii100W18通断状态"/>
+			 <Param code="DCVH1028" parId="VBFF" desc="功控Ii100W19通断状态"/>
+			 <Param code="DCVH1029" parId="VC00" desc="功控Ii100W20通断状态"/>
+			 <Param code="DCVH1030" parId="VC01" desc="功控Ii300W4通断状态"/>
+			 <Param code="DCVH1031" parId="VC02" desc="功控Ii1kW4通断状态"/>
+			 <Param code="DCVH1032" parId="VC03" desc="功控Ii状态预留4"/>
+			 <Param code="DCVH1033" parId="VC04" desc="功控Ii100W1保护状态"/>
+			 <Param code="DCVH1034" parId="VC05" desc="功控Ii100W2保护状态"/>
+			 <Param code="DCVH1035" parId="VC06" desc="功控Ii100W3保护状态"/>
+			 <Param code="DCVH1036" parId="VC07" desc="功控Ii100W4保护状态"/>
+			 <Param code="DCVH1037" parId="VC08" desc="功控Ii100W5保护状态"/>
+			 <Param code="DCVH1038" parId="VC09" desc="功控Ii300W1保护状态"/>
+			 <Param code="DCVH1039" parId="VC0A" desc="功控Ii1kW1保护状态"/>
+			 <Param code="DCVH1040" parId="VC0B" desc="功控Ii状态预留5"/>
+			 <Param code="DCVH1041" parId="VC0C" desc="功控Ii100W6保护状态"/>
+			 <Param code="DCVH1042" parId="VC0D" desc="功控Ii100W7保护状态"/>
+			 <Param code="DCVH1043" parId="VC0E" desc="功控Ii100W8保护状态"/>
+			 <Param code="DCVH1044" parId="VC0F" desc="功控Ii100W9保护状态"/>
+			 <Param code="DCVH1045" parId="VC10" desc="功控Ii100W10保护状态"/>
+			 <Param code="DCVH1046" parId="VC11" desc="功控Ii300W2保护状态"/>
+			 <Param code="DCVH1047" parId="VC12" desc="功控Ii1kW2保护状态"/>
+			 <Param code="DCVH1048" parId="VC13" desc="功控Ii状态预留6"/>
+			 <Param code="DCVH1049" parId="VC14" desc="功控Ii100W11保护状态"/>
+			 <Param code="DCVH1050" parId="VC15" desc="功控Ii100W12保护状态"/>
+			 <Param code="DCVH1051" parId="VC16" desc="功控Ii100W13保护状态"/>
+			 <Param code="DCVH1052" parId="VC17" desc="功控Ii100W14保护状态"/>
+			 <Param code="DCVH1053" parId="VC18" desc="功控Ii100W15保护状态"/>
+			 <Param code="DCVH1054" parId="VC19" desc="功控Ii300W3保护状态"/>
+			 <Param code="DCVH1055" parId="VC1A" desc="功控Ii1kW3保护状态"/>
+			 <Param code="DCVH1056" parId="VC1B" desc="功控Ii状态预留7"/>
+			 <Param code="DCVH1057" parId="VC1C" desc="功控Ii100W16保护状态"/>
+			 <Param code="DCVH1058" parId="VC1D" desc="功控Ii100W17保护状态"/>
+			 <Param code="DCVH1059" parId="VC1E" desc="功控Ii100W18保护状态"/>
+			 <Param code="DCVH1060" parId="VC1F" desc="功控Ii100W19保护状态"/>
+			 <Param code="DCVH1061" parId="VC20" desc="功控Ii100W20保护状态"/>
+			 <Param code="DCVH1062" parId="VC21" desc="功控Ii300W4保护状态"/>
+			 <Param code="DCVH1063" parId="VC22" desc="功控Ii1kW4保护状态"/>
+			 <Param code="DCVH1064" parId="VC23" desc="功控Ii状态预留8"/>
+			 <Param code="DCVH1065" parId="VC24" desc="功控Ii输入总电流"/>
+			 <Param code="DCVH1066" parId="VC25" desc="功控Ii1kW1温度"/>
+			 <Param code="DCVH1067" parId="VC26" desc="功控Ii1kW2温度"/>
+			 <Param code="DCVH1068" parId="VC27" desc="功控Ii1kW3温度"/>
+			 <Param code="DCVH1069" parId="VC28" desc="功控Ii1kW4温度"/>
+			 <Param code="DCVH1101" parId="VC3D" desc="功控Ij100W1通断状态"/>
+			 <Param code="DCVH1102" parId="VC3E" desc="功控Ij100W2通断状态"/>
+			 <Param code="DCVH1103" parId="VC3F" desc="功控Ij100W3通断状态"/>
+			 <Param code="DCVH1104" parId="VC40" desc="功控Ij100W4通断状态"/>
+			 <Param code="DCVH1105" parId="VC41" desc="功控Ij100W5通断状态"/>
+			 <Param code="DCVH1106" parId="VC42" desc="功控Ij300W1通断状态"/>
+			 <Param code="DCVH1107" parId="VC43" desc="功控Ij1kW1通断状态"/>
+			 <Param code="DCVH1108" parId="VC44" desc="功控Ij状态预留1"/>
+			 <Param code="DCVH1109" parId="VC45" desc="泛光灯电源h"/>
+			 <Param code="DCVH1110" parId="VC46" desc="功控Ij100W7通断状态"/>
+			 <Param code="DCVH1111" parId="VC47" desc="功控Ij100W8通断状态"/>
+			 <Param code="DCVH1112" parId="VC48" desc="功控Ij100W9通断状态"/>
+			 <Param code="DCVH1113" parId="VC49" desc="功控Ij100W10通断状态"/>
+			 <Param code="DCVH1114" parId="VC4A" desc="功控Ij300W2通断状态"/>
+			 <Param code="DCVH1115" parId="VC4B" desc="功控Ij1kW2通断状态"/>
+			 <Param code="DCVH1116" parId="VC4C" desc="功控Ij状态预留2"/>
+			 <Param code="DCVH1117" parId="VC4D" desc="功控Ij100W11通断状态"/>
+			 <Param code="DCVH1118" parId="VC4E" desc="功控Ij100W12通断状态"/>
+			 <Param code="DCVH1119" parId="VC4F" desc="功控Ij100W13通断状态"/>
+			 <Param code="DCVH1120" parId="VC50" desc="功控Ij100W14通断状态"/>
+			 <Param code="DCVH1121" parId="VC51" desc="功控Ij100W15通断状态"/>
+			 <Param code="DCVH1122" parId="VC52" desc="功控Ij300W3通断状态"/>
+			 <Param code="DCVH1123" parId="VC53" desc="功控Ij1kW3通断状态"/>
+			 <Param code="DCVH1124" parId="VC54" desc="功控Ij状态预留3"/>
+			 <Param code="DCVH1125" parId="VC55" desc="功控Ij100W16通断状态"/>
+			 <Param code="DCVH1126" parId="VC56" desc="功控Ij100W17通断状态"/>
+			 <Param code="DCVH1127" parId="VC57" desc="功控Ij100W18通断状态"/>
+			 <Param code="DCVH1128" parId="VC58" desc="功控Ij100W19通断状态"/>
+			 <Param code="DCVH1129" parId="VC59" desc="功控Ij100W20通断状态"/>
+			 <Param code="DCVH1130" parId="VC5A" desc="功控Ij300W4通断状态"/>
+			 <Param code="DCVH1131" parId="VC5B" desc="功控Ij1kW4通断状态"/>
+			 <Param code="DCVH1132" parId="VC5C" desc="功控Ij状态预留4"/>
+			 <Param code="DCVH1133" parId="VC5D" desc="功控Ij100W1保护状态"/>
+			 <Param code="DCVH1134" parId="VC5E" desc="功控Ij100W2保护状态"/>
+			 <Param code="DCVH1135" parId="VC5F" desc="功控Ij100W3保护状态"/>
+			 <Param code="DCVH1136" parId="VC60" desc="功控Ij100W4保护状态"/>
+			 <Param code="DCVH1137" parId="VC61" desc="功控Ij100W5保护状态"/>
+			 <Param code="DCVH1138" parId="VC62" desc="功控Ij300W1保护状态"/>
+			 <Param code="DCVH1139" parId="VC63" desc="功控Ij1kW1保护状态"/>
+			 <Param code="DCVH1140" parId="VC64" desc="功控Ij状态预留5"/>
+			 <Param code="DCVH1141" parId="VC65" desc="功控Ij100W6保护状态"/>
+			 <Param code="DCVH1142" parId="VC66" desc="功控Ij100W7保护状态"/>
+			 <Param code="DCVH1143" parId="VC67" desc="功控Ij100W8保护状态"/>
+			 <Param code="DCVH1144" parId="VC68" desc="功控Ij100W9保护状态"/>
+			 <Param code="DCVH1145" parId="VC69" desc="功控Ij100W10保护状态"/>
+			 <Param code="DCVH1146" parId="VC6A" desc="功控Ij300W2保护状态"/>
+			 <Param code="DCVH1147" parId="VC6B" desc="功控Ij1kW2保护状态"/>
+			 <Param code="DCVH1148" parId="VC6C" desc="功控Ij状态预留6"/>
+			 <Param code="DCVH1149" parId="VC6D" desc="功控Ij100W11保护状态"/>
+			 <Param code="DCVH1150" parId="VC6E" desc="功控Ij100W12保护状态"/>
+			 <Param code="DCVH1151" parId="VC6F" desc="功控Ij100W13保护状态"/>
+			 <Param code="DCVH1152" parId="VC70" desc="功控Ij100W14保护状态"/>
+			 <Param code="DCVH1153" parId="VC71" desc="功控Ij100W15保护状态"/>
+			 <Param code="DCVH1154" parId="VC72" desc="功控Ij300W3保护状态"/>
+			 <Param code="DCVH1155" parId="VC73" desc="功控Ij1kW3保护状态"/>
+			 <Param code="DCVH1156" parId="VC74" desc="功控Ij状态预留7"/>
+			 <Param code="DCVH1157" parId="VC75" desc="功控Ij100W16保护状态"/>
+			 <Param code="DCVH1158" parId="VC76" desc="功控Ij100W17保护状态"/>
+			 <Param code="DCVH1159" parId="VC77" desc="功控Ij100W18保护状态"/>
+			 <Param code="DCVH1160" parId="VC78" desc="功控Ij100W19保护状态"/>
+			 <Param code="DCVH1161" parId="VC79" desc="功控Ij100W20保护状态"/>
+			 <Param code="DCVH1162" parId="VC7A" desc="功控Ij300W4保护状态"/>
+			 <Param code="DCVH1163" parId="VC7B" desc="功控Ij1kW4保护状态"/>
+			 <Param code="DCVH1164" parId="VC7C" desc="功控Ij状态预留8"/>
+			 <Param code="DCVH1165" parId="VC7D" desc="功控Ij输入总电流"/>
+			 <Param code="DCVH1166" parId="VC7E" desc="功控Ij1kW1温度"/>
+			 <Param code="DCVH1167" parId="VC7F" desc="功控Ij1kW2温度"/>
+			 <Param code="DCVH1168" parId="VC80" desc="功控Ij1kW3温度"/>
+			 <Param code="DCVH1169" parId="VC81" desc="功控Ij1kW4温度"/>
+			 <Param code="DCVH1201" parId="VC96" desc="功控Ik100W1通断状态"/>
+			 <Param code="DCVH1202" parId="VC97" desc="功控Ik100W2通断状态"/>
+			 <Param code="DCVH1203" parId="VC98" desc="功控Ik100W3通断状态"/>
+			 <Param code="DCVH1204" parId="VC99" desc="功控Ik100W4通断状态"/>
+			 <Param code="DCVH1205" parId="VC9A" desc="功控Ik100W5通断状态"/>
+			 <Param code="DCVH1206" parId="VC9B" desc="功控Ik300W1通断状态"/>
+			 <Param code="DCVH1207" parId="VC9C" desc="功控Ik1kW1通断状态"/>
+			 <Param code="DCVH1208" parId="VC9D" desc="功控Ik状态预留1"/>
+			 <Param code="DCVH1209" parId="VC9E" desc="功控Ik100W6通断状态"/>
+			 <Param code="DCVH1210" parId="VC9F" desc="专用照明灯2控制板"/>
+			 <Param code="DCVH1211" parId="VCA0" desc="功控Ik100W8通断状态"/>
+			 <Param code="DCVH1212" parId="VCA1" desc="功控Ik100W9通断状态"/>
+			 <Param code="DCVH1213" parId="VCA2" desc="功控Ik100W10通断状态"/>
+			 <Param code="DCVH1214" parId="VCA3" desc="功控Ik300W2通断状态"/>
+			 <Param code="DCVH1215" parId="VCA4" desc="功控Ik1kW2通断状态"/>
+			 <Param code="DCVH1216" parId="VCA5" desc="功控Ik状态预留2"/>
+			 <Param code="DCVH1217" parId="VCA6" desc="功控Ik100W11通断状态"/>
+			 <Param code="DCVH1218" parId="VCA7" desc="功控Ik100W12通断状态"/>
+			 <Param code="DCVH1219" parId="VCA8" desc="功控Ik100W13通断状态"/>
+			 <Param code="DCVH1220" parId="VCA9" desc="功控Ik100W14通断状态"/>
+			 <Param code="DCVH1221" parId="VCAA" desc="功控Ik100W15通断状态"/>
+			 <Param code="DCVH1222" parId="VCAB" desc="功控Ik300W3通断状态"/>
+			 <Param code="DCVH1223" parId="VCAC" desc="功控Ik1kW3通断状态"/>
+			 <Param code="DCVH1224" parId="VCAD" desc="功控Ik状态预留3"/>
+			 <Param code="DCVH1225" parId="VCAE" desc="功控Ik100W16通断状态"/>
+			 <Param code="DCVH1226" parId="VCAF" desc="功控Ik100W17通断状态"/>
+			 <Param code="DCVH1227" parId="VCB0" desc="功控Ik100W18通断状态"/>
+			 <Param code="DCVH1228" parId="VCB1" desc="功控Ik100W19通断状态"/>
+			 <Param code="DCVH1229" parId="VCB2" desc="功控Ik100W20通断状态"/>
+			 <Param code="DCVH1230" parId="VCB3" desc="功控Ik300W4通断状态"/>
+			 <Param code="DCVH1231" parId="VCB4" desc="功控Ik1kW4通断状态"/>
+			 <Param code="DCVH1232" parId="VCB5" desc="功控Ik状态预留4"/>
+			 <Param code="DCVH1233" parId="VCB6" desc="功控Ik100W1保护状态"/>
+			 <Param code="DCVH1234" parId="VCB7" desc="功控Ik100W2保护状态"/>
+			 <Param code="DCVH1235" parId="VCB8" desc="功控Ik100W3保护状态"/>
+			 <Param code="DCVH1236" parId="VCB9" desc="功控Ik100W4保护状态"/>
+			 <Param code="DCVH1237" parId="VCBA" desc="功控Ik100W5保护状态"/>
+			 <Param code="DCVH1238" parId="VCBB" desc="功控Ik300W1保护状态"/>
+			 <Param code="DCVH1239" parId="VCBC" desc="功控Ik1kW1保护状态"/>
+			 <Param code="DCVH1240" parId="VCBD" desc="功控Ik状态预留5"/>
+			 <Param code="DCVH1241" parId="VCBE" desc="功控Ik100W6保护状态"/>
+			 <Param code="DCVH1242" parId="VCBF" desc="功控Ik100W7保护状态"/>
+			 <Param code="DCVH1243" parId="VCC0" desc="功控Ik100W8保护状态"/>
+			 <Param code="DCVH1244" parId="VCC1" desc="功控Ik100W9保护状态"/>
+			 <Param code="DCVH1245" parId="VCC2" desc="功控Ik100W10保护状态"/>
+			 <Param code="DCVH1246" parId="VCC3" desc="功控Ik300W2保护状态"/>
+			 <Param code="DCVH1247" parId="VCC4" desc="功控Ik1kW2保护状态"/>
+			 <Param code="DCVH1248" parId="VCC5" desc="功控Ik状态预留6"/>
+			 <Param code="DCVH1249" parId="VCC6" desc="功控Ik100W11保护状态"/>
+			 <Param code="DCVH1250" parId="VCC7" desc="功控Ik100W12保护状态"/>
+			 <Param code="DCVH1251" parId="VCC8" desc="功控Ik100W13保护状态"/>
+			 <Param code="DCVH1252" parId="VCC9" desc="功控Ik100W14保护状态"/>
+			 <Param code="DCVH1253" parId="VCCA" desc="功控Ik100W15保护状态"/>
+			 <Param code="DCVH1254" parId="VCCB" desc="功控Ik300W3保护状态"/>
+			 <Param code="DCVH1255" parId="VCCC" desc="功控Ik1kW3保护状态"/>
+			 <Param code="DCVH1256" parId="VCCD" desc="功控Ik状态预留7"/>
+			 <Param code="DCVH1257" parId="VCCE" desc="功控Ik100W16保护状态"/>
+			 <Param code="DCVH1258" parId="VCCF" desc="功控Ik100W17保护状态"/>
+			 <Param code="DCVH1259" parId="VCD0" desc="功控Ik100W18保护状态"/>
+			 <Param code="DCVH1260" parId="VCD1" desc="功控Ik100W19保护状态"/>
+			 <Param code="DCVH1261" parId="VCD2" desc="功控Ik100W20保护状态"/>
+			 <Param code="DCVH1262" parId="VCD3" desc="功控Ik300W4保护状态"/>
+			 <Param code="DCVH1263" parId="VCD4" desc="功控Ik1kW4保护状态"/>
+			 <Param code="DCVH1264" parId="VCD5" desc="功控Ik状态预留8"/>
+			 <Param code="DCVH1265" parId="VCD6" desc="功控Ik输入总电流"/>
+			 <Param code="DCVH1266" parId="VCD7" desc="功控Ik1kW1温度"/>
+			 <Param code="DCVH1267" parId="VCD8" desc="功控Ik1kW2温度"/>
+			 <Param code="DCVH1268" parId="VCD9" desc="功控Ik1kW3温度"/>
+			 <Param code="DCVH1269" parId="VCDA" desc="功控Ik1kW4温度"/>
+			 <Param code="DCVH1301" parId="VCEF" desc="功控Il100W1通断状态"/>
+			 <Param code="DCVH1302" parId="VCF0" desc="功控Il100W2通断状态"/>
+			 <Param code="DCVH1303" parId="VCF1" desc="功控Il100W3通断状态"/>
+			 <Param code="DCVH1304" parId="VCF2" desc="功控Il100W4通断状态"/>
+			 <Param code="DCVH1305" parId="VCF3" desc="功控Il100W5通断状态"/>
+			 <Param code="DCVH1306" parId="VCF4" desc="功控Il300W1通断状态"/>
+			 <Param code="DCVH1307" parId="VCF5" desc="功控Il1kW1通断状态"/>
+			 <Param code="DCVH1308" parId="VCF6" desc="功控Il状态预留1"/>
+			 <Param code="DCVH1309" parId="VCF7" desc="功控Il100W6通断状态"/>
+			 <Param code="DCVH1310" parId="VCF8" desc="功控Il100W7通断状态"/>
+			 <Param code="DCVH1311" parId="VCF9" desc="舱内照明电源b"/>
+			 <Param code="DCVH1312" parId="VCFA" desc="功控Il100W9通断状态"/>
+			 <Param code="DCVH1313" parId="VCFB" desc="功控Il100W10通断状态"/>
+			 <Param code="DCVH1314" parId="VCFC" desc="功控Il300W2通断状态"/>
+			 <Param code="DCVH1315" parId="VCFD" desc="功控Il1kW2通断状态"/>
+			 <Param code="DCVH1316" parId="VCFE" desc="功控Il状态预留2"/>
+			 <Param code="DCVH1317" parId="VCFF" desc="功控Il100W11通断状态"/>
+			 <Param code="DCVH1318" parId="VD00" desc="功控Il100W12通断状态"/>
+			 <Param code="DCVH1319" parId="VD01" desc="功控Il100W13通断状态"/>
+			 <Param code="DCVH1320" parId="VD02" desc="功控Il100W14通断状态"/>
+			 <Param code="DCVH1321" parId="VD03" desc="功控Il100W15通断状态"/>
+			 <Param code="DCVH1322" parId="VD04" desc="功控Il300W3通断状态"/>
+			 <Param code="DCVH1323" parId="VD05" desc="功控Il1kW3通断状态"/>
+			 <Param code="DCVH1324" parId="VD06" desc="功控Il状态预留3"/>
+			 <Param code="DCVH1325" parId="VD07" desc="功控Il100W16通断状态"/>
+			 <Param code="DCVH1326" parId="VD08" desc="功控Il100W17通断状态"/>
+			 <Param code="DCVH1327" parId="VD09" desc="功控Il100W18通断状态"/>
+			 <Param code="DCVH1328" parId="VD0A" desc="功控Il100W19通断状态"/>
+			 <Param code="DCVH1329" parId="VD0B" desc="功控Il100W20通断状态"/>
+			 <Param code="DCVH1330" parId="VD0C" desc="功控Il300W4通断状态"/>
+			 <Param code="DCVH1331" parId="VD0D" desc="功控Il1kW4通断状态"/>
+			 <Param code="DCVH1332" parId="VD0E" desc="功控Il状态预留4"/>
+			 <Param code="DCVH1333" parId="VD0F" desc="功控Il100W1保护状态"/>
+			 <Param code="DCVH1334" parId="VD10" desc="功控Il100W2保护状态"/>
+			 <Param code="DCVH1335" parId="VD11" desc="功控Il100W3保护状态"/>
+			 <Param code="DCVH1336" parId="VD12" desc="功控Il100W4保护状态"/>
+			 <Param code="DCVH1337" parId="VD13" desc="功控Il100W5保护状态"/>
+			 <Param code="DCVH1338" parId="VD14" desc="功控Il300W1保护状态"/>
+			 <Param code="DCVH1339" parId="VD15" desc="功控Il1kW1保护状态"/>
+			 <Param code="DCVH1340" parId="VD16" desc="功控Il状态预留5"/>
+			 <Param code="DCVH1341" parId="VD17" desc="功控Il100W6保护状态"/>
+			 <Param code="DCVH1342" parId="VD18" desc="功控Il100W7保护状态"/>
+			 <Param code="DCVH1343" parId="VD19" desc="功控Il100W8保护状态"/>
+			 <Param code="DCVH1344" parId="VD1A" desc="功控Il100W9保护状态"/>
+			 <Param code="DCVH1345" parId="VD1B" desc="功控Il100W10保护状态"/>
+			 <Param code="DCVH1346" parId="VD1C" desc="功控Il300W2保护状态"/>
+			 <Param code="DCVH1347" parId="VD1D" desc="功控Il1kW2保护状态"/>
+			 <Param code="DCVH1348" parId="VD1E" desc="功控Il状态预留6"/>
+			 <Param code="DCVH1349" parId="VD1F" desc="功控Il100W11保护状态"/>
+			 <Param code="DCVH1350" parId="VD20" desc="功控Il100W12保护状态"/>
+			 <Param code="DCVH1351" parId="VD21" desc="功控Il100W13保护状态"/>
+			 <Param code="DCVH1352" parId="VD22" desc="功控Il100W14保护状态"/>
+			 <Param code="DCVH1353" parId="VD23" desc="功控Il100W15保护状态"/>
+			 <Param code="DCVH1354" parId="VD24" desc="功控Il300W3保护状态"/>
+			 <Param code="DCVH1355" parId="VD25" desc="功控Il1kW3保护状态"/>
+			 <Param code="DCVH1356" parId="VD26" desc="功控Il状态预留7"/>
+			 <Param code="DCVH1357" parId="VD27" desc="功控Il100W16保护状态"/>
+			 <Param code="DCVH1358" parId="VD28" desc="功控Il100W17保护状态"/>
+			 <Param code="DCVH1359" parId="VD29" desc="功控Il100W18保护状态"/>
+			 <Param code="DCVH1360" parId="VD2A" desc="功控Il100W19保护状态"/>
+			 <Param code="DCVH1361" parId="VD2B" desc="功控Il100W20保护状态"/>
+			 <Param code="DCVH1362" parId="VD2C" desc="功控Il300W4保护状态"/>
+			 <Param code="DCVH1363" parId="VD2D" desc="功控Il1kW4保护状态"/>
+			 <Param code="DCVH1364" parId="VD2E" desc="功控Il状态预留8"/>
+			 <Param code="DCVH1365" parId="VD2F" desc="功控Il输入总电流"/>
+			 <Param code="DCVH1366" parId="VD30" desc="功控Il1kW1温度"/>
+			 <Param code="DCVH1367" parId="VD31" desc="功控Il1kW2温度"/>
+			 <Param code="DCVH1368" parId="VD32" desc="功控Il1kW3温度"/>
+			 <Param code="DCVH1369" parId="VD33" desc="功控Il1kW4温度"/>
+			 <Param code="DCVH1401" parId="VD48" desc="功控Im100W1通断状态"/>
+			 <Param code="DCVH1402" parId="VD49" desc="功控Im100W2通断状态"/>
+			 <Param code="DCVH1403" parId="VD4A" desc="功控Im100W3通断状态"/>
+			 <Param code="DCVH1404" parId="VD4B" desc="功控Im100W4通断状态"/>
+			 <Param code="DCVH1405" parId="VD4C" desc="音频单元a通断状态"/>
+			 <Param code="DCVH1406" parId="VD4D" desc="功控Im300W1通断状态"/>
+			 <Param code="DCVH1407" parId="VD4E" desc="功控Im1kW1通断状态"/>
+			 <Param code="DCVH1408" parId="VD4F" desc="功控Im状态预留1"/>
+			 <Param code="DCVH1409" parId="VD50" desc="功控Im100W6通断状态"/>
+			 <Param code="DCVH1410" parId="VD51" desc="功控Im100W7通断状态"/>
+			 <Param code="DCVH1411" parId="VD52" desc="泛光灯电源a"/>
+			 <Param code="DCVH1412" parId="VD53" desc="功控Im100W9通断状态"/>
+			 <Param code="DCVH1413" parId="VD54" desc="功控Im100W10通断状态"/>
+			 <Param code="DCVH1414" parId="VD55" desc="功控Im300W2通断状态"/>
+			 <Param code="DCVH1415" parId="VD56" desc="功控Im1kW2通断状态"/>
+			 <Param code="DCVH1416" parId="VD57" desc="功控Im状态预留2"/>
+			 <Param code="DCVH1417" parId="VD58" desc="功控Im100W11通断状态"/>
+			 <Param code="DCVH1418" parId="VD59" desc="功控Im100W12通断状态"/>
+			 <Param code="DCVH1419" parId="VD5A" desc="功控Im100W13通断状态"/>
+			 <Param code="DCVH1420" parId="VD5B" desc="功控Im100W14通断状态"/>
+			 <Param code="DCVH1421" parId="VD5C" desc="功控Im100W15通断状态"/>
+			 <Param code="DCVH1422" parId="VD5D" desc="功控Im300W3通断状态"/>
+			 <Param code="DCVH1423" parId="VD5E" desc="功控Im1kW3通断状态"/>
+			 <Param code="DCVH1424" parId="VD5F" desc="功控Im状态预留3"/>
+			 <Param code="DCVH1425" parId="VD60" desc="功控Im100W16通断状态"/>
+			 <Param code="DCVH1426" parId="VD61" desc="功控Im100W17通断状态"/>
+			 <Param code="DCVH1427" parId="VD62" desc="舱内照明电源a"/>
+			 <Param code="DCVH1428" parId="VD63" desc="功控Im100W19通断状态"/>
+			 <Param code="DCVH1429" parId="VD64" desc="功控Im100W20通断状态"/>
+			 <Param code="DCVH1430" parId="VD65" desc="功控Im300W4通断状态"/>
+			 <Param code="DCVH1431" parId="VD66" desc="功控Im1kW4通断状态"/>
+			 <Param code="DCVH1432" parId="VD67" desc="功控Im状态预留4"/>
+			 <Param code="DCVH1433" parId="VD68" desc="功控Im100W1保护状态"/>
+			 <Param code="DCVH1434" parId="VD69" desc="功控Im100W2保护状态"/>
+			 <Param code="DCVH1435" parId="VD6A" desc="功控Im100W3保护状态"/>
+			 <Param code="DCVH1436" parId="VD6B" desc="功控Im100W4保护状态"/>
+			 <Param code="DCVH1437" parId="VD6C" desc="功控Im100W5保护状态"/>
+			 <Param code="DCVH1438" parId="VD6D" desc="功控Im300W1保护状态"/>
+			 <Param code="DCVH1439" parId="VD6E" desc="功控Im1kW1保护状态"/>
+			 <Param code="DCVH1440" parId="VD6F" desc="功控Im状态预留5"/>
+			 <Param code="DCVH1441" parId="VD70" desc="功控Im100W6保护状态"/>
+			 <Param code="DCVH1442" parId="VD71" desc="功控Im100W7保护状态"/>
+			 <Param code="DCVH1443" parId="VD72" desc="功控Im100W8保护状态"/>
+			 <Param code="DCVH1444" parId="VD73" desc="功控Im100W9保护状态"/>
+			 <Param code="DCVH1445" parId="VD74" desc="功控Im100W10保护状态"/>
+			 <Param code="DCVH1446" parId="VD75" desc="功控Im300W2保护状态"/>
+			 <Param code="DCVH1447" parId="VD76" desc="功控Im1kW2保护状态"/>
+			 <Param code="DCVH1448" parId="VD77" desc="功控Im状态预留6"/>
+			 <Param code="DCVH1449" parId="VD78" desc="功控Im100W11保护状态"/>
+			 <Param code="DCVH1450" parId="VD79" desc="功控Im100W12保护状态"/>
+			 <Param code="DCVH1451" parId="VD7A" desc="功控Im100W13保护状态"/>
+			 <Param code="DCVH1452" parId="VD7B" desc="功控Im100W14保护状态"/>
+			 <Param code="DCVH1453" parId="VD7C" desc="功控Im100W15保护状态"/>
+			 <Param code="DCVH1454" parId="VD7D" desc="功控Im300W3保护状态"/>
+			 <Param code="DCVH1455" parId="VD7E" desc="功控Im1kW3保护状态"/>
+			 <Param code="DCVH1456" parId="VD7F" desc="功控Im状态预留7"/>
+			 <Param code="DCVH1457" parId="VD80" desc="功控Im100W16保护状态"/>
+			 <Param code="DCVH1458" parId="VD81" desc="功控Im100W17保护状态"/>
+			 <Param code="DCVH1459" parId="VD82" desc="功控Im100W18保护状态"/>
+			 <Param code="DCVH1460" parId="VD83" desc="功控Im100W19保护状态"/>
+			 <Param code="DCVH1461" parId="VD84" desc="功控Im100W20保护状态"/>
+			 <Param code="DCVH1462" parId="VD85" desc="功控Im300W4保护状态"/>
+			 <Param code="DCVH1463" parId="VD86" desc="功控Im1kW4保护状态"/>
+			 <Param code="DCVH1464" parId="VD87" desc="功控Im状态预留8"/>
+			 <Param code="DCVH1465" parId="VD88" desc="功控Im输入总电流"/>
+			 <Param code="DCVH1466" parId="VD89" desc="功控Im1kW1温度"/>
+			 <Param code="DCVH1467" parId="VD8A" desc="功控Im1kW2温度"/>
+			 <Param code="DCVH1468" parId="VD8B" desc="功控Im1kW3温度"/>
+			 <Param code="DCVH1469" parId="VD8C" desc="功控Im1kW4温度"/>
+			 <Param code="DCVH1501" parId="VDA1" desc="功控In100W1通断状态"/>
+			 <Param code="DCVH1502" parId="VDA2" desc="功控In100W2通断状态"/>
+			 <Param code="DCVH1503" parId="VDA3" desc="功控In100W3通断状态"/>
+			 <Param code="DCVH1504" parId="VDA4" desc="功控In100W4通断状态"/>
+			 <Param code="DCVH1505" parId="VDA5" desc="功控In100W5通断状态"/>
+			 <Param code="DCVH1506" parId="VDA6" desc="功控In300W1通断状态"/>
+			 <Param code="DCVH1507" parId="VDA7" desc="功控In1kW1通断状态"/>
+			 <Param code="DCVH1508" parId="VDA8" desc="功控In状态预留1"/>
+			 <Param code="DCVH1509" parId="VDA9" desc="泛光灯电源b"/>
+			 <Param code="DCVH1510" parId="VDAA" desc="功控In100W7通断状态"/>
+			 <Param code="DCVH1511" parId="VDAB" desc="功控In100W8通断状态"/>
+			 <Param code="DCVH1512" parId="VDAC" desc="功控In100W9通断状态"/>
+			 <Param code="DCVH1513" parId="VDAD" desc="功控In100W10通断状态"/>
+			 <Param code="DCVH1514" parId="VDAE" desc="功控In300W2通断状态"/>
+			 <Param code="DCVH1515" parId="VDAF" desc="功控In1kW2通断状态"/>
+			 <Param code="DCVH1516" parId="VDB0" desc="功控In状态预留2"/>
+			 <Param code="DCVH1517" parId="VDB1" desc="功控In100W11通断状态"/>
+			 <Param code="DCVH1518" parId="VDB2" desc="功控In100W12通断状态"/>
+			 <Param code="DCVH1519" parId="VDB3" desc="功控In100W13通断状态"/>
+			 <Param code="DCVH1520" parId="VDB4" desc="功控In100W14通断状态"/>
+			 <Param code="DCVH1521" parId="VDB5" desc="音频单元b通断状态"/>
+			 <Param code="DCVH1522" parId="VDB6" desc="功控In300W3通断状态"/>
+			 <Param code="DCVH1523" parId="VDB7" desc="功控In1kW3通断状态"/>
+			 <Param code="DCVH1524" parId="VDB8" desc="功控In状态预留3"/>
+			 <Param code="DCVH1525" parId="VDB9" desc="功控In100W16通断状态"/>
+			 <Param code="DCVH1526" parId="VDBA" desc="功控In100W17通断状态"/>
+			 <Param code="DCVH1527" parId="VDBB" desc="功控In100W18通断状态"/>
+			 <Param code="DCVH1528" parId="VDBC" desc="功控In100W19通断状态"/>
+			 <Param code="DCVH1529" parId="VDBD" desc="功控In100W20通断状态"/>
+			 <Param code="DCVH1530" parId="VDBE" desc="功控In300W4通断状态"/>
+			 <Param code="DCVH1531" parId="VDBF" desc="功控In1kW4通断状态"/>
+			 <Param code="DCVH1532" parId="VDC0" desc="功控In状态预留4"/>
+			 <Param code="DCVH1533" parId="VDC1" desc="功控In100W1保护状态"/>
+			 <Param code="DCVH1534" parId="VDC2" desc="功控In100W2保护状态"/>
+			 <Param code="DCVH1535" parId="VDC3" desc="功控In100W3保护状态"/>
+			 <Param code="DCVH1536" parId="VDC4" desc="功控In100W4保护状态"/>
+			 <Param code="DCVH1537" parId="VDC5" desc="功控In100W5保护状态"/>
+			 <Param code="DCVH1538" parId="VDC6" desc="功控In300W1保护状态"/>
+			 <Param code="DCVH1539" parId="VDC7" desc="功控In1kW1保护状态"/>
+			 <Param code="DCVH1540" parId="VDC8" desc="功控In状态预留5"/>
+			 <Param code="DCVH1541" parId="VDC9" desc="功控In100W6保护状态"/>
+			 <Param code="DCVH1542" parId="VDCA" desc="功控In100W7保护状态"/>
+			 <Param code="DCVH1543" parId="VDCB" desc="功控In100W8保护状态"/>
+			 <Param code="DCVH1544" parId="VDCC" desc="功控In100W9保护状态"/>
+			 <Param code="DCVH1545" parId="VDCD" desc="功控In100W10保护状态"/>
+			 <Param code="DCVH1546" parId="VDCE" desc="功控In300W2保护状态"/>
+			 <Param code="DCVH1547" parId="VDCF" desc="功控In1kW2保护状态"/>
+			 <Param code="DCVH1548" parId="VDD0" desc="功控In状态预留6"/>
+			 <Param code="DCVH1549" parId="VDD1" desc="功控In100W11保护状态"/>
+			 <Param code="DCVH1550" parId="VDD2" desc="功控In100W12保护状态"/>
+			 <Param code="DCVH1551" parId="VDD3" desc="功控In100W13保护状态"/>
+			 <Param code="DCVH1552" parId="VDD4" desc="功控In100W14保护状态"/>
+			 <Param code="DCVH1553" parId="VDD5" desc="功控In100W15保护状态"/>
+			 <Param code="DCVH1554" parId="VDD6" desc="功控In300W3保护状态"/>
+			 <Param code="DCVH1555" parId="VDD7" desc="功控In1kW3保护状态"/>
+			 <Param code="DCVH1556" parId="VDD8" desc="功控In状态预留7"/>
+			 <Param code="DCVH1557" parId="VDD9" desc="功控In100W16保护状态"/>
+			 <Param code="DCVH1558" parId="VDDA" desc="功控In100W17保护状态"/>
+			 <Param code="DCVH1559" parId="VDDB" desc="功控In100W18保护状态"/>
+			 <Param code="DCVH1560" parId="VDDC" desc="功控In100W19保护状态"/>
+			 <Param code="DCVH1561" parId="VDDD" desc="功控In100W20保护状态"/>
+			 <Param code="DCVH1562" parId="VDDE" desc="功控In300W4保护状态"/>
+			 <Param code="DCVH1563" parId="VDDF" desc="功控In1kW4保护状态"/>
+			 <Param code="DCVH1564" parId="VDE0" desc="功控In状态预留8"/>
+			 <Param code="DCVH1565" parId="VDE1" desc="功控In输入总电流"/>
+			 <Param code="DCVH1566" parId="VDE2" desc="功控In1kW1温度"/>
+			 <Param code="DCVH1567" parId="VDE3" desc="功控In1kW2温度"/>
+			 <Param code="DCVH1568" parId="VDE4" desc="功控In1kW3温度"/>
+			 <Param code="DCVH1569" parId="VDE5" desc="功控In1kW4温度"/>
+			 <Param code="DCVH1601" parId="VDFA" desc="功控III通道1通断状态"/>
+			 <Param code="DCVH1602" parId="VDFB" desc="功控III通道2通断状态"/>
+			 <Param code="DCVH1603" parId="VDFC" desc="功控III通道3通断状态"/>
+			 <Param code="DCVH1604" parId="VDFD" desc="功控III通道4通断状态"/>
+			 <Param code="DCVH1605" parId="VDFE" desc="功控III通道5通断状态"/>
+			 <Param code="DCVH1606" parId="VDFF" desc="功控III通道6通断状态"/>
+			 <Param code="DCVH1607" parId="VE00" desc="功控III通道7通断状态"/>
+			 <Param code="DCVH1608" parId="VE01" desc="功控III通道8通断状态"/>
+			 <Param code="DCVH1609" parId="VE02" desc="功控III通道9通断状态"/>
+			 <Param code="DCVH1610" parId="VE03" desc="功控III通道10通断状态"/>
+			 <Param code="DCVH1611" parId="VE04" desc="功控III通道11通断状态"/>
+			 <Param code="DCVH1612" parId="VE05" desc="功控III通道12通断状态"/>
+			 <Param code="DCVH1613" parId="VE06" desc="功控III通道13通断状态"/>
+			 <Param code="DCVH1614" parId="VE07" desc="功控III通道14通断状态"/>
+			 <Param code="DCVH1615" parId="VE08" desc="功控III通道15通断状态"/>
+			 <Param code="DCVH1633" parId="VE1A" desc="功控III输入母线总电流"/>
+			 <Param code="DCVH1634" parId="VE1B" desc="功控III通道1电流"/>
+			 <Param code="DCVH1635" parId="VE1C" desc="功控III通道2电流"/>
+			 <Param code="DCVH1636" parId="VE1D" desc="功控III通道3电流"/>
+			 <Param code="DCVH1637" parId="VE1E" desc="功控III通道4电流"/>
+			 <Param code="DCVH1638" parId="VE1F" desc="功控III通道5电流"/>
+			 <Param code="DCVH1639" parId="VE20" desc="功控III通道6电流"/>
+			 <Param code="DCVH1640" parId="VE21" desc="功控III通道7电流"/>
+			 <Param code="DCVH1641" parId="VE22" desc="功控III通道8电流"/>
+			 <Param code="DCVH1642" parId="VE23" desc="功控III通道9电流"/>
+			 <Param code="DCVH1643" parId="VE24" desc="功控III通道10电流"/>
+			 <Param code="DCVH1644" parId="VE25" desc="功控III通道11电流"/>
+			 <Param code="DCVH1645" parId="VE26" desc="功控III通道12电流"/>
+			 <Param code="DCVH1646" parId="VE27" desc="功控III通道13电流"/>
+			 <Param code="DCVH1647" parId="VE28" desc="功控III通道14电流"/>
+			 <Param code="DCVH1648" parId="VE29" desc="功控III通道15电流"/>
+			 <Param code="DCVH1701" parId="VE4D" desc="供控Ia通道1通断状态"/>
+			 <Param code="DCVH1702" parId="VE4E" desc="供控Ia通道2通断状态"/>
+			 <Param code="DCVH1703" parId="VE4F" desc="供控Ia通道3通断状态"/>
+			 <Param code="DCVH1704" parId="VE50" desc="供控Ia通道4通断状态"/>
+			 <Param code="DCVH1705" parId="VE51" desc="供控Ia通道5通断状态"/>
+			 <Param code="DCVH1706" parId="VE52" desc="供控Ia通道6通断状态"/>
+			 <Param code="DCVH1707" parId="VE53" desc="供控Ia通道7通断状态"/>
+			 <Param code="DCVH1708" parId="VE54" desc="供控Ia通道8通断状态"/>
+			 <Param code="DCVH1709" parId="VE55" desc="供控Ia母线A输入电流"/>
+			 <Param code="DCVH1710" parId="VE56" desc="供控Ia母线B输入电流"/>
+			 <Param code="DCVH1711" parId="VE57" desc="供控Ia母线A输入电压"/>
+			 <Param code="DCVH1712" parId="VE58" desc="供控Ia母线B输入电压"/>
+			 <Param code="DCVH1801" parId="VE7B" desc="供控Ib通道1通断状态"/>
+			 <Param code="DCVH1802" parId="VE7C" desc="供控Ib通道2通断状态"/>
+			 <Param code="DCVH1803" parId="VE7D" desc="供控Ib通道3通断状态"/>
+			 <Param code="DCVH1804" parId="VE7E" desc="供控Ib通道4通断状态"/>
+			 <Param code="DCVH1805" parId="VE7F" desc="供控Ib通道5通断状态"/>
+			 <Param code="DCVH1806" parId="VE80" desc="供控Ib通道6通断状态"/>
+			 <Param code="DCVH1807" parId="VE81" desc="供控Ib通道7通断状态"/>
+			 <Param code="DCVH1808" parId="VE82" desc="供控Ib通道8通断状态"/>
+			 <Param code="DCVH1809" parId="VE83" desc="供控Ib母线A输入电流"/>
+			 <Param code="DCVH1810" parId="VE84" desc="供控Ib母线B输入电流"/>
+			 <Param code="DCVH1811" parId="VE85" desc="供控Ib母线A输入电压"/>
+			 <Param code="DCVH1812" parId="VE86" desc="供控Ib母线B输入电压"/>
+			 <Param code="DCVH1901" parId="VEA9" desc="供控Ic通道1通断状态"/>
+			 <Param code="DCVH1902" parId="VEAA" desc="供控Ic通道2通断状态"/>
+			 <Param code="DCVH1903" parId="VEAB" desc="供控Ic通道3通断状态"/>
+			 <Param code="DCVH1904" parId="VEAC" desc="供控Ic通道4通断状态"/>
+			 <Param code="DCVH1905" parId="VEAD" desc="供控Ic通道5通断状态"/>
+			 <Param code="DCVH1906" parId="VEAE" desc="供控Ic通道6通断状态"/>
+			 <Param code="DCVH1907" parId="VEAF" desc="供控Ic通道7通断状态"/>
+			 <Param code="DCVH1908" parId="VEB0" desc="供控Ic通道8通断状态"/>
+			 <Param code="DCVH1909" parId="VEB1" desc="供控Ic母线A输入电流"/>
+			 <Param code="DCVH1910" parId="VEB2" desc="供控Ic母线B输入电流"/>
+			 <Param code="DCVH1911" parId="VEB3" desc="供控Ic母线A输入电压"/>
+			 <Param code="DCVH1912" parId="VEB4" desc="供控Ic母线B输入电压"/>
+			 <Param code="DCVH2001" parId="VED7" desc="供控II通道1通断状态"/>
+			 <Param code="DCVH2002" parId="VED8" desc="供控II通道2通断状态"/>
+			 <Param code="DCVH2003" parId="VED9" desc="供控II通道3通断状态"/>
+			 <Param code="DCVH2004" parId="VEDA" desc="供控II通道4通断状态"/>
+			 <Param code="DCVH2005" parId="VEDB" desc="供控II通道5通断状态"/>
+			 <Param code="DCVH2006" parId="VEDC" desc="供控II通道6通断状态"/>
+			 <Param code="DCVH2007" parId="VEDD" desc="供控II通道7通断状态"/>
+			 <Param code="DCVH2008" parId="VEDE" desc="供控II通道8通断状态"/>
+			 <Param code="DCVH2009" parId="VEDF" desc="供控II母线A输入电流"/>
+			 <Param code="DCVH2010" parId="VEE0" desc="供控II母线B输入电流"/>
+			 <Param code="DCVH2011" parId="VEE1" desc="供控II母线A输入电压"/>
+			 <Param code="DCVH2012" parId="VEE2" desc="供控II母线B输入电压"/>
+			 <Param code="DCVH2028" parId="VEF2" desc="供控IIA母线DC1输入电流"/>
+			 <Param code="DCVH2029" parId="VEF3" desc="供控IIA母线DC2输入电流"/>
+			 <Param code="DCVH2030" parId="VEF4" desc="供控IIB母线DC1输入电流"/>
+			 <Param code="DCVH2031" parId="VEF5" desc="供控IIB母线DC2输入电流"/>
+			 <Param code="DCVH2501" parId="VF05" desc="并网IIIa输出正通断状态"/>
+			 <Param code="DCVH2502" parId="VF06" desc="并网IIIa输出负通断状态"/>
+			 <Param code="DCVH2503" parId="VF07" desc="并网IIIaDCA1开关状态"/>
+			 <Param code="DCVH2505" parId="VF09" desc="并网IIIaDCA2开关状态"/>
+			 <Param code="DCVH2507" parId="VF0B" desc="并网IIIaDCB1开关状态"/>
+			 <Param code="DCVH2509" parId="VF0D" desc="并网IIIaDCB2开关状态"/>
+			 <Param code="DCVH2514" parId="VF12" desc="并网IIIa母线A输入电压"/>
+			 <Param code="DCVH2515" parId="VF13" desc="并网IIIaDCA1输入电流"/>
+			 <Param code="DCVH2516" parId="VF14" desc="并网IIIaDCA2输入电流"/>
+			 <Param code="DCVH2517" parId="VF15" desc="并网IIIa母线B输入电压"/>
+			 <Param code="DCVH2518" parId="VF16" desc="并网IIIaDCB1输入电流"/>
+			 <Param code="DCVH2519" parId="VF17" desc="并网IIIaDCB2输入电流"/>
+			 <Param code="DCVH2520" parId="VF18" desc="并网IIIa输出电压"/>
+			 <Param code="DCVH2521" parId="VF19" desc="并网IIIaDCA1输出电压"/>
+			 <Param code="DCVH2523" parId="VF1B" desc="并网IIIaDCA2输出电压"/>
+			 <Param code="DCVH2525" parId="VF1D" desc="并网IIIaDCB1输出电压"/>
+			 <Param code="DCVH2527" parId="VF1F" desc="并网IIIaDCB2输出电压"/>
+			 <Param code="DCVH2601" parId="VF38" desc="并网IIIb输出正通断状态"/>
+			 <Param code="DCVH2602" parId="VF39" desc="并网IIIb输出负通断状态"/>
+			 <Param code="DCVH2603" parId="VF3A" desc="并网IIIbDCA1开关状态"/>
+			 <Param code="DCVH2605" parId="VF3C" desc="并网IIIbDCA2开关状态"/>
+			 <Param code="DCVH2607" parId="VF3E" desc="并网IIIbDCB1开关状态"/>
+			 <Param code="DCVH2609" parId="VF40" desc="并网IIIbDCB2开关状态"/>
+			 <Param code="DCVH2614" parId="VF45" desc="并网IIIb母线A输入电压"/>
+			 <Param code="DCVH2615" parId="VF46" desc="并网IIIbDCA1输入电流"/>
+			 <Param code="DCVH2616" parId="VF47" desc="并网IIIbDCA2输入电流"/>
+			 <Param code="DCVH2617" parId="VF48" desc="并网IIIb母线B输入电压"/>
+			 <Param code="DCVH2618" parId="VF49" desc="并网IIIbDCB1输入电流"/>
+			 <Param code="DCVH2619" parId="VF4A" desc="并网IIIbDCB2输入电流"/>
+			 <Param code="DCVH2620" parId="VF4B" desc="并网IIIb输出电压"/>
+			 <Param code="DCVH2621" parId="VF4C" desc="并网IIIbDCA1输出电压"/>
+			 <Param code="DCVH2623" parId="VF4E" desc="并网IIIbDCA2输出电压"/>
+			 <Param code="DCVH2625" parId="VF50" desc="并网IIIbDCB1输出电压"/>
+			 <Param code="DCVH2627" parId="VF52" desc="并网IIIbDCB2输出电压"/>
+			 <Param code="DCSH33" parId="S081" desc="相对时间码"/>
+			 <Param code="DCSH34" parId="S082" desc="绝对时间码"/>
+			 <Param code="DGKH1080" parId="K050" desc="程控遥控令"/>
+			 <Param code="DGKH1081" parId="K051" desc="程控遥控令次数"/>
+			 <Param code="DGKH1082" parId="K052" desc="未执行的时间令条数"/>
+			 <Param code="DGKH1083" parId="K053" desc="下一条时间令执行时间"/>
+			 <Param code="DGKH1084" parId="K054" desc="下一条时间令指令码"/>
+			 <Param code="DGSH1" parId="S001" desc="飞行阶段"/>
+			 <Param code="DGSH2" parId="S002" desc="飞行模式"/>
+			 <Param code="DGSH3" parId="S003" desc="转段使能标志"/>
+			 <Param code="DGSH4" parId="S004" desc="当前触点事件"/>
+			 <Param code="DGSH5" parId="S005" desc="系统网管理模式"/>
+			 <Param code="DGSH6" parId="S006" desc="遥测工作模式"/>
+			 <Param code="DGSH7" parId="S007" desc="工程遥测中断计数"/>
+			 <Param code="DGSH8" parId="S008" desc="工程遥测明密态切换状态"/>
+			 <Param code="DGSH9" parId="S009" desc="遥控注入总计数"/>
+			 <Param code="DGSH10" parId="S00A" desc="遥控注入正确总计数"/>
+			 <Param code="DGSH11" parId="S00B" desc="遥控注入校验状态"/>
+			 <Param code="DGSH12" parId="S00C" desc="包转发计数"/>
+			 <Param code="DGSH13" parId="S00D" desc="发送给其他RT的遥控帧计数"/>
+			 <Param code="DGSH14" parId="S00E" desc="已发飞行程序计数"/>
+			 <Param code="DGSH15" parId="S00F" desc="三机通信模式判别字"/>
+			 <Param code="DGSH16" parId="S010" desc="相对时间码"/>
+			 
+ 
+
+ </SQLDatabaseName>
+	</TmVars>
+</SQLDatas>

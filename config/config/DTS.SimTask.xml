@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Config>
+    <Category name="入轨初期段"/>
+    <Category name="在轨测试段">
+        <Category name="总体">
+            <SimTask name="总体仿真" model="SpaceStation.SystemLibrary.HSystem.Integration.HSystemTwin">
+                <ui file="系统展示界面.ui" name="系统指标展示"/>
+            </SimTask>
+            <SimTask name="能量平衡与散热能力仿真" model="SpaceStation.SubsystemLibrary.EnergySystem.Energy_H_Template_ZDLH_YCTB_BJTZ_T1">
+                <ui file="总体_能量平衡与散热能力仿真.ui" name="总体_能量平衡与散热能力仿真"/>
+            </SimTask>
+            <SimTask name="舱段转位过程多学科仿真" model="SpaceStation.SystemLibrary.HSystem.Integration.HSystem_ZWBaihe">
+                <ui file="舱段转位_总体模型.ui" name="舱段转位_总体模型"/>
+                <ui file="舱段转位_能源专业.ui" name="舱段转位_能源专业"/>
+                <ui file="舱段转位_信息专业.ui" name="舱段转位_信息专业"/>
+                <ui file="舱段转位_姿轨控专业.ui" name="舱段转位_姿轨控专业"/>
+                <ui file="舱段转位_环热控专业.ui" name="舱段转位_环热控专业"/>
+            </SimTask>
+        </Category>
+        <Category name="能源专业">
+            <SimTask name="能量平衡分析" model="SpaceStation.SubsystemLibrary.EnergySystem.Energy_H_Template_ZDLH_YCTB_BJTZ">
+                <ui file="能源_仿真遥测数据展示.ui" name="能源_能量平衡分析"/>
+            </SimTask>
+            <SimTask name="单太阳翼展开故障仿真" model="SpaceStation.SubsystemLibrary.EnergySystem.Energy_H_Template_ZDLH_YCTB_BJTZ">
+                <ui file="能源_单太阳翼展开故障仿真.ui" name="能源_单太阳翼展开故障仿真"/>
+            </SimTask>
+        </Category>
+        <Category name="姿轨控专业">
+            <SimTask name="入轨初期消初偏转惯性模型" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV1">
+                <ui file="姿轨控_入轨初期消初偏转惯性飞行.ui" name="姿轨控_入轨初期消初偏转惯性飞行"/>
+            </SimTask>
+            <SimTask name="停控转位+起控+控制" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV2">
+                <ui file="姿轨控_停控转位+起控+控制.ui" name="姿轨控_停控转位+起控+控制"/>
+            </SimTask>
+            <SimTask name="航天员进出舱" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV3">
+                <ui file="姿轨控_航天员进出舱.ui" name="姿轨控_航天员进出舱"/>
+            </SimTask>
+            <SimTask name="轨控过程仿真" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV4">
+                <ui file="姿轨控_轨控过程仿真.ui" name="姿轨控_轨控过程仿真"/>
+            </SimTask>
+            <SimTask name="失控姿态漂移预示" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV5">
+                <ui file="姿轨控_失控姿态漂移预示.ui" name="姿轨控_失控姿态漂移预示"/>
+            </SimTask>
+            <SimTask name="天地同步遥测模型" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV6">
+                <ui file="姿轨控_天地同步遥测模型.ui" name="姿轨控_天地同步遥测模型"/>
+            </SimTask>
+            <SimTask name="推进剂补加吹除干扰力矩仿真" model="SpaceStation.SubsystemLibrary.GNCSystem.THSysHV7">
+                <ui file="姿轨控_推进剂补加吹除干扰力矩仿真.ui" name="姿轨控_推进剂补加吹除干扰力矩仿真"/>
+            </SimTask>
+        </Category>
+        <Category name="环热控专业">
+            <SimTask name="出舱泄复压过程仿真" model="SpaceStation.SubsystemLibrary.ETCSystem.ETC_chucang">
+                <ui file="环热控_出舱泄复压过程仿真.ui" name="环热控_出舱泄复压过程仿真"/>
+            </SimTask>
+            <SimTask name="舱压应急快速预示" model="SpaceStation.SubsystemLibrary.ETCSystem.ETC_SYDB">
+                <ui file="环热控_舱压应急快速预示.ui" name="环热控_舱压应急快速预示"/>
+            </SimTask>
+            <SimTask name="环控风机故障舱内温度预示" model="SpaceStation.SubsystemLibrary.ETCSystem.ETC_FanFault">
+                <ui file="环热控_环控风机故障舱内温度预示.ui" name="环热控_环控风机故障舱内温度预示"/>
+            </SimTask>
+            <SimTask name="热控流体回路泄露故障仿真" model="SpaceStation.SubsystemLibrary.ETCSystem.Thermal_guzhanag">
+                <ui file="环热控_热控流体回路泄露故障仿真.ui" name="环热控_热控流体回路泄露故障仿真"/>
+            </SimTask>
+            <SimTask name="热控系统工作性能仿真评估" model="SpaceStation.SubsystemLibrary.ETCSystem.TCS_input">
+                <ui file="环热控_热控系统工作性能仿真评估.ui" name="环热控_热控系统工作性能仿真评估"/>
+            </SimTask>
+        </Category>
+    </Category>
+    <Category name="货运船TZ-2后向交会对接段"/>
+    <Category name="核心舱+后向货船TZ-2组合体飞行段I"/>
+    <Category name="载人船SZ-12前向交会对接段"/>
+    <Category name="核心舱+后向货船TZ-2+前向载人船SZ-12组合体飞行段"/>
+    <Category name="载人船SZ-12前向分离撤离段"/>
+    <Category name="核心舱+后向货船TZ-2组合体飞行段II"/>
+    <Category name="货运船TZ-2后向-前向绕飞交会对接段"/>
+    <Category name="核心舱+前向货船TZ-2组合体飞行段"/>
+    <Category name="货运船TZ-3后向交会对接段"/>
+    <Category name="核心舱+后向货船TZ-3+前向货船TZ-2组合体飞行段"/>
+    <Category name="载人船SZ-13径向交会对接段"/>
+    <Category name="核心舱+后向货船TZ-3+前向货船TZ-2+径向载人船SZ-13组合体飞行段"/>
+    <Category name="货运船TZ-2前向分离撤离段"/>
+    <Category name="核心舱+后向货船TZ-3+径向载人船SZ-13组合体飞行段"/>
+    <Category name="载人船SZ-13径向分离撤离段"/>
+    <Category name="核心舱+后向货船TZ-3组合体飞行段"/>
+    <SimTask name="舱压应急快速预示" model="SpaceStation.SubsystemLibrary.ETCSystem.ETC_SYDB">
+        <ui file="环热控_舱压应急快速预示.ui" name="环热控_舱压应急快速预示"/>
+    </SimTask>
+</Config>

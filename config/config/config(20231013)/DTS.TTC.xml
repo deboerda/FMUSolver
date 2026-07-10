@@ -1,0 +1,8 @@
+<Config>
+	<SimVar name="Cmd"/>
+	<TTC>
+		<Ground in_code="BH4" out_code="BH5"/>  <!--地面站-->
+		<SingleRelaySat in_code="BH6" out_code="BH7"/> <!--单中继星-->
+		<SMARelaySat in_code="BH8" out_code="BH9"/> <!--SMA中继星-->
+	</TTC>
+</Config>

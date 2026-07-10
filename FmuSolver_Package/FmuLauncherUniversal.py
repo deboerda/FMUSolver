@@ -1,4 +1,4 @@
-import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, ddm_pb2
+import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, queue, ddm_pb2
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
@@ -6,11 +6,12 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QGridLayout, QLabel, QLineEdit, QPushButton, QFrame, QScrollArea, 
                              QTextEdit, QProgressBar, QCheckBox, QFileDialog, QTreeWidget, 
                              QTreeWidgetItem, QHeaderView, QDialog, QGraphicsDropShadowEffect, QMessageBox, QSizeGrip,
-                             QTableWidget, QTableWidgetItem, QAbstractItemView, QColorDialog, QStackedWidget, QSlider, QComboBox)
+                             QTableWidget, QTableWidgetItem, QAbstractItemView, QColorDialog, QStackedWidget, QSlider, QComboBox,
+                             QSizePolicy)
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0709"
+APP_VERSION = "v26.0711.0207"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -56,6 +57,19 @@ def set_blur_behind(hwnd):
         ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.pointer(data))
     except: pass
 
+def disable_blur_behind(hwnd):
+    """Disable acrylic blur while live-resizing to keep Windows resize responsive."""
+    accent = ACCENT_POLICY()
+    accent.AccentState = 0 # ACCENT_DISABLED
+    accent.GradientColor = 0x00FFFFFF
+    data = WINDOWCOMPOSITIONATTRIBDATA()
+    data.Attribute = 19
+    data.SizeOfData = ctypes.sizeof(accent)
+    data.Data = ctypes.cast(ctypes.pointer(accent), ctypes.c_void_p)
+    try:
+        ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.pointer(data))
+    except: pass
+
 # ─── Constants & Sequoia Colors ───
 if getattr(sys, 'frozen', False):
     APP_DIR = os.path.dirname(sys.executable)
@@ -65,6 +79,96 @@ else:
 GUI_CONFIG_PATH = os.path.join(APP_DIR, "gui_config.json")
 
 CONTROL_PORT = 8898
+
+class AsyncRotatingFileLogger:
+    """Bounded async file logger: keeps UI threads away from slow disk IO."""
+    def __init__(self, path, max_bytes=10 * 1024 * 1024, backups=3, queue_size=2000, flush_interval=0.5, batch_size=100):
+        self.path = path
+        self.max_bytes = max(1024 * 1024, int(max_bytes))
+        self.backups = max(1, int(backups))
+        self.flush_interval = max(0.1, float(flush_interval))
+        self.batch_size = max(1, int(batch_size))
+        self.queue = queue.Queue(maxsize=max(10, int(queue_size)))
+        self.stop_event = threading.Event()
+        self.drop_count = 0
+        self.thread = threading.Thread(target=self._loop, name="FmuSolverAsyncLog", daemon=True)
+        self.thread.start()
+
+    def log(self, line, important=False):
+        text = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n"
+        try:
+            self.queue.put_nowait((text, important))
+        except queue.Full:
+            self.drop_count += 1
+            if not important:
+                return
+            try:
+                self.queue.get_nowait()
+                try: self.queue.task_done()
+                except Exception: pass
+            except Exception:
+                pass
+            try:
+                self.queue.put_nowait((text, important))
+            except Exception:
+                pass
+
+    def close(self, timeout=2.0):
+        self.stop_event.set()
+        try: self.thread.join(timeout=timeout)
+        except Exception: pass
+
+    def _rotate_if_needed(self):
+        try:
+            if not os.path.exists(self.path) or os.path.getsize(self.path) <= self.max_bytes:
+                return
+            for idx in range(self.backups, 0, -1):
+                src = f"{self.path}.{idx}"
+                dst = f"{self.path}.{idx + 1}"
+                if os.path.exists(dst):
+                    try: os.remove(dst)
+                    except Exception: pass
+                if os.path.exists(src):
+                    try: os.replace(src, dst)
+                    except Exception: pass
+            try: os.replace(self.path, f"{self.path}.1")
+            except Exception: pass
+        except Exception:
+            pass
+
+    def _loop(self):
+        pending = []
+        last_flush = time.time()
+        while not self.stop_event.is_set() or not self.queue.empty() or pending:
+            timeout = max(0.05, self.flush_interval - (time.time() - last_flush))
+            try:
+                item, _important = self.queue.get(timeout=timeout)
+                pending.append(item)
+                try: self.queue.task_done()
+                except Exception: pass
+                while len(pending) < self.batch_size:
+                    try:
+                        item, _important = self.queue.get_nowait()
+                        pending.append(item)
+                        try: self.queue.task_done()
+                        except Exception: pass
+                    except queue.Empty:
+                        break
+            except queue.Empty:
+                pass
+            if pending and (len(pending) >= self.batch_size or time.time() - last_flush >= self.flush_interval or self.stop_event.is_set()):
+                try:
+                    os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
+                    self._rotate_if_needed()
+                    if self.drop_count:
+                        pending.insert(0, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [LOG] dropped {self.drop_count} runtime log lines due to backpressure\n")
+                        self.drop_count = 0
+                    with open(self.path, "a", encoding="utf-8", buffering=1024 * 1024) as f:
+                        f.writelines(pending)
+                except Exception:
+                    pass
+                pending.clear()
+                last_flush = time.time()
 
 # Soft glass palette aligned to the reference dashboard
 C_BG_START = "rgba(250, 252, 255, 220)"
@@ -990,6 +1094,7 @@ class ModernCard(QFrame):
         self.setObjectName("Card")
         self.setAttribute(Qt.WA_StyledBackground, True)
         self.setAutoFillBackground(False)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
 
 class PillInput(QWidget):
     """Compact label + value field with word wrap for long descriptions."""
@@ -1083,6 +1188,9 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
     shell = QFrame(parent)
     shell.setObjectName("ConsoleShell")
     shell._log_collapsed = False
+    shell._expanded_min_height = min_height
+    shell._expanded_fixed_height = fixed_height
+    shell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
     lay = QVBoxLayout(shell)
     lay.setContentsMargins(12, 10, 12, 10)
     lay.setSpacing(6)
@@ -1121,13 +1229,21 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
         star.setVisible(not collapsed)
         if collapsed:
             editor.clear()
-            shell.setMaximumHeight(52)
+            shell.setMinimumHeight(48)
+            shell.setMaximumHeight(48)
+            shell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             toggle_btn.setText("展开日志")
             toggle_btn.setToolTip("展开后恢复显示新的日志信息")
         else:
+            shell.setMinimumHeight(0)
             shell.setMaximumHeight(16777215)
+            shell.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
             toggle_btn.setText("折叠日志")
             toggle_btn.setToolTip("折叠后停止向界面写入日志，完整日志仍写入文件")
+        shell.updateGeometry()
+        parent_widget = shell.parentWidget()
+        if parent_widget and parent_widget.layout():
+            parent_widget.layout().activate()
 
     toggle_btn.clicked.connect(toggle_console)
     editor._log_toggle_button = toggle_btn
@@ -1440,9 +1556,21 @@ class FmuSolverGUI(QMainWindow):
         self.current_sim_id = None
         self._yaoce_log_pos = 0
         self.runtime_log_path = os.path.join(APP_DIR, "fmusolver_runtime.log")
+        self.runtime_logger = AsyncRotatingFileLogger(
+            self.runtime_log_path,
+            max_bytes=int(os.environ.get("FMUSOLVER_RUNTIME_LOG_MB", "10")) * 1024 * 1024,
+            backups=int(os.environ.get("FMUSOLVER_RUNTIME_LOG_BACKUPS", "3")),
+            queue_size=int(os.environ.get("FMUSOLVER_RUNTIME_LOG_QUEUE", "2000")),
+            flush_interval=float(os.environ.get("FMUSOLVER_RUNTIME_LOG_FLUSH", "0.5")),
+            batch_size=int(os.environ.get("FMUSOLVER_RUNTIME_LOG_BATCH", "100")),
+        )
         self.last_ui_heartbeat = time.time()
         self._runtime_log_last_size_check = 0.0
         self._ui_log_throttle = {}
+        self._resize_perf_mode = False
+        self._resize_restore_timer = QTimer(self)
+        self._resize_restore_timer.setSingleShot(True)
+        self._resize_restore_timer.timeout.connect(self._end_resize_perf_mode)
         self.gui_config_path = GUI_CONFIG_PATH
         self.gui_config = self._load_gui_config()
         self.default_sim_fmu   = self._resolve_sim_fmu()
@@ -1467,6 +1595,41 @@ class FmuSolverGUI(QMainWindow):
         self.ui_heartbeat_timer = QTimer(self)
         self.ui_heartbeat_timer.timeout.connect(self._write_ui_heartbeat)
         self.ui_heartbeat_timer.start(10000)
+
+    def _begin_resize_perf_mode(self):
+        if self._resize_perf_mode:
+            return
+        self._resize_perf_mode = True
+        try:
+            disable_blur_behind(self.winId())
+        except Exception:
+            pass
+        try:
+            self.setUpdatesEnabled(False)
+            self.root_container.setUpdatesEnabled(False)
+        except Exception:
+            pass
+
+    def _end_resize_perf_mode(self):
+        if not self._resize_perf_mode:
+            return
+        self._resize_perf_mode = False
+        try:
+            self.root_container.setUpdatesEnabled(True)
+            self.setUpdatesEnabled(True)
+        except Exception:
+            pass
+        try:
+            set_blur_behind(self.winId())
+        except Exception:
+            pass
+        self.update()
+
+    def resizeEvent(self, event):
+        if not self.isMaximized() and not self.isFullScreen():
+            self._begin_resize_perf_mode()
+            self._resize_restore_timer.start(180)
+        return super().resizeEvent(event)
 
     def _cleanup_on_start(self):
         """ 清理旧的日志和临时文件，确保空间不膨胀 """
@@ -1605,6 +1768,10 @@ class FmuSolverGUI(QMainWindow):
                 for ev in self.inj_stop_events:
                     try: ev.set()
                     except: pass
+        except: pass
+        try:
+            if hasattr(self, 'runtime_logger') and self.runtime_logger:
+                self.runtime_logger.close()
         except: pass
         super().closeEvent(event)
 
@@ -1753,6 +1920,7 @@ class FmuSolverGUI(QMainWindow):
         env["PYTHONIOENCODING"] = "utf-8"
         env["FMUSOLVER_PARENT_PID"] = str(os.getpid())
         env.setdefault("FMUSOLVER_VIZ_SEND_HZ", "5.0")
+        env.setdefault("FMUSOLVER_VIZ_PORTS", "22345,8888")
         env.setdefault("FMUSOLVER_EXT_INJECT_MIN_INTERVAL", "0.2")
         env.setdefault("FMUSOLVER_SENSITIVE_INJECT_MIN_INTERVAL", "1.0")
         env.setdefault("FMUSOLVER_INJECTION_STDOUT_INTERVAL", "10.0")
@@ -1761,18 +1929,10 @@ class FmuSolverGUI(QMainWindow):
 
     def _append_runtime_log(self, line):
         try:
-            now = time.time()
-            if now - getattr(self, '_runtime_log_last_size_check', 0.0) > 30.0 and os.path.exists(self.runtime_log_path):
-                self._runtime_log_last_size_check = now
-                if os.path.getsize(self.runtime_log_path) > 10 * 1024 * 1024:
-                    bak = self.runtime_log_path + ".1"
-                    try:
-                        if os.path.exists(bak): os.remove(bak)
-                    except Exception: pass
-                    try: os.replace(self.runtime_log_path, bak)
-                    except Exception: pass
-            with open(self.runtime_log_path, "a", encoding="utf-8") as f:
-                f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+            important = "[ERROR]" in str(line) or "[!]" in str(line) or "Fatal" in str(line) or "Traceback" in str(line)
+            logger = getattr(self, 'runtime_logger', None)
+            if logger:
+                logger.log(line, important=important)
         except Exception:
             pass
 
@@ -1990,7 +2150,8 @@ class FmuSolverGUI(QMainWindow):
 
         self.txt_orbit_log = QTextEdit()
         self.txt_orbit_log.document().setMaximumBlockCount(300)
-        lay.addWidget(console_panel("轨道预示运行日志", self.txt_orbit_log, min_height=100), 1)
+        lay.addWidget(console_panel("轨道预示运行日志", self.txt_orbit_log, min_height=100))
+        lay.addStretch(1)
 
         self.tab_orbit.setWidget(w)
         self.year_edit = self.year_e.edit; self.mon_edit = self.mon_e.edit; self.day_edit = self.day_e.edit
@@ -2090,7 +2251,8 @@ class FmuSolverGUI(QMainWindow):
 
         self.txt_log = QTextEdit()
         self.txt_log.document().setMaximumBlockCount(300)
-        lay.addWidget(console_panel("实时运行状态与诊断", self.txt_log, min_height=100), 1)
+        lay.addWidget(console_panel("实时运行状态与诊断", self.txt_log, min_height=100))
+        lay.addStretch(1)
         self.tab_sim.setWidget(w)
         self.cj_year_e_edit = self.cj_year_e.edit; self.cj_mon_e_edit = self.cj_mon_e.edit; self.cj_day_e_edit = self.cj_day_e.edit
         self.cj_hour_edit = self.cj_hour_e.edit; self.cj_min_edit = self.cj_min_e.edit; self.cj_sec_edit = self.cj_sec_e.edit
@@ -2117,7 +2279,8 @@ class FmuSolverGUI(QMainWindow):
 
         self.txt_yaoce_log = QTextEdit()
         self.txt_yaoce_log.document().setMaximumBlockCount(300)
-        lay.addWidget(console_panel("实时转发调试日志", self.txt_yaoce_log, min_height=200), 1)
+        lay.addWidget(console_panel("实时转发调试日志", self.txt_yaoce_log, min_height=200))
+        lay.addStretch(1)
         self.tab_yaoce.setWidget(w)
     def _choose_yaoce_dir(self):
         d = QFileDialog.getExistingDirectory(self, "选择遥测配置文件目录 (需包含 config.ini)", APP_DIR)
@@ -2203,7 +2366,7 @@ class FmuSolverGUI(QMainWindow):
             key = (id(widget), msg_text[:40])
             now = time.time()
             last = self._ui_log_throttle.get(key, 0.0)
-            if ("Injected " in msg_text or "Injection summary" in msg_text or "RECV Protobuf" in msg_text) and now - last < 15.0:
+            if ("Injected " in msg_text or "Injection summary" in msg_text or "RECV Protobuf" in msg_text or "variables mirrored" in msg_text) and now - last < 5.0:
                 return
             self._ui_log_throttle[key] = now
         ts = datetime.now().strftime("%H:%M:%S")
@@ -2487,8 +2650,8 @@ class FmuSolverGUI(QMainWindow):
                 if now - last_perf_log_at >= 30.0:
                     self.sig_log.emit(line_str, "sys")
                     last_perf_log_at = now
-            elif "Injected " in line_str or "Injection summary" in line_str:
-                if "[!]" in line_str or now - last_injection_ui_log_at >= 30.0:
+            elif "Injected " in line_str or "Injection summary" in line_str or "variables mirrored" in line_str:
+                if "[!]" in line_str or now - last_injection_ui_log_at >= 5.0:
                     tag = "error" if "[!]" in line_str else "info"
                     self.sig_log.emit(line_str, tag)
                     last_injection_ui_log_at = now
@@ -2817,12 +2980,9 @@ class FmuSolverGUI(QMainWindow):
                                 forward_to_worker(pending_var_cmd)
                                 pending_var_cmd.clear()
                                 last_var_forward_time = now
-                            if self.worker_process and self.worker_process.poll() is None:
-                                if do_log:
-                                    safe_log(f"[*] [Port {listen_port}] 已按 {var_forward_freq:.1f}Hz 节流转发 PE/YC 连续变量到 FMU Worker: {len(cmd)} vars", "info")
-                                    last_log_time = now
                             if now - last_perf_time >= 5.0:
-                                safe_log(f"[PERF][INJ:{listen_port}] recv={recv_count} fwd={fwd_count} parse_err={parse_error_count} last_bytes={last_packet_bytes}", "info")
+                                worker_alive = bool(self.worker_process and self.worker_process.poll() is None)
+                                safe_log(f"[PERF][INJ:{listen_port}] recv={recv_count} fwd={fwd_count} pending={len(pending_var_cmd)} worker_alive={worker_alive} parse_err={parse_error_count} last_bytes={last_packet_bytes}", "info")
                                 last_perf_time = now
                         except Exception as e:
                             parse_error_count += 1
@@ -3133,4 +3293,3 @@ if __name__ == "__main__":
         window.setWindowTitle("FmuSolver") # 必须设置，以便单实例检测查找
         window.show()
         sys.exit(app.exec())
-

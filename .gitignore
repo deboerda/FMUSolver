@@ -18,6 +18,10 @@ Thumbs.db
 # Ignore build directories
 build/
 dist/
+Script/build/
+Script/build32/
+Script/dist/
+Script/dist32/
 
 # Ignore Python bytecode
 __pycache__/
@@ -37,6 +41,18 @@ __pycache__/
 
 # Ignore output files
 *.txt
+*.tmp
+*.temp
+sim_pause_*.flag
+orbit_pre_result.json
+viz_presets.json
+viz_sync_state.json
+viz_ui_settings.json
+gui_config.json
+chart_exports/
+FmuSolver_Package/Visualizer/chart_exports/
+FmuSolver_Package/txt/
+.git-status-cleanup.txt
 
 # Ignore large archive files
 *.zip

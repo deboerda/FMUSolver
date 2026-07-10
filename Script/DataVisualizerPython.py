@@ -5,11 +5,37 @@ import base64
 import json
 import os
 import argparse
+import time
+import queue
+import gc
 import numpy as np
 import ctypes
 from ctypes import wintypes
 import ddm_pb2
 import datetime
+import traceback
+
+def is_process_alive(pid):
+    try:
+        pid = int(pid)
+    except Exception:
+        return True
+    if pid <= 0 or pid == os.getpid():
+        return True
+    if sys.platform == 'win32':
+        try:
+            handle = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
 
 # 强制 Windows 任务栏显示独立图标
 try:
@@ -275,16 +301,20 @@ class ProfessionalVisualizer(QMainWindow):
         
         self.port = port
         self.vars_config = []
-        self.max_points = 30000
+        self.max_points = int(os.environ.get("FMUSOLVER_VIZ_MAX_POINTS", "12000"))
         self.current_idx = 0
         self.times = np.zeros(self.max_points)
         self.data_store = {} 
         self.accumulate_enabled = False
-        self.accumulate_max_render_points = 1500
+        self.accumulate_max_render_points = int(os.environ.get("FMUSOLVER_VIZ_ACC_RENDER_POINTS", "1000"))
         self.accumulate_update_stride = 10
-        self.accumulate_bucket_seconds = 0.5
-        self.accumulate_hard_limit = 30000
-        self.realtime_max_render_points = 1800
+        self.accumulate_bucket_seconds = float(os.environ.get("FMUSOLVER_VIZ_ACC_BUCKET_SEC", "1.0"))
+        self.accumulate_hard_limit = int(os.environ.get("FMUSOLVER_VIZ_ACC_LIMIT", "8000"))
+        self.realtime_max_render_points = int(os.environ.get("FMUSOLVER_VIZ_REALTIME_RENDER_POINTS", "1000"))
+        self.max_runtime_variables = int(os.environ.get("FMUSOLVER_VIZ_MAX_RUNTIME_VARS", "500"))
+        self.max_packets_per_ui_tick = int(os.environ.get("FMUSOLVER_VIZ_MAX_PACKETS_PER_TICK", "3"))
+        self.packet_queue = queue.Queue(maxsize=int(os.environ.get("FMUSOLVER_VIZ_PACKET_QUEUE_MAX", "20")))
+        self.memory_soft_limit_mb = int(os.environ.get("FMUSOLVER_VIZ_MEMORY_SOFT_LIMIT_MB", "900"))
         self.trend_times = []
         self.trend_store = {}
         self.trend_bucket_start = None
@@ -298,6 +328,28 @@ class ProfessionalVisualizer(QMainWindow):
         self.last_y_range = {}
         self.last_ui_idx = -1
         self.max_dock_updates_per_tick = 2
+        self.rx_packet_count = 0
+        self.rx_error_count = 0
+        self.rx_drop_count = 0
+        self.rx_var_count_total = 0
+        self.process_packet_count = 0
+        self.process_var_count_total = 0
+        self.ui_tick_count = 0
+        self.ui_curve_updates = 0
+        self.ui_skipped_docks = 0
+        self.perf_log_file = os.path.join(APP_DIR, "visualizer_perf.log")
+        self.last_perf_log_wall = time.time()
+        self.last_gc_wall = time.time()
+        self.last_memory_guard_wall = time.time()
+        try:
+            with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                f.write(
+                    f"\n[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [SESSION][VIZ] "
+                    f"pid={os.getpid()} port={self.port} queue={self.packet_queue.maxsize} "
+                    f"max_packets_per_tick={self.max_packets_per_ui_tick} app_dir={APP_DIR}\n"
+                )
+        except Exception:
+            pass
         
         self.docks = {}        
         self.plot_widgets = {} 
@@ -345,6 +397,11 @@ class ProfessionalVisualizer(QMainWindow):
         self.poll_timer = QTimer(self)
         self.poll_timer.timeout.connect(self.apply_theme_from_config)
         self.poll_timer.start(2000) # 2秒轮询一次，作为 Watcher 的兜底
+        self.parent_pid = os.environ.get("FMUSOLVER_PARENT_PID", "")
+        if self.parent_pid:
+            self.parent_watch_timer = QTimer(self)
+            self.parent_watch_timer.timeout.connect(self.check_parent_process)
+            self.parent_watch_timer.start(1000)
         
         cfg_path = self.find_config_path()
         if cfg_path:
@@ -358,6 +415,16 @@ class ProfessionalVisualizer(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_ui)
         self.timer.start(50) 
+
+    def check_parent_process(self):
+        if self.parent_pid and not is_process_alive(self.parent_pid):
+            try:
+                with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [SESSION][VIZ] Parent {self.parent_pid} gone; exiting.\n")
+            except Exception:
+                pass
+            self.running = False
+            self.close()
 
     def find_config_path(self):
         paths = [
@@ -872,6 +939,15 @@ class ProfessionalVisualizer(QMainWindow):
     def register_runtime_variable(self, tag, desc=""):
         """Add variables received at runtime to the dashboard only, without touching sync_fields.json."""
         if not tag or tag in self.data_store:
+            return
+        if len([v for v in self.vars_config if v.get("runtime")]) >= self.max_runtime_variables:
+            if not hasattr(self, '_runtime_var_limit_warned'):
+                self._runtime_var_limit_warned = True
+                try:
+                    with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                        f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARN][VIZ] Runtime variable limit reached: {self.max_runtime_variables}. New variables will be ignored for stability.\n")
+                except Exception:
+                    pass
             return
         row = self.table.rowCount()
         self.table.blockSignals(True)
@@ -1563,7 +1639,20 @@ class ProfessionalVisualizer(QMainWindow):
             self.trend_bucket_last_values = {}
         else:
             self.flush_trend_bucket()
+            self.trend_times = []
+            self.trend_store = {tag: [] for tag in self.ordered_tags}
+            self.trend_bucket_start = None
+            self.trend_bucket_end = None
+            self.trend_bucket_values = {}
+            self.trend_bucket_last_values = {}
         self.save_ui_settings()
+
+    def get_plotted_tags(self):
+        tags = set()
+        for tag, dock_map in self.curves.items():
+            if dock_map:
+                tags.add(tag)
+        return tags
 
     def trim_accumulate_buffers(self):
         if len(self.trend_times) <= self.accumulate_hard_limit:
@@ -1583,12 +1672,20 @@ class ProfessionalVisualizer(QMainWindow):
 
         bucket_time = self.trend_bucket_end
         self.trend_times.append(bucket_time)
-        for tag in self.ordered_tags:
+        active_tags = self.get_plotted_tags() or set(self.ordered_tags[:min(len(self.ordered_tags), 80)])
+        for tag in active_tags:
+            self.trend_store.setdefault(tag, [])
             values = self.trend_bucket_values.get(tag, [])
             if values:
                 self.trend_store[tag].append(float(values[-1]))
             else:
                 self.trend_store[tag].append(self.trend_bucket_last_values.get(tag, np.nan))
+        target_len = len(self.trend_times)
+        for tag in list(self.trend_store.keys()):
+            if tag not in active_tags:
+                self.trend_store[tag] = []
+            elif len(self.trend_store[tag]) < target_len:
+                self.trend_store[tag].extend([np.nan] * (target_len - len(self.trend_store[tag])))
 
         self.trend_bucket_start = None
         self.trend_bucket_end = None
@@ -1599,19 +1696,22 @@ class ProfessionalVisualizer(QMainWindow):
         if self.trend_bucket_start is None:
             self.trend_bucket_start = t
             self.trend_bucket_end = t
-            self.trend_bucket_values = {tag: [] for tag in self.ordered_tags}
+            self.trend_bucket_values = {}
         elif (t - self.trend_bucket_start) >= self.accumulate_bucket_seconds:
             self.flush_trend_bucket()
             self.trend_bucket_start = t
             self.trend_bucket_end = t
-            self.trend_bucket_values = {tag: [] for tag in self.ordered_tags}
+            self.trend_bucket_values = {}
         else:
             self.trend_bucket_end = t
 
-        for tag in self.ordered_tags:
+        active_tags = self.get_plotted_tags()
+        if not active_tags:
+            return
+        for tag in active_tags:
             if tag in var_map:
                 value = var_map[tag]
-                self.trend_bucket_values[tag].append(value)
+                self.trend_bucket_values.setdefault(tag, []).append(value)
                 self.trend_bucket_last_values[tag] = value
 
     def sanitize_active_series(self, t_data, y_data):
@@ -1644,11 +1744,15 @@ class ProfessionalVisualizer(QMainWindow):
 
         return t_arr, y_arrs
 
-    def get_active_series(self):
+    def get_active_series(self, active_tags=None):
+        if active_tags is None:
+            active_tags = list(self.data_store.keys())
+        else:
+            active_tags = [tag for tag in active_tags if tag in self.data_store]
         if self.accumulate_enabled and self.trend_times:
             self.flush_trend_bucket()
             t_data = np.asarray(self.trend_times, dtype=float)
-            return self.sanitize_active_series(t_data, self.trend_store)
+            return self.sanitize_active_series(t_data, {tag: self.trend_store.get(tag, []) for tag in active_tags})
 
         valid_len = min(self.current_idx, self.max_points)
         wrapped_idx = None
@@ -1659,7 +1763,7 @@ class ProfessionalVisualizer(QMainWindow):
             t_data = self.times[:valid_len]
 
         y_data = {}
-        for tag in self.data_store:
+        for tag in active_tags:
             if wrapped_idx is not None:
                 y_data[tag] = np.concatenate((self.data_store[tag][wrapped_idx:], self.data_store[tag][:wrapped_idx]))
             else:
@@ -2188,11 +2292,110 @@ class ProfessionalVisualizer(QMainWindow):
                 decoded = base64.b64decode(data)
                 pb_data = ddm_pb2.DDMData()
                 pb_data.ParseFromString(decoded)
-                self.data_received.emit(pb_data)
-            except: pass
+                self.rx_packet_count += 1
+                self.rx_var_count_total += len(pb_data.sim_vars)
+                try:
+                    self.packet_queue.put_nowait(pb_data)
+                except queue.Full:
+                    self.rx_drop_count += 1
+                    try:
+                        self.packet_queue.get_nowait()
+                    except Exception:
+                        pass
+                    try:
+                        self.packet_queue.put_nowait(pb_data)
+                    except Exception:
+                        pass
+            except Exception:
+                self.rx_error_count += 1
+
+    def drain_packet_queue(self):
+        processed = 0
+        while processed < self.max_packets_per_ui_tick:
+            try:
+                pb_data = self.packet_queue.get_nowait()
+            except queue.Empty:
+                break
+            self.process_data(pb_data)
+            processed += 1
+        return processed
+
+    def write_perf_log(self, ui_elapsed_ms=0.0):
+        now = time.time()
+        if now - self.last_perf_log_wall < 5.0:
+            return
+        pending = self.packet_queue.qsize()
+        avg_rx_vars = self.rx_var_count_total / max(1, self.rx_packet_count)
+        avg_proc_vars = self.process_var_count_total / max(1, self.process_packet_count)
+        line = (
+            f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [PERF][VIZ] "
+            f"rx={self.rx_packet_count} rx_err={self.rx_error_count} rx_drop={self.rx_drop_count} processed={self.process_packet_count} "
+            f"queue={pending}/{self.packet_queue.maxsize} avg_rx_vars={avg_rx_vars:.1f} avg_proc_vars={avg_proc_vars:.1f} "
+            f"ui_ticks={self.ui_tick_count} curve_updates={self.ui_curve_updates} skipped_docks={self.ui_skipped_docks} "
+            f"last_ui_ms={ui_elapsed_ms:.2f} docks={len(self.plot_widgets)} vars={len(self.data_store)} idx={self.current_idx}\n"
+        )
+        try:
+            with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                f.write(line)
+        except Exception:
+            pass
+        self.last_perf_log_wall = now
+
+    def get_process_memory_mb(self):
+        if sys.platform != 'win32':
+            return 0.0
+        try:
+            class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+                _fields_ = [
+                    ('cb', ctypes.c_ulong), ('PageFaultCount', ctypes.c_ulong),
+                    ('PeakWorkingSetSize', ctypes.c_size_t), ('WorkingSetSize', ctypes.c_size_t),
+                    ('QuotaPeakPagedPoolUsage', ctypes.c_size_t), ('QuotaPagedPoolUsage', ctypes.c_size_t),
+                    ('QuotaPeakNonPagedPoolUsage', ctypes.c_size_t), ('QuotaNonPagedPoolUsage', ctypes.c_size_t),
+                    ('PagefileUsage', ctypes.c_size_t), ('PeakPagefileUsage', ctypes.c_size_t),
+                ]
+            counters = PROCESS_MEMORY_COUNTERS()
+            counters.cb = ctypes.sizeof(PROCESS_MEMORY_COUNTERS)
+            psapi = ctypes.WinDLL('psapi')
+            if psapi.GetProcessMemoryInfo(ctypes.windll.kernel32.GetCurrentProcess(), ctypes.byref(counters), counters.cb):
+                return counters.WorkingSetSize / (1024 * 1024)
+        except Exception:
+            return 0.0
+        return 0.0
+
+    def memory_guard(self):
+        now = time.time()
+        if now - self.last_memory_guard_wall < 10.0:
+            return
+        self.last_memory_guard_wall = now
+        mem_mb = self.get_process_memory_mb()
+        if not mem_mb or mem_mb < self.memory_soft_limit_mb:
+            return
+        self.realtime_max_render_points = max(300, int(self.realtime_max_render_points * 0.75))
+        self.accumulate_max_render_points = max(300, int(self.accumulate_max_render_points * 0.75))
+        self.max_packets_per_ui_tick = 1
+        while self.packet_queue.qsize() > 2:
+            try:
+                self.packet_queue.get_nowait()
+                self.rx_drop_count += 1
+            except Exception:
+                break
+        if len(self.trend_times) > max(1000, self.accumulate_hard_limit // 2):
+            keep = max(1000, self.accumulate_hard_limit // 2)
+            overflow = len(self.trend_times) - keep
+            del self.trend_times[:overflow]
+            for tag in self.trend_store:
+                del self.trend_store[tag][:overflow]
+        gc.collect()
+        try:
+            with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [WARN][VIZ] Memory guard activated: working_set={mem_mb:.1f}MB realtime_points={self.realtime_max_render_points} trend_points={self.accumulate_max_render_points}\n")
+        except Exception:
+            pass
 
     def process_data(self, pb_data):
         t = pb_data.sim_time
+        self.process_packet_count += 1
+        self.process_var_count_total += len(pb_data.sim_vars)
         
         # 环形写入
         idx = self.current_idx % self.max_points
@@ -2240,11 +2443,16 @@ class ProfessionalVisualizer(QMainWindow):
         self.current_idx += 1
 
     def update_ui(self):
+        ui_start = time.perf_counter()
+        self.drain_packet_queue()
         if self.current_idx == 0:
+            self.write_perf_log(0.0)
             return
         if self.current_idx == self.last_ui_idx:
+            self.write_perf_log(0.0)
             return
         self.last_ui_idx = self.current_idx
+        self.ui_tick_count += 1
         
         # 1. 极致性能优化：仅更新数值发生变化的表格单元格 (Dirty Check)
         for i in range(self.table.rowCount()):
@@ -2255,16 +2463,32 @@ class ProfessionalVisualizer(QMainWindow):
                     self.table.item(i, 2).setText(val_str)
                     self.last_displayed_strs[tag] = val_str
                 
-        # 2. 更新图表曲线
-        t_data, y_store = self.get_active_series()
-        if len(t_data) == 0: return
-        latest_time = t_data[-1]
-            
         updated_docks = 0
         dock_names = list(self.plot_widgets.keys())
         dock_count = len(dock_names)
         if dock_count == 0:
+            self.write_perf_log((time.perf_counter() - ui_start) * 1000.0)
             return
+        visible_dock_curves = {}
+        active_tags = set()
+        for dock_name in dock_names:
+            pw = self.plot_widgets.get(dock_name)
+            if pw is None or not pw.isVisible():
+                continue
+            dock_curves = [tag for tag, dock_map in self.curves.items() if dock_name in dock_map and tag in self.data_store]
+            if dock_curves:
+                visible_dock_curves[dock_name] = dock_curves
+                active_tags.update(dock_curves)
+        if not active_tags:
+            self.write_perf_log((time.perf_counter() - ui_start) * 1000.0)
+            return
+
+        # 2. 更新图表曲线，只准备当前可见曲线的数据，避免全量变量产生大量临时数组。
+        t_data, y_store = self.get_active_series(active_tags)
+        if len(t_data) == 0:
+            self.write_perf_log((time.perf_counter() - ui_start) * 1000.0)
+            return
+        latest_time = t_data[-1]
         start_offset = self.current_idx % dock_count
 
         for dock_index in range(dock_count):
@@ -2275,14 +2499,16 @@ class ProfessionalVisualizer(QMainWindow):
             if not pw.isVisible():
                 continue
             vb = pw.getViewBox()
-            dock_curves = [tag for tag, dock_map in self.curves.items() if dock_name in dock_map]
+            dock_curves = visible_dock_curves.get(dock_name, [])
             if not dock_curves:
                 continue
 
             if not self.accumulate_enabled and updated_docks >= self.max_dock_updates_per_tick:
+                self.ui_skipped_docks += 1
                 continue
 
             if self.accumulate_enabled and (self.current_idx % self.accumulate_update_stride) != 0:
+                self.ui_skipped_docks += 1
                 continue
             
             # 1. 工业级滚动引擎：维持固定视口宽度
@@ -2348,6 +2574,13 @@ class ProfessionalVisualizer(QMainWindow):
             self.update_dock_y_range(dock_name, vb, rendered_y_arrays)
             if rendered_y_arrays:
                 updated_docks += 1
+                self.ui_curve_updates += len(rendered_y_arrays)
+
+        self.write_perf_log((time.perf_counter() - ui_start) * 1000.0)
+        if time.time() - self.last_gc_wall > 30.0:
+            gc.collect()
+            self.last_gc_wall = time.time()
+        self.memory_guard()
 
 if __name__ == "__main__":
     # 强制单实例运行 (DataVisualizer)
@@ -2366,7 +2599,16 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=22345)
     args = parser.parse_args()
     
-    app = QApplication(sys.argv)
-    window = ProfessionalVisualizer(port=args.port)
-    window.show()
-    sys.exit(app.exec_() if QT_VERSION == 5 else app.exec())
+    try:
+        app = QApplication(sys.argv)
+        window = ProfessionalVisualizer(port=args.port)
+        window.show()
+        sys.exit(app.exec_() if QT_VERSION == 5 else app.exec())
+    except Exception:
+        try:
+            with open(os.path.join(APP_DIR, "visualizer_fatal.log"), "a", encoding="utf-8") as f:
+                f.write(f"\n--- Visualizer Fatal {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+                f.write(traceback.format_exc())
+        except Exception:
+            pass
+        raise

@@ -1,5 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import runpy
+
+runpy.run_path(os.path.join(SPECPATH, 'update_build_version.py'), run_name='__main__')
+
 
 a = Analysis(
     ['FmuLauncherUniversal.py'],

@@ -1,0 +1,50 @@
+<Config>
+	<Sat Code="SZKJZ" IP="225.10.50.170" Port="32700" Name="空间站" TaskCode="7"/>
+	<BaseLocalTime BaseTime="1970-01-01 00:00:00"/>
+	<Target code="5883">
+		<Msg code="3152">
+			<Params>
+				<Param Id="1" No="stCraftTime"/>
+				<Param Id="2" No="PTMC001"/>
+				<Param Id="3" No="PTMC002"/>
+				<Param Id="4" No="PTMC003"/>
+				<Param Id="5" No="PTMC004"/>
+				<Param Id="6" No="PTMD001"/>
+				<Param Id="7" No="PTMD002"/>
+				<Param Id="8" No="PTMD003"/>
+				<Param Id="9" No="PTMK001"/>
+				<Param Id="10" No="PTMK002"/>
+				<Param Id="11" No="PTMK003"/>
+				<Param Id="12" No="PTMK004"/>
+				<Param Id="13" No="PTMK005"/>
+				<Param Id="14" No="PTMK006"/>
+				<Param Id="15" No="PTMS300B0"/>
+				<Param Id="16" No="PTMS300B1"/>
+				<Param Id="17" No="PTMS300B2"/>
+				<Param Id="18" No="PTMS300B3"/>
+				<Param Id="19" No="PTMS300B4"/>
+				<Param Id="20" No="PTMS300B5"/>
+				<Param Id="21" No="PTMS300B6"/>
+				<Param Id="22" No="PTMS300B7"/>
+				<Param Id="23" No="PTMS300B8"/>
+				<Param Id="24" No="PTMS300B9"/>
+				<Param Id="25" No="PTMN005"/>
+				<Param Id="26" No="PTMN006"/>
+				<Param Id="27" No="PTMN007"/>
+				<Param Id="28" No="PTMN008"/>
+				<Param Id="29" No="PTMN009"/>
+				<Param Id="30" No="PTMN010"/>
+				<Param Id="31" No="PTMT001"/>
+				<Param Id="32" No="PTMT001"/>
+				<Param Id="33" No="PTMT010"/>
+			</Params>
+		</Msg>
+	</Target>
+	<SimVar2TmMapping>
+		<Var fullname="TRAINH019_10_Switch" type="Real" expression="#(PTMC001)"/>
+		<Var fullname="TRAINH019_10_PowerLoad" type="Real" expression="-1.5 + 2*#(PTMK001) + #(PTMK002)"/>
+		<Var fullname="TRAINH019_11_Switch" type="Real" expression="#(PTMC002)"/>
+		<Var fullname="TRAINH019_11_PowerLoad" type="Real" expression="50 * (#(PTMK003) * #(PTMK004) * 2) ^ 0.5"/>
+		<Var fullname="TRAINH018_3_Solar_Online" type="Real" expression="#(PTMN010)"/>
+	</SimVar2TmMapping>
+</Config>

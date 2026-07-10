@@ -5,7 +5,7 @@ import sys
 import os
 from datetime import datetime
 
-def replay_log(file_path, target_ip="127.0.0.1", target_port=30019, speed=0.1):
+def replay_log(file_path, target_ip="127.0.0.1", target_port=30019, speed=0.1, loop=True):
     """
     Replays a YaoCe raw record log file to a UDP target.
     speed: 0.5 means half speed (slower), 1.0 means original speed, 2.0 means double speed.
@@ -22,18 +22,25 @@ def replay_log(file_path, target_ip="127.0.0.1", target_port=30019, speed=0.1):
     print(f"[*] Replaying: {os.path.basename(file_path)}")
     print(f"[*] Target: {target_ip}:{target_port}")
     print(f"[*] Speed: {speed}x (Sending 1 second of data every {1/speed:.1f} seconds)")
+    print("[*] Loop mode: ON. Press Ctrl+C to stop." if loop else "[*] Loop mode: OFF.")
 
     # Regex to match the timestamp line
     ts_pattern = re.compile(r"\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3})\] RX")
 
-    last_ts = None
-    packet_count = 0
+    total_packet_count = 0
     start_time = time.time()
+    loop_count = 0
 
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
-            
+
+        while True:
+            loop_count += 1
+            last_ts = None
+            loop_packet_count = 0
+            print(f"[*] Replay loop #{loop_count} started.")
+
             i = 0
             while i < len(lines):
                 line = lines[i].strip()
@@ -41,42 +48,48 @@ def replay_log(file_path, target_ip="127.0.0.1", target_port=30019, speed=0.1):
                 if match:
                     # Parse timestamp from log
                     current_ts = datetime.strptime(match.group(1), "%Y-%m-%d %H:%M:%S.%f")
-                    
+
                     # Read the next line for hex data
                     i += 1
                     if i >= len(lines): break
                     hex_data = lines[i].strip()
-                    
+
                     if hex_data:
                         try:
                             # Strip spaces to ensure compatibility with all Python versions
                             clean_hex = hex_data.replace(" ", "").replace("\t", "")
                             data_bytes = bytes.fromhex(clean_hex)
-                            
+
                             # Real-time synchronization
                             if last_ts is not None:
                                 delay = (current_ts - last_ts).total_seconds()
                                 if delay > 0:
                                     # Wait based on speed factor
                                     time.sleep(delay / speed)
-                            
+
                             # Send
                             sock.sendto(data_bytes, (target_ip, target_port))
-                            packet_count += 1
-                            
-                            if packet_count == 1:
+                            total_packet_count += 1
+                            loop_packet_count += 1
+
+                            if total_packet_count == 1:
                                 print(f"[OK] First packet sent! Size: {len(data_bytes)} bytes")
-                            
-                            if packet_count % 100 == 0:
+
+                            if loop_packet_count % 100 == 0:
                                 progress = (i / total_lines) * 100
-                                print(f"[REPLAY] Sent {packet_count} packets ({progress:.1f}% complete)...")
-                            
+                                print(f"[REPLAY] loop #{loop_count}: {loop_packet_count} packets ({progress:.1f}%), total={total_packet_count}")
+
                             last_ts = current_ts
-                        except Exception as e:
+                        except Exception:
                             # Skip malformed lines
                             pass
-                
+
                 i += 1
+
+            print(f"[*] Replay loop #{loop_count} finished. loop_packets={loop_packet_count}, total={total_packet_count}")
+            if not loop:
+                break
+            time.sleep(0.2)
                 
     except KeyboardInterrupt:
         print("\n[*] Replay stopped by user.")
@@ -85,7 +98,7 @@ def replay_log(file_path, target_ip="127.0.0.1", target_port=30019, speed=0.1):
     finally:
         sock.close()
         duration = time.time() - start_time
-        print(f"[*] Replay finished. Total packets sent: {packet_count}. Duration: {duration:.1f}s")
+        print(f"[*] Replay finished. Loops: {loop_count}. Total packets sent: {total_packet_count}. Duration: {duration:.1f}s")
 
 if __name__ == "__main__":
     # Default file path

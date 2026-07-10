@@ -1,0 +1,48 @@
+<DTS>
+	<!--tab页名称-->
+	<Categories Name="梦天舱">
+		<Subsys Name="电源系统">
+			<__variable__ Name="DisChargeAh_Online[1]" Type="Real"  Description="电池组#A放电电量"  />
+			<__variable__ Name="DisChargeAh_Online[2]" Type="Real"  Description="电池组#B放电电量2"  />
+			<__variable__ Name="DisChargeAh_Online[3]" Type="Real"  Description="电池组#C放电电量3"  />
+			<__variable__ Name="DisChargeAh_Online[4]" Type="Real"  Description="电池组#D放电电量4"  />
+			<__variable__ Name="DisChargeAh_Online[5]" Type="Real"  Description="电池组#E放电电量5"  />
+			<__variable__ Name="DisChargeAh_Online[6]" Type="Real"  Description="电池组#F放电电量6"  />
+			<__variable__ Name="SOC_Online[1]" Type="Real"  Description="电池组#A SOC（真实状态）"  />
+			<__variable__ Name="SOC_Online[2]" Type="Real"  Description="电池组#B SOC（真实状态）"  />
+			<__variable__ Name="SOC_Online[3]" Type="Real"  Description="电池组#C SOC（真实状态）"  />
+			<__variable__ Name="SOC_Online[4]" Type="Real"  Description="电池组#D SOC（真实状态）"  />
+			<__variable__ Name="SOC_Online[5]" Type="Real"  Description="电池组#E SOC（真实状态）"  />
+			<__variable__ Name="SOC_Online[6]" Type="Real"  Description="电池组#F SOC（真实状态）"  />
+			<__variable__ Name="TSolarWing_Online[1]" Type="Real"  Description="A翼电池电路温度1 "  />
+			<__variable__ Name="TSolarWing_Online[2]" Type="Real"  Description="A翼电池电路温度2 "  />
+			<__variable__ Name="TSolarWing_Online[3]" Type="Real"  Description="A翼电池电路温度3 "  />
+			<__variable__ Name="TSolarWing_Online[4]" Type="Real"  Description="B翼电池电路温度1 "  />
+			<__variable__ Name="TSolarWing_Online[5]" Type="Real"  Description="B翼电池电路温度2 "  />
+			<__variable__ Name="TSolarWing_Online[6]" Type="Real"  Description="B翼电池电路温度3 "  />
+		</Subsys>
+		<Subsys Name="环热控系统">
+			<__variable__ Name="T_n_Online" Type="Real"  Description="低温回路控温点温度输入"  />
+			<__variable__ Name="T_z_Online" Type="Real"  Description="中温回路控温点温度输入"  />
+			<__variable__ Name="p_Online" Type="Real"  Description="舱压"  />
+			<__variable__ Name="T_air_Online" Type="Real"  Description="舱温"  />
+		</Subsys>
+		<Subsys Name="姿轨控">
+		    <__variable__ Name="CK" Type="Real"  Description="测控标志"/>
+			<__variable__ Name="a" Type="Real"  Description="半长轴km"/>
+			<__variable__ Name="e" Type="Real"  Description="偏心率"/>
+			<__variable__ Name="i" Type="Real"  Description="轨道倾角"/>
+			<__variable__ Name="OMEGA" Type="Real"  Description="升交点赤经"/>
+			<__variable__ Name="omega" Type="Real"  Description="近地点幅角"/>
+			<__variable__ Name="f" Type="Real"  Description="真近点角"/>		
+			<__variable__ Name="PanelAngle[1]" Type="Real"  Description="左帆板转角"/>
+			<__variable__ Name="PanelAngle[2]" Type="Real"  Description="右帆板转角"/>
+			<__variable__ Name="SolarAngle" Type="Real"  Description="入射角,DEG"/>
+			<__variable__ Name="ShieldRate[1]" Type="Real"  Description="左帆板遮挡率0-1"/>
+			<__variable__ Name="ShieldRate[2]" Type="Real"  Description="右帆板遮挡率0-1"/>
+		</Subsys>
+		<Subsys Name="指令单元">
+			<__variable__ Name="CMD" Description="指令信号" Type="Integer"/>
+			</Subsys>
+	</Categories>
+</DTS>

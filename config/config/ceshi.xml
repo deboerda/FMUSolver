@@ -1,0 +1,93 @@
+	<Sat name="实验舱Ⅱ">
+        <Subsys name="GNC">
+            <!--设备Device包含多个模块Module，单个模块对应一个遥测值，遥测取值在不同工作模式对应模块的不同功耗，设备的功耗等于其所有模块功耗的和-->
+            <!--distributor：负载所属配电器-->
+            <!--line：:负载在所属配电器的第几路-->
+            <!--init_var:表示是否只在仿真初始化时注入，若为true只会在仿真开始或手动选择天地状态同步时注入，否则每个单步注入-->
+            <Device distributor="9" name="红外地球敏感器1" line="4" init_var="true">
+                <Module expression="#(TGMT0001.DAHE@VGKH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <GlobalVars>
+            <Category name="姿轨控">
+				<Var expression="#(TGMT0001.DAHE@A029)" desc="北京时.年" sim_var="UTC_MT_Online[1]" init_var="false"/>
+				<Var expression="#(TGMT0001.DAHE@A02A)" desc="北京时.月" sim_var="UTC_MT_Online[2]" init_var="false"/>
+				<Var expression="#(TGMT0001.DAHE@A02B)" desc="北京时.日" sim_var="UTC_MT_Online[3]" init_var="false"/>
+				<Var expression="#(TGMT0001.DAHE@A02C)" desc="北京时.时" sim_var="UTC_MT_Online[4]" init_var="false"/>
+				<Var expression="#(TGMT0001.DAHE@A02D)" desc="北京时.分" sim_var="UTC_MT_Online[5]" init_var="false"/>
+				<Var expression="#(TGMT0001.DAHE@A02E)" desc="北京时.秒" sim_var="UTC_MT_Online[6]" init_var="false"/>
+            	<Var expression="86400*#(TGMT0001.DAHE@DCSM34.d)+3600*#(TGMT0001.DAHE@DCSM34.h)+60*#(TGMT0001.DAHE@DCSM34.m)+#(TGMT0001.DAHE@DCSM34.s)+0.001*#(TGMT0001.DAHE@DCSM34.ms)" desc="绝对时间码" sim_var="relativetime_MT_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@PF01)" desc="MTC测控区标志" sim_var="CK02" init_var="false"/>		
+                <Var expression="#(TGMT0001.DAHE@DCKW5006)" desc="MTC半长轴" sim_var="a_MT_Online" init_var="false"/>            	
+                <Var expression="#(TGMT0001.DAHE@DCKW5007)" desc="MTC偏心率" sim_var="e_MT_Online" init_var="false"/>				
+                <Var expression="#(TGMT0001.DAHE@DCKW5008)" desc="MTC轨道倾角" sim_var="i_MT_Online" init_var="false"/>			
+				<Var expression="#(TGMT0001.DAHE@DCKW5009)" desc="MTC升交点赤经" sim_var="OMEGA_MT_Online" init_var="false"/>		
+				<Var expression="#(TGMT0001.DAHE@DCKW5010)" desc="MTC近地点幅角" sim_var="omega_MT_Online" init_var="false"/>		
+				<Var expression="#(TGMT0001.DAHE@DCKW5012)" desc="MTC真近点角" sim_var="f_WT_Online" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCKM1014)" desc="MTC滚动姿态角" sim_var="Att_MT_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCKM1015)" desc="MTC俯仰姿态角" sim_var="Att_MT_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCKM1016)" desc="MTC偏航姿态角" sim_var="Att_MT_Online[3]" init_var="false"/>               
+			    <Var expression="#(TGMT0001.DAHE@DCKM1017)" desc="MTC滚动角速度" sim_var="w_MT_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCKM1018)" desc="MTC俯仰角速度" sim_var="w_MT_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCKM1019)" desc="MTC偏航角速度" sim_var="w_MT_Online[3]" init_var="false"/>
+			</Category>
+            <Category name="能源">
+                <Var expression="#(TGMT0001.DAHE@DCNM1047)" desc="MTC电池组aAh容量" sim_var="DisChargeAh_MT_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM1357)" desc="MTC电池组bAh容量" sim_var="DisChargeAh_MT_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM1647)" desc="MTC电池组cAh容量" sim_var="DisChargeAh_MT_Online[3]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM1947)" desc="MTC电池组dAh容量" sim_var="DisChargeAh_MT_Online[4]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM3447)" desc="MTC电池组eAh容量" sim_var="DisChargeAh_MT_Online[5]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM3757)" desc="MTC电池组fAh容量" sim_var="DisChargeAh_MT_Online[6]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM4047)" desc="MTC电池组gAh容量" sim_var="DisChargeAh_MT_Online[7]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM4347)" desc="MTC电池组hAh容量" sim_var="DisChargeAh_MT_Online[8]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM105)" desc="MTC母线滤波a母线电压1" sim_var="BusFilter_MT_V_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2505)" desc="MTC母线滤波b母线电压1" sim_var="BusFilter_MT_V_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM108)" desc="MTC母线滤波a母线输出电流" sim_var="BusFilter_MT_A_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2508)" desc="MTC母线滤波b母线输出电流" sim_var="BusFilter_MT_A_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM475)" desc="MTC第1组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM476)" desc="MTC第2组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM477)" desc="MTC第3组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM478)" desc="MTC第4组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM479)" desc="MTC第5组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM480)" desc="MTC第6组方阵输出电流-A" sim_var="SolarArrayMTA_I_Online[6]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2875)" desc="MTC第1组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2876)" desc="MTC第2组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2877)" desc="MTC第3组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2878)" desc="MTC第4组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2879)" desc="MTC第5组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCNM2880)" desc="MTC第6组方阵输出电流-B" sim_var="SolarArrayMTB_I_Online[6]" init_var="false"/>               
+				<Var expression="#(TGMT0001.DAHE@DCVM265)" desc="MTC功控Ia输入总电流" sim_var="GK_I_Current_MT_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM365)" desc="MTC功控Ib输入总电流" sim_var="GK_I_Current_MT_Online[2]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM465)" desc="MTC功控Ic输入总电流" sim_var="GK_I_Current_MT_Online[3]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM565)" desc="MTC功控Id输入总电流" sim_var="GK_I_Current_MT_Online[4]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM665)" desc="MTC功控Ie输入总电流" sim_var="GK_I_Current_MT_Online[5]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM765)" desc="MTC功控If输入总电流" sim_var="GK_I_Current_MT_Online[6]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM865)" desc="MTC功控Ig输入总电流" sim_var="GK_I_Current_MT_Online[7]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM965)" desc="MTC功控Ih输入总电流" sim_var="GK_I_Current_MT_Online[8]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1065)" desc="MTC功控Ii输入总电流" sim_var="GK_I_Current_MT_Online[9]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1165)" desc="MTC功控Ij输入总电流" sim_var="GK_I_Current_MT_Online[10]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1265)" desc="MTC功控Ik输入总电流" sim_var="GK_I_Current_MT_Online[11]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1365)" desc="MTC功控Il输入总电流" sim_var="GK_I_Current_MT_Online[12]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1465)" desc="MTC功控Im输入总电流" sim_var="GK_I_Current_MT_Online[13]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1565)" desc="MTC功控In输入总电流" sim_var="GK_I_Current_MT_Online[14]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM2565)" desc="MTC功控II输入总电流" sim_var="GK_II_Current_MT_Online" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1633)" desc="MTC功控IIIa输入母线总电流" sim_var="GK_IIIa_Current_MT_Online" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1709)" desc="MTC供控I母线A输入电流" sim_var="GD_Ia_Current_MT_Online[1]" init_var="false"/>
+                <Var expression="#(TGMT0001.DAHE@DCVM1710)" desc="MTC供控I母线B输入电流" sim_var="GD_Ia_Current_MT_Online[2]" init_var="false"/>
+            </Category>
+			<Category name="环热控">
+                <Var expression="#(TGMT0001.DAHE@DCBM138)" desc="MTC总压" sim_var="p_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCBM1254)" desc="MTC温度" sim_var="T_air_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCBM1255)" desc="MTC湿度" sim_var="rhum_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCBM40)" desc="MTC氧分压" sim_var="p_O2_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCBM1253)" desc="MTCCO2分压" sim_var="p_CO2_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCRM7145)" desc="MTC外回路控温值" sim_var="T_n_MT_Online" init_var="true"/>
+                <Var expression="#(TGMT0001.DAHE@DCRM7146)" desc="MTC中温回路控温值" sim_var="T_z_MT_Online" init_var="true"/>
+            </Category>
+        </GlobalVars>
+    </Sat>
+    <!--全局变量与遥测（或遥测表达式）一一对应-->
+    <!--look_back：回查一定时间的遥测，单位s-->

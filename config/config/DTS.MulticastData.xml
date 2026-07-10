@@ -1,0 +1,49 @@
+<!--向外组播数据模块设置，用于包括DDM，三维动画，阳光遮挡等通信-->
+<Config>
+    <!--组播ip，端口，物理网卡-->
+    <Connect PhysicalNetworkCard="" port="32700" ip="224.0.11.14"/>
+    <!--发数间隔，单位ms-->
+    <SendInterval>500</SendInterval>
+    <!--需要播放的仿真变量全名-->
+    <SimVars>
+        <Var name="Simtime"/>
+        <Var name="ToSimulationTime[1]"/>
+        <Var name="ToSimulationTime[2]"/>
+        <Var name="ToSimulationTime[3]"/>
+        <Var name="ToSimulationTime[4]"/>
+        <Var name="ToSimulationTime[5]"/>
+        <Var name="ToSimulationTime[6]"/>
+        <Var name="ToSimulationTime[7]"/>
+        <Var name="MTSatPos[1]"/>
+        <Var name="MTSatPos[2]"/>
+        <Var name="MTSatPos[3]"/>
+        <Var name="MTSatVel[1]"/>
+        <Var name="MTSatVel[2]"/>
+        <Var name="MTSatVel[3]"/>
+        <Var name="SixRoot_MT[1]"/>
+        <Var name="SixRoot_MT[2]"/>
+        <Var name="SixRoot_MT[3]"/>
+        <Var name="SixRoot_MT[4]"/>
+        <Var name="SixRoot_MT[5]"/>
+        <Var name="SixRoot_MT[6]"/>
+        <Var name="DisChargeAh_MT[1]"/>
+        <Var name="DisChargeAh_MT[2]"/>
+        <Var name="DisChargeAh_MT[3]"/>
+        <Var name="DisChargeAh_MT[4]"/>
+        <Var name="DisChargeAh_MT[5]"/>
+        <Var name="DisChargeAh_MT[6]"/>
+        <Var name="DisChargeAh_MT[7]"/>
+        <Var name="DisChargeAh_MT[8]"/>
+        <Var name="BusFilter_MT_V[1]"/>
+        <Var name="BusFilter_MT_V[2]"/>
+        <Var name="BusFilter_MT_A[1]"/>
+        <Var name="BusFilter_MT_A[2]"/>
+        <Var name="ISolar[1]"/>
+        <Var name="ISolar[2]"/>
+        <Var name="InSunArea"/>
+        <Var name="Ah_MT_Pre[2]"/>
+    </SimVars>
+    <TmVars>
+        <!--需要播放的遥测代号-->
+    </TmVars>
+</Config>

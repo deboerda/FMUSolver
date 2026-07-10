@@ -17,6 +17,94 @@ import queue
 import traceback
 import struct
 
+class AsyncRotatingFileLogger:
+    """Small bounded async logger for long-running worker diagnostics."""
+    def __init__(self, path, max_bytes=10 * 1024 * 1024, backups=3, queue_size=1000, flush_interval=0.5, batch_size=100):
+        self.path = path
+        self.max_bytes = max(1024 * 1024, int(max_bytes))
+        self.backups = max(1, int(backups))
+        self.queue = queue.Queue(maxsize=max(10, int(queue_size)))
+        self.flush_interval = max(0.1, float(flush_interval))
+        self.batch_size = max(1, int(batch_size))
+        self.stop_event = threading.Event()
+        self.drop_count = 0
+        self.thread = threading.Thread(target=self._loop, name="FmuWorkerAsyncLog", daemon=True)
+        self.thread.start()
+
+    def log(self, line, important=False):
+        text = f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n"
+        try:
+            self.queue.put_nowait((text, important))
+        except queue.Full:
+            self.drop_count += 1
+            if not important:
+                return
+            try:
+                self.queue.get_nowait()
+                try: self.queue.task_done()
+                except Exception: pass
+            except Exception:
+                pass
+            try: self.queue.put_nowait((text, important))
+            except Exception: pass
+
+    def close(self, timeout=2.0):
+        self.stop_event.set()
+        try: self.thread.join(timeout=timeout)
+        except Exception: pass
+
+    def _rotate_if_needed(self):
+        try:
+            if not os.path.exists(self.path) or os.path.getsize(self.path) <= self.max_bytes:
+                return
+            for idx in range(self.backups, 0, -1):
+                src = f"{self.path}.{idx}"
+                dst = f"{self.path}.{idx + 1}"
+                if os.path.exists(dst):
+                    try: os.remove(dst)
+                    except Exception: pass
+                if os.path.exists(src):
+                    try: os.replace(src, dst)
+                    except Exception: pass
+            try: os.replace(self.path, f"{self.path}.1")
+            except Exception: pass
+        except Exception:
+            pass
+
+    def _loop(self):
+        pending = []
+        last_flush = time.time()
+        while not self.stop_event.is_set() or not self.queue.empty() or pending:
+            timeout = max(0.05, self.flush_interval - (time.time() - last_flush))
+            try:
+                item, _important = self.queue.get(timeout=timeout)
+                pending.append(item)
+                try: self.queue.task_done()
+                except Exception: pass
+                while len(pending) < self.batch_size:
+                    try:
+                        item, _important = self.queue.get_nowait()
+                        pending.append(item)
+                        try: self.queue.task_done()
+                        except Exception: pass
+                    except queue.Empty:
+                        break
+            except queue.Empty:
+                pass
+            if pending and (len(pending) >= self.batch_size or time.time() - last_flush >= self.flush_interval or self.stop_event.is_set()):
+                try:
+                    os.makedirs(os.path.dirname(self.path) or ".", exist_ok=True)
+                    self._rotate_if_needed()
+                    if self.drop_count:
+                        pending.insert(0, f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] [LOG] dropped {self.drop_count} perf log lines due to backpressure\n")
+                        self.drop_count = 0
+                    with open(self.path, "a", encoding="utf-8", buffering=1024 * 1024) as f:
+                        f.writelines(pending)
+                except Exception:
+                    pass
+                pending.clear()
+                last_flush = time.time()
+
 def is_process_alive(pid):
     try:
         pid = int(pid)
@@ -336,6 +424,17 @@ class DDMCommManager:
     def __init__(self, remote_ip="127.0.0.1", remote_port=8889, listen_port=8898, replace_dot=False):
         self.target_addr = (remote_ip, remote_port)
         self.viz_addr = ("127.0.0.1", 22345) # 专用图表端口，避免冲突
+        raw_viz_ports = os.environ.get("FMUSOLVER_VIZ_PORTS", "22345,8888")
+        self.viz_addrs = []
+        for port_text in raw_viz_ports.split(','):
+            try:
+                addr = ("127.0.0.1", int(port_text.strip()))
+                if addr not in self.viz_addrs:
+                    self.viz_addrs.append(addr)
+            except Exception:
+                pass
+        if self.viz_addr not in self.viz_addrs:
+            self.viz_addrs.insert(0, self.viz_addr)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.last_received_data = None
         self.received_queue = queue.Queue(maxsize=1000)
@@ -387,7 +486,14 @@ class DDMCommManager:
         if extra_external_variables:
             external_variables.update(extra_external_variables)
 
-        var_names = list(variables.keys())
+        viz_variables = dict(variables)
+        if extra_external_variables and os.environ.get("FMUSOLVER_VIZ_INCLUDE_YC", "1").strip().lower() not in ("0", "false", "no", "off"):
+            for name, val in extra_external_variables.items():
+                name_text = str(name)
+                viz_name = name_text if name_text.startswith(("PE.", "YC.")) else f"YC.{name_text}"
+                viz_variables[viz_name] = val
+
+        var_names = list(viz_variables.keys())
         ext_var_names = list(external_variables.keys())
         for i in range(0, len(ext_var_names), chunk_size):
             ext_chunk_names = ext_var_names[i:i + chunk_size]
@@ -446,7 +552,7 @@ class DDMCommManager:
             packet_viz.sim_time = sim_time
 
             for name in chunk_names:
-                val = variables[name]
+                val = viz_variables[name]
 
                 # 配置看板包
                 svar_viz = packet_viz.sim_vars.add()
@@ -474,7 +580,9 @@ class DDMCommManager:
                 raw_viz = packet_viz.SerializeToString()
                 self.last_viz_var_count = len(chunk_names)
                 self.last_viz_payload_bytes = len(raw_viz)
-                self.sock.sendto(base64.b64encode(raw_viz).decode('ascii').encode('ascii'), self.viz_addr)
+                viz_payload = base64.b64encode(raw_viz).decode('ascii').encode('ascii')
+                for viz_addr in self.viz_addrs:
+                    self.sock.sendto(viz_payload, viz_addr)
                 self.viz_send_count += 1
             except Exception:
                 self.send_error_count += 1
@@ -509,7 +617,9 @@ class DDMCommManager:
                 svar.double_value = float(val)
         try:
             raw = packet.SerializeToString()
-            self.sock.sendto(base64.b64encode(raw).decode('ascii').encode('ascii'), self.viz_addr)
+            payload = base64.b64encode(raw).decode('ascii').encode('ascii')
+            for viz_addr in self.viz_addrs:
+                self.sock.sendto(payload, viz_addr)
             self.viz_echo_send_count += 1
         except Exception:
             pass
@@ -545,18 +655,18 @@ class FMUPlayer:
         if injection_blacklist:
             print(f"[*] Injection blacklist loaded: {len(injection_blacklist)} vars from {blacklist_path}", flush=True)
         perf_log_path = os.path.join(root_dir, "fmu_worker_perf.log")
+        perf_logger = AsyncRotatingFileLogger(
+            perf_log_path,
+            max_bytes=int(os.environ.get("FMUSOLVER_FMU_PERF_LOG_MB", "10")) * 1024 * 1024,
+            backups=int(os.environ.get("FMUSOLVER_FMU_PERF_LOG_BACKUPS", "3")),
+            queue_size=int(os.environ.get("FMUSOLVER_FMU_PERF_LOG_QUEUE", "1000")),
+            flush_interval=float(os.environ.get("FMUSOLVER_FMU_PERF_LOG_FLUSH", "0.5")),
+            batch_size=int(os.environ.get("FMUSOLVER_FMU_PERF_LOG_BATCH", "100")),
+        )
 
         def append_perf_log(line):
             try:
-                if os.path.exists(perf_log_path) and os.path.getsize(perf_log_path) > 10 * 1024 * 1024:
-                    bak = perf_log_path + ".1"
-                    try:
-                        if os.path.exists(bak): os.remove(bak)
-                    except Exception: pass
-                    try: os.replace(perf_log_path, bak)
-                    except Exception: pass
-                with open(perf_log_path, "a", encoding="utf-8") as f:
-                    f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+                perf_logger.log(line, important=("[ERROR]" in str(line) or "[!]" in str(line)))
             except Exception:
                 pass
         append_perf_log(f"[SESSION][FMU] start fmu={os.path.basename(self.fmu_path)} pid={os.getpid()} step={step_size} sample_freq={sample_freq} sim_rate={sim_rate}")
@@ -756,6 +866,7 @@ class FMUPlayer:
             viz_echo_cache = {}
             viz_echo_last_send = 0.0
             viz_echo_interval = max(0.05, float(os.environ.get("FMUSOLVER_VIZ_INJECTION_ECHO_INTERVAL", "0.2")))
+            last_injection_recv_log_wall = 0.0
             pending_limited_injection = {}
             limited_inject_freq = max(0.1, float(os.environ.get("FMUSOLVER_YC_INJECT_FREQ", str(min(5.0, sample_freq or 5.0)))))
             limited_inject_interval = 1.0 / limited_inject_freq
@@ -822,7 +933,15 @@ class FMUPlayer:
                     try:
                         cmd = json.loads(raw_cmd.decode('utf-8'))
                         control_cmd_count += 1
-                        if self.sim_id and cmd.get("sim_id") != self.sim_id:
+                        # Telemetry bridge sends pure PE./YC. variable JSON directly to the worker
+                        # and intentionally has no GUI session id. Keep session checks for GUI
+                        # control commands, but do not drop external variable injections.
+                        has_session_id = "sim_id" in cmd
+                        has_external_vars = any(str(k).startswith(("PE.", "YC.")) for k in cmd.keys())
+                        if self.sim_id and has_session_id and cmd.get("sim_id") != self.sim_id:
+                            self.comm.last_received_data = None
+                            continue
+                        if self.sim_id and not has_session_id and not has_external_vars:
                             self.comm.last_received_data = None
                             continue
                         if cmd.get("exit"):
@@ -849,7 +968,6 @@ class FMUPlayer:
                         for k, v in cmd.items():
                             if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now"):
                                 continue
-                            injected_echo[str(k)] = v
                             is_rate_limited_external = str(k).startswith(("PE.", "YC."))
                             if str(k).startswith("YC."):
                                 pe_name = strip_source_prefix(k)
@@ -878,6 +996,7 @@ class FMUPlayer:
                                     normalized_v = normalize_external_real_value(k, v) if is_rate_limited_external else float(v)
                                     fmu_instance.setReal([input_real_vr_map[actual]], [normalized_v])
                                     injected_count += 1
+                                    injected_echo[str(k)] = normalized_v
                                     remember_injection(k, actual, "Real", normalized_v, "applied")
                                     last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Real", "value": repr(normalized_v), "sim_time": current_time}
                                     if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
@@ -889,6 +1008,7 @@ class FMUPlayer:
                                 try:
                                     fmu_instance.setInteger([input_int_vr_map[actual]], [int(v)])
                                     injected_count += 1
+                                    injected_echo[str(k)] = int(v)
                                     remember_injection(k, actual, "Integer", v, "applied")
                                     last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Integer", "value": repr(v), "sim_time": current_time}
                                     if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
@@ -898,8 +1018,10 @@ class FMUPlayer:
                                     missing_injection.append(f"{k}->{actual} setInteger failed: {set_e}")
                             elif actual in input_bool_vr_map:
                                 try:
-                                    fmu_instance.setBoolean([input_bool_vr_map[actual]], [parse_bool_value(v)])
+                                    bool_v = parse_bool_value(v)
+                                    fmu_instance.setBoolean([input_bool_vr_map[actual]], [bool_v])
                                     injected_count += 1
+                                    injected_echo[str(k)] = bool_v
                                     remember_injection(k, actual, "Boolean", v, "applied")
                                     last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Boolean", "value": repr(v), "sim_time": current_time}
                                     if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
@@ -918,7 +1040,13 @@ class FMUPlayer:
                             elif injected_count:
                                 print(f"[*] Injection summary: {injected_count}/{total_cmd} applied", flush=True)
                             last_injection_log_wall = time.perf_counter()
-                        viz_echo_cache.update(self.comm.normalize_injection_echo_vars(injected_echo))
+                        if injected_echo:
+                            viz_echo_cache.update(self.comm.normalize_injection_echo_vars(injected_echo))
+                            if time.perf_counter() - last_injection_recv_log_wall > 5.0:
+                                pe_count = sum(1 for name in injected_echo if str(name).startswith("PE."))
+                                yc_count = sum(1 for name in injected_echo if str(name).startswith("YC."))
+                                print(f"[*] Applied external variables mirrored to dashboard: PE={pe_count} YC={yc_count} pending={len(pending_limited_injection)}", flush=True)
+                                last_injection_recv_log_wall = time.perf_counter()
                     except Exception as e:
                         control_error_count += 1
                         print(f"[!] Control command error: {e}", flush=True)
@@ -1063,6 +1191,10 @@ class FMUPlayer:
                         print(f"[!] FAILED VARIABLE: {v.name} (VR={v.valueReference})")
         finally:
             os.chdir(orig_cwd)
+            try:
+                perf_logger.close()
+            except Exception:
+                pass
             try:
                 if fmu_instance is not None:
                     fmu_instance.terminate(); fmu_instance.freeInstance()

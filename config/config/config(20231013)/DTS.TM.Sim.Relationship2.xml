@@ -1,0 +1,1863 @@
+<!--仿真-遥测对应关系-->
+<Config>
+    <InitialFlagVar>Is_initial</InitialFlagVar>
+    <TTCFlagVar>CK01</TTCFlagVar>
+    <DevInitTableVar>IniLoad_Online</DevInitTableVar>
+    <!--每个航天器包括设备和全局变量两部分-->
+    <!--IniLoadInput：负载设备在模型中的input变量，是一个三维数组-->
+    <Sat name="核心舱">
+        <Subsys name="GNC">
+            <Device distributor="9" name="红外地球敏感器1" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="红外地球敏感器2" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH22)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="太阳敏感器线路盒（主）" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH23)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="4.5" range="[4,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="太阳敏感器线路盒（备）" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@TGTH0001.DAHE@VGKH24)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="4.5" range="[4,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="星敏感器1" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH17)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="8.3" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH42)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="5.7" range="[1,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="星敏感器2" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH18)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="8.3" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH48)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="5.7" range="[1,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="星敏感器3" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="8.3" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH54)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="5.7" range="[1,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="8" name="星敏感器4" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH20)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="8.3" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH60)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="5.7" range="[1,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="二浮惯性测量单元线路盒" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH33)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH34)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH35)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH36)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH37)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH38)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH39)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH40)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="11.625" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="光纤惯性测量单元组合体1" line="7" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH17)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH18)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH20)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH22)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH23)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH24)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="光纤惯性测量单元组合体2" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH25)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH26)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH27)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH28)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH29)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH30)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH31)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH32)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.25" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="GNC控制器（主）" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGKH2)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGKH5)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="GNC控制器（备）" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH3)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGKH4)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGKH5)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5" range="[3,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="备份控制器（备）" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH6)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="12" range="[3,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="备份控制器（主）" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH6)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="12" range="[3,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="智能接口装置1（主）" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH7)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3.2" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="智能接口装置1（备）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH8)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3.2" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="智能接口装置2（备）" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH9)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3.2" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="智能接口装置2（主）" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH10)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3.2" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="编解码单元（主）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH49)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="13" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="编解码单元（备）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH50)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="13" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="微波应答机主机1" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH37)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="33" range="[1.2,2.4]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="微波应答机主机2" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH41)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="33" range="[1.2,2.4]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="微波应答机主机3" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGKH45)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="33" range="[1.2,2.4]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="单框架控制力矩陀螺线路1（主）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH75)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="单框架控制力矩陀螺线路1（备）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH79)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="单框架控制力矩陀螺线路2（备）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH87)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="单框架控制力矩陀螺线路2（主）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH83)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="单框架控制力矩陀螺线路3（备）" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH95)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="单框架控制力矩陀螺线路3（主）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH93)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="单框架控制力矩陀螺线路4（备）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH103)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="单框架控制力矩陀螺线路4（主）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH99)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="单框架控制力矩陀螺线路5（主）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH107)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="单框架控制力矩陀螺线路5（备）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH111)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="单框架控制力矩陀螺线路6（备）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH119)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="单框架控制力矩陀螺线路6（主）" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH115)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="[1.2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="总线中继器1" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH150)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="总线中继器2" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH152)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="总线中继器3" line="16" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH154)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="总线中继器4" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH156)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="总线中继器5" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH158)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="总线中继器6" line="17" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH160)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="总线中继器7" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH162)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="总线中继器8" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH164)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="总线中继器9" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH166)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="总线中继器10" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH168)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="总线中继器11" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH170)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="总线中继器12" line="16" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH172)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1]"/>
+                    <Interval powerload="1.4" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="信息处理单元(主)" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH175)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="17" range="[2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="8" name="信息处理单元(备)" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH177)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="17" range="[2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="双目监视测量敏感器左相机" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH178)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="26" range="[2,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH179)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="双目监视测量敏感器左相机" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCKH182)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="26" range="[2,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCKH183)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2,5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="化学推进">
+            <Device distributor="7" name="主承力模块（主）" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCTH18)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="5.8" range="(2,3]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCTH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="5.8" range="(2,3]"/>
+                </Module>
+            </Device>
+            <Device distributor="8" name="主承力模块（备）" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCTH18)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="5.8" range="(2,3]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCTH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="5.8" range="(2,3]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="对接与转位">
+            <Device distributor="5" name="被动对接控制器a（主）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH011)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="被动对接控制器a（备）" line="16" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH012)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="被动对接控制器b（主）" line="14" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH027)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="被动对接控制器b（备）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH028)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="13" name="被动对接控制器c（主）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH043)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="被动对接控制器c（备）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH044)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="15" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="对接与转位控制器（主）" line="15" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH079)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="20" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="对接与转位控制器（备）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH080)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="20" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="对接与转位控制器（备）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGUH080)" def_powerload="0">
+                    <Interval powerload="0" range="(-0.7,0.7)"/>
+                    <Interval powerload="20" range="(4.3,5.7)"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="数管">
+            <Device distributor="1" name="核心处理单元a" line="1" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="18" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="核心处理单元b" line="1" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH7)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="17" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="核心处理单元c" line="1" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH13)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="17" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="数管综合业务单元a" line="19" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCSH31)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(2.9,3.7]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH32)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(10.5,13.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH33)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(4.5,5.9]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="数管综合业务单元b" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH35)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(4.5,5.9]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH37)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(2.9,3.7]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH38)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(10.5,13.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="数管综合业务单元c" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH37)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(4.5,5.9]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH43)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(2.9,3.7]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH44)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(10.5,13.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="数管综合业务单元d" line="3" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH37)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="4" range="(4.5,5.9]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH43)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(2.9,3.7]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH44)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1)"/>
+                    <Interval powerload="3.4" range="(10.5,13.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="数据存储服务器a" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH25)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="8" name="数据存储服务器b" line="2" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH27)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="数据复接器" line="2" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH20)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH20)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH22)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH22)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH23)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCSH23)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.625" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="指令与数据处理单元a" line="1" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH29)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.6" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH30)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4.6" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="8" name="指令与数据处理单元b" line="3" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH31)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.7" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH32)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="4.7" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="数据转换器1a" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH41)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH42)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="19" name="数据转换器1b" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH43)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH44)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="数据转换器2a" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH45)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH46)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="数据转换器2b" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH47)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH48)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7)"/>
+                    <Interval powerload="4.5" range="(2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="低速遥测编码单元（备）" line="1" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH49)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH63)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.5" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="低速遥测编码单元（主）" line="3" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGSH49)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGSH63)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5)"/>
+                    <Interval powerload="3.5" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="机械臂">
+            <Device distributor="11" name="对接相机a（左目）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCXH501)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="23" range="[1.9,2.9]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="对接相机a（右目）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCXH502)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="23" range="[1.9,2.9]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="对接相机b（左目）" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCXH601)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="23" range="[1.9,2.9]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="对接相机b（右目）" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCXH602)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="23" range="[1.9,2.9]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="双臂组合转接件悬挂装置" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCXH801)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCXH802)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="机械臂操作台（主）" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGXH701)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="机械臂操作台（备）" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGXH702)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="18" range="[2.5,5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="环控">
+            <Device distributor="7" name="应急泄压组件（阀a供电）" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH51)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="应急泄压组件（阀b供电）" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH52)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="应急泄压组件（阀c供电）" line="14" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH53)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="应急泄压组件（阀d供电）" line="15" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH54)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="5.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="真空管理控制器" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH55)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH56)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH57)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH58)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="7" name="净化风机a" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH215)" def_powerload="0">
+                    <Interval powerload="0" range="[0,800]"/>
+                    <Interval powerload="8.25" range="[850,1000]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="净化风机b" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH216)" def_powerload="0">
+                    <Interval powerload="0" range="[0,800]"/>
+                    <Interval powerload="8.25" range="[850,1000]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="舱间风机a" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH221)" def_powerload="0">
+                    <Interval powerload="0" range="[0,100]"/>
+                    <Interval powerload="22.58" range="[1100,1450]"/>
+                    <Interval powerload="35.64" range="(1450,1800]"/>
+                    <Interval powerload="35.64" range="(1800,2300]"/>
+                    <Interval powerload="152.77" range="(2300,2800]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="舱间风机b" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1128)" def_powerload="0">
+                    <Interval powerload="0" range="[0,100]"/>
+                    <Interval powerload="22.58" range="[1100,1450]"/>
+                    <Interval powerload="35.64" range="(1450,1800]"/>
+                    <Interval powerload="35.64" range="(1800,2300]"/>
+                    <Interval powerload="152.77" range="(2300,2800]"/>
+                </Module>
+            </Device>
+            <Device distributor="13" name="舱间风机c" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH222)" def_powerload="0">
+                    <Interval powerload="0" range="[0,100]"/>
+                    <Interval powerload="22.58" range="[1100,1450]"/>
+                    <Interval powerload="35.64" range="(1450,1800]"/>
+                    <Interval powerload="35.64" range="(1800,2300]"/>
+                    <Interval powerload="152.77" range="(2300,2800]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="座舱风扇a" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH260)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="座舱风扇b" line="16" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH261)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="座舱风扇c" line="5" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH262)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="座舱风扇d" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH263)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="13" name="座舱风扇e" line="14" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH285)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="座舱风扇f" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH286)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="座舱风扇g" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH287)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="座舱风扇h" line="7" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH288)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="座舱风扇i" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1126)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="座舱风扇j" line="7" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1127)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1070]"/>
+                    <Interval powerload="3.1" range="[1100,1500]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="舱内循环风机a" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH217)" def_powerload="0">
+                    <Interval powerload="0" range="[0,4200]"/>
+                    <Interval powerload="205.76" range="(4200,5400]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="舱内循环风机b" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH218)" def_powerload="0">
+                    <Interval powerload="0" range="[0,4200]"/>
+                    <Interval powerload="205.76" range="(4200,5400]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="设备散热风机组件（主风机）" line="6" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH213)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1880]"/>
+                    <Interval powerload="66.62" range="(2800,3600]"/>
+                </Module>
+            </Device>
+            <Device distributor="6" name="设备散热风机组件（副风机）" line="7" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH214)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1880]"/>
+                    <Interval powerload="266.62" range="(2800,3600]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="内回路泵组件a" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH199)" def_powerload="0">
+                    <Interval powerload="0" range="[0,8460]"/>
+                    <Interval powerload="50" range="[8900,9900]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH200)" def_powerload="0">
+                    <Interval powerload="0" range="[80,180]"/>
+                    <Interval powerload="50" range="[220,350]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="内回路泵控制器b" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH199)" def_powerload="0">
+                    <Interval powerload="0" range="[0,8460]"/>
+                    <Interval powerload="50" range="[8900,9900]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH200)" def_powerload="0">
+                    <Interval powerload="0" range="[80,180]"/>
+                    <Interval powerload="50" range="[220,350]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="冷凝水抽吸泵" line="7" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH207)" def_powerload="0">
+                    <Interval powerload="2.5" range="[0,300]"/>
+                    <Interval powerload="45" range="[300,500]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="冷凝水动态水气分离器" line="14" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH208)" def_powerload="0">
+                    <Interval powerload="0" range="[0,1035]"/>
+                    <Interval powerload="45" range="[1035,1300]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="CO2传感器组件II（泵）" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH72)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH73)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH74)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH75)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH76)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH77)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH78)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH79)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH80)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.36" range="[0.6,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="微量气体检测装置" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH23)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="135" range="[2.8,3.8]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH25)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="90" range="[10.5,13.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH27)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="135" range="[3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH26)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="90" range="[-13.5,-10.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="安全性气体检测组件气体采样泵b" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH137)" def_powerload="0">
+                    <Interval powerload="0" range="[0,2100]"/>
+                    <Interval powerload="6" range="(2100,3500]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="安全性气体检测组件气体采样泵a" line="10" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH136)" def_powerload="0">
+                    <Interval powerload="0" range="[0,2100]"/>
+                    <Interval powerload="6" range="(2100,3500]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="中心计算机a" line="2" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH2)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="10" name="中心计算机b" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH3)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH4)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH2)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="2" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="1" name="环控综合业务单元a" line="3" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCBH3)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH4)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[2.8,3.8]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH5)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH6)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH7)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH8)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="环控综合业务单元b" line="3" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCBH11)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH12)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[2.8,3.8]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH13)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH14)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH15)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH16)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[10.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH22)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="1.63" range="[3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="环控出舱控制器（备）" line="21" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH7)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH30)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH8)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="环控出舱控制器（主）" line="23" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH5)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH29)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="(3.5,5.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH6)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="(3.5,5.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="负压封装组件" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCBH50)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="[1.82,2.82]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH49)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7.5" range="(3.97,4.97]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH26)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="20" range="(3.79,4.79]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="大小便收集装置（主）" line="22" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH24)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="8.4" range="[2.3,2.7]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH39)" def_powerload="0">
+                    <Interval powerload="0" range="[-20,80]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH40)" def_powerload="0">
+                    <Interval powerload="0" range="[0,100]"/>
+                    <Interval powerload="105.6" range="[810,1552]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH41)" def_powerload="0">
+                    <Interval powerload="0" range="[-12.5,50]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH42)" def_powerload="0">
+                    <Interval powerload="0" range="[0,100]"/>
+                    <Interval powerload="0" range="[14462.4,22296.2]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCBH43)" def_powerload="0">
+                    <Interval powerload="0" range="[-12.5,50]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="气体复用控制器" line="11" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH60)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH61)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH62)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH63)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0.9" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="13" name="出舱泄压控制器a" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1116)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.18" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH1117)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="14" name="出舱泄压控制器b" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1118)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="6.18" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH1119)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="11" name="内置复压控制器" line="8" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH1120)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3.06" range="[3.5,5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH1121)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="3" range="[3.5,5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="电解制氧子系统" line="24" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH10)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="32" range="[3.5,4]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VGBH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="电解制氧子系统" line="25" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH695)" def_powerload="0">
+                    <Interval powerload="30.8" range="[4.5,5.5]"/>
+                    <Interval powerload="53" range="[9,11]"/>
+                    <Interval powerload="76.8" range="[13.5,16.5]"/>
+                    <Interval powerload="102.12" range="[18,22]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH696)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="0" range="[36,48]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH697)" def_powerload="0">
+                    <Interval powerload="30.8" range="[1,1.4]"/>
+                    <Interval powerload="53" range="[2,3.5]"/>
+                    <Interval powerload="76.8" range="(3.5,4.5]"/>
+                    <Interval powerload="102.12" range="(4.5,6]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH698)" def_powerload="0">
+                    <Interval powerload="30.8" range="[1,1.4]"/>
+                    <Interval powerload="53" range="[2,3.5]"/>
+                    <Interval powerload="76.8" range="(3.5,4.5]"/>
+                    <Interval powerload="102.12" range="(4.5,6]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH699)" def_powerload="0">
+                    <Interval powerload="30.8" range="[1,1.4]"/>
+                    <Interval powerload="53" range="[2,3.5]"/>
+                    <Interval powerload="76.8" range="(3.5,4.5]"/>
+                    <Interval powerload="102.12" range="(4.5,6]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH700)" def_powerload="0">
+                    <Interval powerload="30.8" range="[1,1.4]"/>
+                    <Interval powerload="53" range="[2,3.5]"/>
+                    <Interval powerload="76.8" range="(3.5,4.5]"/>
+                    <Interval powerload="102.12" range="(4.5,6]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@DCBH701)" def_powerload="0">
+                    <Interval powerload="0" range="[3.67,3.83]"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="CO2去除子系统" line="28" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH11)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="796" range="[1.8,2.8]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="微量有害气体去除子系统主风机" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH790)" def_powerload="0">
+                    <Interval powerload="0" range="[0,200]"/>
+                    <Interval powerload="37" range="[14000,18000]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="微量有害气体去除子系统副风机" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@DCBH791)" def_powerload="0">
+                    <Interval powerload="0" range="[0,200]"/>
+                    <Interval powerload="37" range="[14000,18000]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="微量有害气体去除子系统副风机" line="27" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH15)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="350" range="[1.8,2.8]"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="微量有害气体去除子系统副风机" line="25" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VGBH19)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="500" range="[1.8,2.8]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="电推进">
+            <Device distributor="5" name="电推进子系统控制器加热1" line="16" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCTH105)" def_powerload="0">
+                    <Interval powerload="20" range="(4,5)"/>
+                </Module>
+            </Device>
+            <Device distributor="5" name="电推进子系统控制器加热2" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCTH105)" def_powerload="0">
+                    <Interval powerload="20" range="(4,5)"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="空间技术试验">
+            <Device distributor="3" name="荷载管理单元a" line="18" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7]"/>
+                    <Interval powerload="9.5" range="[3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCEH22)" def_powerload="0">
+                    <Interval powerload="9.5" range="[2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="荷载管理单元b" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH25)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.7]"/>
+                    <Interval powerload="9.5" range="[3.5,4.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCEH26)" def_powerload="0">
+                    <Interval powerload="9.5" range="[2.5,3.3]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="接入交换机（主）" line="17" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH7)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="39" range="[2.84,3.84]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="接入交换机（备）" line="14" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH10)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="39" range="[2.84,3.84]"/>
+                </Module>
+            </Device>
+            <Device distributor="9" name="骨干交换机a" line="13" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="12" name="骨干交换机b" line="19" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH1)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="48" range="[2.84,3.84]"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="网络管理器（主）" line="17" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH13)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="16" range="[3.1,3.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCEH14)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="16" range="[3.1,3.5]"/>
+                </Module>
+            </Device>
+            <Device distributor="4" name="网络管理器（备）" line="12" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCEH17)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="16" range="[3.1,3.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCEH18)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.2]"/>
+                    <Interval powerload="16" range="[3.1,3.5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <Subsys name="结构机构">
+            <Device distributor="3" name="力学环境与结果状态测量单元" line="9" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCJH17)" def_powerload="0">
+                    <Interval powerload="0" range="(0,0.6)"/>
+                    <Interval powerload="30" range="(3.5,4.5)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH18)" def_powerload="0">
+                    <Interval powerload="0" range="(0,0.6)"/>
+                    <Interval powerload="30" range="[3.5,3.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH19)" def_powerload="0">
+                    <Interval powerload="0" range="(0,0.6)"/>
+                    <Interval powerload="30" range="[3.5,3.5]"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH20)" def_powerload="0">
+                    <Interval powerload="56" range="(3.6,5)"/>
+                </Module>
+            </Device>
+            <Device distributor="3" name="撞击感知与定位单元（主）" line="20" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCJH21)" def_powerload="0">
+                    <Interval powerload="0" range="(0,0.6)"/>
+                    <Interval powerload="22" range="(3.5,4.5)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH22)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(3.2,4.2)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH23)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(2.1,2.8)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH24)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(3,5)"/>
+                </Module>
+            </Device>
+            <Device distributor="2" name="撞击感知与定位单元（备）" line="4" init_var="true">
+                <Module expression="#(TGTH0001.DAHE@VCJH25)" def_powerload="0">
+                    <Interval powerload="0" range="(0,0.6)"/>
+                    <Interval powerload="22" range="(3.5,4.5)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH26)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(3.2,4.2)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH27)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(2.1,2.8)"/>
+                </Module>
+                <Module expression="#(TGTH0001.DAHE@VCJH28)" def_powerload="0">
+                    <Interval powerload="0" range="(0,1)"/>
+                    <Interval powerload="22" range="(3,5)"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <GlobalVars>
+            <Category name="姿轨控">
+                <Var expression="#(TGTH0001.DAHE@DGSH34_D7)" desc="测控区标志" sim_var="CK" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8006)" desc="半长轴" sim_var="a_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8007)" desc="偏心率" sim_var="e_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8010)" desc="近地点幅角" sim_var="omega_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8009)" desc="升交点赤经" sim_var="OMEGA_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8008)" desc="轨道倾角" sim_var="i_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8012)" desc="真近点角" sim_var="f_Online" init_var="false"/>
+                <Var expression="86400*#(TGTH0001.DAHE@DCSH34.d)+3600*#(TGTH0001.DAHE@DCSH34.h)+60*#(TGTH0001.DAHE@DCSH34.m)+#(TGTH0001.DAHE@DCSH34.s)+0.001*#(TGTH0001.DAHE@DCSH34.ms)" desc="绝对时间码" sim_var="relativetime_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11056)" desc="参考姿态相对轨道系四元数1" sim_var="QO_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11057)" desc="参考姿态相对轨道系四元数2" sim_var="QO_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11058)" desc="参考姿态相对轨道系四元数3" sim_var="QO_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11059)" desc="参考姿态相对轨道系四元数4" sim_var="QO_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11060)" desc="参考姿态相对惯性系四元数1" sim_var="QI_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11061)" desc="参考姿态相对惯性系四元数2" sim_var="QI_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11062)" desc="参考姿态相对惯性系四元数3" sim_var="QI_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11063)" desc="参考姿态相对惯性系四元数4" sim_var="QI_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9033)" desc="惯性系下姿态角速度1" sim_var="w_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9034)" desc="惯性系下姿态角速度2" sim_var="w_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9035)" desc="惯性系下姿态角速度3" sim_var="w_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2063)" desc="右帆板转角" sim_var="SolarWingAngle_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2057)" desc="左帆板转角" sim_var="SolarWingAngle_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1014)" desc="滚动角" sim_var="Att_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1015)" desc="俯仰角" sim_var="Att_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1016)" desc="偏航角" sim_var="Att_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11005)" desc="h_Online[1]" sim_var="h_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11006)" desc="h_Online[2]" sim_var="h_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11007)" desc="h_Online[3]" sim_var="h_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10701)" desc="arm_angle_Online[1]" sim_var="arm_angle_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10702)" desc="arm_angle_Online[2]" sim_var="arm_angle_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10703)" desc="arm_angle_Online[3]" sim_var="arm_angle_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10704)" desc="arm_angle_Online[4]" sim_var="arm_angle_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10705)" desc="arm_angle_Online[5]" sim_var="arm_angle_Online[5]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10706)" desc="arm_angle_Online[6]" sim_var="arm_angle_Online[6]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10707)" desc="arm_angle_Online[7]" sim_var="arm_angle_Online[7]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11012)" desc="CMG控制指令力矩x" sim_var="T_CMG_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11013)" desc="CMG控制指令力矩y" sim_var="T_CMG_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11014)" desc="CMG控制指令力矩z" sim_var="T_CMG_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10701)" desc="机械臂关节1角度" sim_var="JXBGJ_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10702)" desc="机械臂关节2角度" sim_var="JXBGJ_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10703)" desc="机械臂关节3角度" sim_var="JXBGJ_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10704)" desc="机械臂关节4角度" sim_var="JXBGJ_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10705)" desc="机械臂关节5角度" sim_var="JXBGJ_Online[5]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10706)" desc="机械臂关节6角度" sim_var="JXBGJ_Online[6]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCXH10707)" desc="机械臂关节7角度" sim_var="JXBGJ_Online[7]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8005)" desc="轨道角速度" sim_var="n_Online " init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@PF01)" desc="HXC测控区标志" sim_var="CK01" init_var="false"/>
+            </Category>
+            <Category name="环热控">
+                <Var expression="#(TGTH0001.DAHE@DCRH1003)" desc="外回路泵开关" sim_var="fai_w_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCRH1017)" desc="中温回路泵开关" sim_var="fai_m_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8012)" desc="真近点角" sim_var="f_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1014)" desc="滚动角" sim_var="psi_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1015)" desc="偏航角" sim_var="theta_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1016)" desc="俯仰角" sim_var="phi_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCBH138)" desc="舱压" sim_var="p_Online_H" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCBH1254)" desc="舱温" sim_var="T_air_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCBH1255)" desc="相对湿度" sim_var="rhum_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCRH7145)" desc="低温控制点温度" sim_var="T_n_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCRH7146)" desc="中温控制点温度" sim_var="T_z_Online" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCBH138)" look_back="120" desc="第一次遥测舱压" sim_var="P1" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCBH138)" desc="第二次遥测舱压" sim_var="P2" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8048)" desc="alpha_Online" sim_var="alpha_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH8049)" desc="beta_Online" sim_var="beta_Online" init_var="false"/>
+            </Category>
+            <Category name="能源">
+                <Var expression="#(TGTH0001.DAHE@DCNH417)" desc="电池组放电电量1" sim_var="DisChargeAh_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCNH737)" desc="电池组放电电量2" sim_var="DisChargeAh_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCNH1027)" desc="电池组放电电量3" sim_var="DisChargeAh_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCNH1817)" desc="电池组放电电量4" sim_var="DisChargeAh_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCNH2137)" desc="电池组放电电量5" sim_var="DisChargeAh_Online[5]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCNH2427)" desc="电池组放电电量6" sim_var="DisChargeAh_Online[6]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态1" sim_var="SOC_Online[1]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态2" sim_var="SOC_Online[2]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态3" sim_var="SOC_Online[3]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态4" sim_var="SOC_Online[4]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态5" sim_var="SOC_Online[5]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@XXX)" desc="电池组实际荷电状态6" sim_var="SOC_Online[6]" init_var="true"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH265)" desc="功控Ia输入总电流" sim_var="GK_I_Current_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH365)" desc="功控Ib输入总电流" sim_var="GK_I_Current_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH465)" desc="功控Ic输入总电流" sim_var="GK_I_Current_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH565)" desc="功控Id输入总电流" sim_var="GK_I_Current_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH665)" desc="功控Ie输入总电流" sim_var="GK_I_Current_Online[5]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH765)" desc="功控If输入总电流" sim_var="GK_I_Current_Online[6]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH865)" desc="功控Ig输入总电流" sim_var="GK_I_Current_Online[7]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH965)" desc="功控Ih输入总电流" sim_var="GK_I_Current_Online[8]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1065)" desc="功控Ii输入总电流" sim_var="GK_I_Current_Online[9]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1165)" desc="功控Ij输入总电流" sim_var="GK_I_Current_Online[10]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1265)" desc="功控Ik输入总电流" sim_var="GK_I_Current_Online[11]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1365)" desc="功控Il输入总电流" sim_var="GK_I_Current_Online[12]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1465)" desc="功控Im输入总电流" sim_var="GK_I_Current_Online[13]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1565)" desc="功控In输入总电流" sim_var="GK_I_Current_Online[14]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1633)" desc="功控III输入总电流" sim_var="GK_III_Current_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1709)" desc="供控Ia母线A输入电流" sim_var="GD_Ia_Current_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1710)" desc="供控Ia母线B输入电流" sim_var="GD_Ia_Current_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1809)" desc="供控Ib母线A输入电流" sim_var="GD_Ib_Current_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1810)" desc="供控Ib母线B输入电流" sim_var="GD_Ib_Current_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1909)" desc="供控Ic母线A输入电流" sim_var="GD_Ic_Current_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH1910)" desc="供控Ic母线B输入电流" sim_var="GD_Ic_Current_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH2009)" desc="供控II母线A输入电流" sim_var="GD_II_Current_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCVH2010)" desc="供控II母线B输入电流" sim_var="GD_II_Current_Online[2]" init_var="false"/>
+            </Category>
+        </GlobalVars>
+    </Sat>
+    <!--全局变量与遥测（或遥测表达式）一一对应-->
+    <!--look_back：回查一定时间的遥测，单位s-->
+	<Sat name="实验舱Ⅰ">
+        <Subsys name="GNC">
+            <!--设备Device包含多个模块Module，单个模块对应一个遥测值，遥测取值在不同工作模式对应模块的不同功耗，设备的功耗等于其所有模块功耗的和-->
+            <!--distributor：负载所属配电器-->
+            <!--line：:负载在所属配电器的第几路-->
+            <!--init_var:表示是否只在仿真初始化时注入，若为true只会在仿真开始或手动选择天地状态同步时注入，否则每个单步注入-->
+            <Device distributor="9" name="红外地球敏感器1" line="4" init_var="true">
+                <Module expression="#(TGWT0001.DAHE@VGKH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <GlobalVars>
+            <Category name="姿轨控">
+                <Var expression="#(TGTH0001.DAHE@PF01)" desc="WTC测控区标志" sim_var="CK01" init_var="false"/>
+				<!-- WTC相关参数，合并后共用核心舱
+                <Var expression="#(TGWT0001.DAHE@DCKW5006)" desc="半长轴" sim_var="a_WT_Online" init_var="false"/>            	
+                <Var expression="#(TGWT0001.DAHE@DCKW5007)" desc="偏心率" sim_var="e_WT_Online" init_var="false"/>				
+                <Var expression="#(TGWT0001.DAHE@DCKW5010)" desc="近地点幅角" sim_var="omega_WT_Online" init_var="false"/>		
+                <Var expression="#(TGWT0001.DAHE@DCKW5009)" desc="升交点赤经" sim_var="OMEGA_WT_Online" init_var="false"/>		
+                <Var expression="#(TGWT0001.DAHE@DCKW5008)" desc="轨道倾角" sim_var="i_WT_Online" init_var="false"/>			
+                <Var expression="#(TGWT0001.DAHE@DCKW5012)" desc="真近点角" sim_var="f_WT_Online" init_var="false"/>
+				<Var expression="86400*#(TGWT0001.DAHE@DCSW34.d)+3600*#(TGWT0001.DAHE@DCSW34.h)+60*#(TGWT0001.DAHE@DCSW34.m)+#(TGWT0001.DAHE@DCSW34.s)+0.001*#(TGWT0001.DAHE@DCSW34.ms)" desc="绝对时间码" sim_var="relativetime_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11056)" desc="参考姿态相对轨道系四元数1" sim_var="QO_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11057)" desc="参考姿态相对轨道系四元数2" sim_var="QO_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11058)" desc="参考姿态相对轨道系四元数3" sim_var="QO_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11059)" desc="参考姿态相对轨道系四元数4" sim_var="QO_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11060)" desc="参考姿态相对惯性系四元数1" sim_var="QI_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11061)" desc="参考姿态相对惯性系四元数2" sim_var="QI_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11062)" desc="参考姿态相对惯性系四元数3" sim_var="QI_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11063)" desc="参考姿态相对惯性系四元数4" sim_var="QI_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4030)" desc="惯性系下姿态角速度wx" sim_var="w_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4031)" desc="惯性系下姿态角速度wy" sim_var="w_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4032)" desc="惯性系下姿态角速度wz" sim_var="w_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW2056)" desc="右帆板beta转角" sim_var="SolarWingAngle_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW2047)" desc="左帆板beta转角" sim_var="SolarWingAngle_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1014)" desc="滚动角" sim_var="Att_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1015)" desc="俯仰角" sim_var="Att_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1016)" desc="偏航角" sim_var="Att_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A029)" desc="北京时.年" sim_var="UTC_WT_Online[1]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02A)" desc="北京时.月" sim_var="UTC_WT_Online[2]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02B)" desc="北京时.日" sim_var="UTC_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02C)" desc="北京时.时" sim_var="UTC_WT_Online[4]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02D)" desc="北京时.分" sim_var="UTC_WT_Online[5]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02E)" desc="北京时.秒" sim_var="UTC_WT_Online[6]" init_var="false"/>
+				-->
+				<Var expression="#(TGTH0001.DAHE@DCKH8006)" desc="半长轴" sim_var="a_WT_Online" init_var="false"/>            	
+                <Var expression="#(TGTH0001.DAHE@DCKH8007)" desc="偏心率" sim_var="e_WT_Online" init_var="false"/>				
+                <Var expression="#(TGTH0001.DAHE@DCKH8010)" desc="近地点幅角" sim_var="omega_WT_Online" init_var="false"/>		
+                <Var expression="#(TGTH0001.DAHE@DCKH8009)" desc="升交点赤经" sim_var="OMEGA_WT_Online" init_var="false"/>		
+                <Var expression="#(TGTH0001.DAHE@DCKH8008)" desc="轨道倾角" sim_var="i_WT_Online" init_var="false"/>			
+                <Var expression="#(TGTH0001.DAHE@DCKH8012)" desc="真近点角" sim_var="f_WT_Online" init_var="false"/>
+				<Var expression="86400*#(TGTH0001.DAHE@DCSH34.d)+3600*#(TGTH0001.DAHE@DCSH34.h)+60*#(TGTH0001.DAHE@DCSH34.m)+#(TGTH0001.DAHE@DCSH34.s)+0.001*#(TGTH0001.DAHE@DCSH34.ms)" desc="绝对时间码" sim_var="relativetime_WT_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11056)" desc="参考姿态相对轨道系四元数1" sim_var="QO_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11057)" desc="参考姿态相对轨道系四元数2" sim_var="QO_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11058)" desc="参考姿态相对轨道系四元数3" sim_var="QO_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11059)" desc="参考姿态相对轨道系四元数4" sim_var="QO_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11060)" desc="参考姿态相对惯性系四元数1" sim_var="QI_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11061)" desc="参考姿态相对惯性系四元数2" sim_var="QI_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11062)" desc="参考姿态相对惯性系四元数3" sim_var="QI_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11063)" desc="参考姿态相对惯性系四元数4" sim_var="QI_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9033)" desc="惯性系下姿态角速度wx" sim_var="w_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9034)" desc="惯性系下姿态角速度wy" sim_var="w_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9035)" desc="惯性系下姿态角速度wz" sim_var="w_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2063)" desc="右帆板beta转角" sim_var="SolarWingAngle_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2057)" desc="左帆板beta转角" sim_var="SolarWingAngle_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1014)" desc="滚动角" sim_var="Att_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1015)" desc="俯仰角" sim_var="Att_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1016)" desc="偏航角" sim_var="Att_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A029)" desc="北京时.年" sim_var="UTC_WT_Online[1]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02A)" desc="北京时.月" sim_var="UTC_WT_Online[2]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02B)" desc="北京时.日" sim_var="UTC_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02C)" desc="北京时.时" sim_var="UTC_WT_Online[4]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02D)" desc="北京时.分" sim_var="UTC_WT_Online[5]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02E)" desc="北京时.秒" sim_var="UTC_WT_Online[6]" init_var="false"/>
+            </Category>
+            <Category name="能源">
+                <Var expression="#(TGWT0001.DAHE@DCNW1047)" desc="电池组放电电量1" sim_var="DisChargeAh_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1357)" desc="电池组放电电量2" sim_var="DisChargeAh_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1647)" desc="电池组放电电量3" sim_var="DisChargeAh_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1947)" desc="电池组放电电量4" sim_var="DisChargeAh_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW3447)" desc="电池组放电电量5" sim_var="DisChargeAh_WT_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW3757)" desc="电池组放电电量6" sim_var="DisChargeAh_WT_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW4047)" desc="电池组放电电量7" sim_var="DisChargeAh_WT_Online[7]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW4347)" desc="电池组放电电量8" sim_var="DisChargeAh_WT_Online[8]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态1" sim_var="SOC_WT_Online[1]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态2" sim_var="SOC_WT_Online[2]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态3" sim_var="SOC_WT_Online[3]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态4" sim_var="SOC_WT_Online[4]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态5" sim_var="SOC_WT_Online[5]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态6" sim_var="SOC_WT_Online[6]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态7" sim_var="SOC_WT_Online[7]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态8" sim_var="SOC_WT_Online[8]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW265)" desc="功控Ia输入总电流" sim_var="GK_I_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW365)" desc="功控Ib输入总电流" sim_var="GK_I_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW465)" desc="功控Ic输入总电流" sim_var="GK_I_Current_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW565)" desc="功控Id输入总电流" sim_var="GK_I_Current_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW665)" desc="功控Ie输入总电流" sim_var="GK_I_Current_WT_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW765)" desc="功控If输入总电流" sim_var="GK_I_Current_WT_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW865)" desc="功控Ig输入总电流" sim_var="GK_I_Current_WT_Online[7]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW965)" desc="功控Ih输入总电流" sim_var="GK_I_Current_WT_Online[8]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1065)" desc="功控Ii输入总电流" sim_var="GK_I_Current_WT_Online[9]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1165)" desc="功控Ij输入总电流" sim_var="GK_I_Current_WT_Online[10]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1265)" desc="功控Ik输入总电流" sim_var="GK_I_Current_WT_Online[11]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1365)" desc="功控Il输入总电流" sim_var="GK_I_Current_WT_Online[12]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1465)" desc="功控Im输入总电流" sim_var="GK_I_Current_WT_Online[13]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1565)" desc="功控In输入总电流" sim_var="GK_I_Current_WT_Online[14]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW2565)" desc="功控II输入总电流" sim_var="GK_II_Current_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1633)" desc="功控IIIa输入总电流" sim_var="GK_IIIa_Current_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1709)" desc="供控Ia母线A输入电流" sim_var="GD_Ia_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1710)" desc="供控Ia母线B输入电流" sim_var="GD_Ia_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1809)" desc="供控Ib母线A输入电流" sim_var="GD_Ib_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1810)" desc="供控Ib母线B输入电流" sim_var="GD_Ib_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1909)" desc="供控Ic母线A输入电流" sim_var="GD_Ic_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1910)" desc="供控Ic母线B输入电流" sim_var="GD_Ic_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DGVW242)" desc="供控II母线A输入电流" sim_var="GD_II_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DGVW243)" desc="供控II母线B输入电流" sim_var="GD_II_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW105)" desc="母线滤波a母线电压1" sim_var="BusFilter_WT_V_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2505)" desc="母线滤波b母线电压1" sim_var="BusFilter_WT_V_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW108)" desc="母线滤波a母线输出电流" sim_var="BusFilter_WT_A_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2508)" desc="母线滤波b母线输出电流" sim_var="BusFilter_WT_A_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW475)" desc="第1组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW476)" desc="第2组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW477)" desc="第3组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW478)" desc="第4组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW479)" desc="第5组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW480)" desc="第6组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2875)" desc="第1组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2876)" desc="第2组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2877)" desc="第3组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2878)" desc="第4组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2879)" desc="第5组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2880)" desc="第6组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[6]" init_var="false"/>
+            </Category>
+			<Category name="环热控">
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1舱压" sim_var="p_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1254)" desc="SYC1舱温" sim_var="T_air_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1255)" desc="SYC1相对湿度" sim_var="rhum_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW40)" desc="SYC1氧分压" sim_var="p_O2_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1253)" desc="SYC1二氧化碳分压" sim_var="p_CO2_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1第一次遥测舱压" sim_var="P1_WT" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1第二次遥测舱压" sim_var="P2_WT" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCRW7145)" desc="SYC1低温控制点温度" sim_var="T_n_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCRW7146)" desc="SYC1中温控制点温度" sim_var="T_z_WT_Online" init_var="true"/>
+            </Category>
+        </GlobalVars>
+    </Sat>
+    <!--全局变量与遥测（或遥测表达式）一一对应-->
+    <!--look_back：回查一定时间的遥测，单位s-->
+
+	<Sat name="实验舱Ⅱ">
+        <Subsys name="GNC">
+            <!--设备Device包含多个模块Module，单个模块对应一个遥测值，遥测取值在不同工作模式对应模块的不同功耗，设备的功耗等于其所有模块功耗的和-->
+            <!--distributor：负载所属配电器-->
+            <!--line：:负载在所属配电器的第几路-->
+            <!--init_var:表示是否只在仿真初始化时注入，若为true只会在仿真开始或手动选择天地状态同步时注入，否则每个单步注入-->
+            <Device distributor="9" name="红外地球敏感器1" line="4" init_var="true">
+                <Module expression="#(TGWT0001.DAHE@VGKH21)" def_powerload="0">
+                    <Interval powerload="0" range="[0,0.5]"/>
+                    <Interval powerload="7" range="[2.5,4.5]"/>
+                </Module>
+            </Device>
+        </Subsys>
+        <GlobalVars>
+            <Category name="姿轨控">
+                <Var expression="#(TGTH0001.DAHE@PF01)" desc="WTC测控区标志" sim_var="CK01" init_var="false"/>
+				<!-- WTC相关参数，合并后共用核心舱
+                <Var expression="#(TGWT0001.DAHE@DCKW5006)" desc="半长轴" sim_var="a_WT_Online" init_var="false"/>            	
+                <Var expression="#(TGWT0001.DAHE@DCKW5007)" desc="偏心率" sim_var="e_WT_Online" init_var="false"/>				
+                <Var expression="#(TGWT0001.DAHE@DCKW5010)" desc="近地点幅角" sim_var="omega_WT_Online" init_var="false"/>		
+                <Var expression="#(TGWT0001.DAHE@DCKW5009)" desc="升交点赤经" sim_var="OMEGA_WT_Online" init_var="false"/>		
+                <Var expression="#(TGWT0001.DAHE@DCKW5008)" desc="轨道倾角" sim_var="i_WT_Online" init_var="false"/>			
+                <Var expression="#(TGWT0001.DAHE@DCKW5012)" desc="真近点角" sim_var="f_WT_Online" init_var="false"/>
+				<Var expression="86400*#(TGWT0001.DAHE@DCSW34.d)+3600*#(TGWT0001.DAHE@DCSW34.h)+60*#(TGWT0001.DAHE@DCSW34.m)+#(TGWT0001.DAHE@DCSW34.s)+0.001*#(TGWT0001.DAHE@DCSW34.ms)" desc="绝对时间码" sim_var="relativetime_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11056)" desc="参考姿态相对轨道系四元数1" sim_var="QO_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11057)" desc="参考姿态相对轨道系四元数2" sim_var="QO_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11058)" desc="参考姿态相对轨道系四元数3" sim_var="QO_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11059)" desc="参考姿态相对轨道系四元数4" sim_var="QO_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11060)" desc="参考姿态相对惯性系四元数1" sim_var="QI_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11061)" desc="参考姿态相对惯性系四元数2" sim_var="QI_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11062)" desc="参考姿态相对惯性系四元数3" sim_var="QI_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW11063)" desc="参考姿态相对惯性系四元数4" sim_var="QI_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4030)" desc="惯性系下姿态角速度wx" sim_var="w_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4031)" desc="惯性系下姿态角速度wy" sim_var="w_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW4032)" desc="惯性系下姿态角速度wz" sim_var="w_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW2056)" desc="右帆板beta转角" sim_var="SolarWingAngle_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW2047)" desc="左帆板beta转角" sim_var="SolarWingAngle_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1014)" desc="滚动角" sim_var="Att_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1015)" desc="俯仰角" sim_var="Att_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCKW1016)" desc="偏航角" sim_var="Att_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A029)" desc="北京时.年" sim_var="UTC_WT_Online[1]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02A)" desc="北京时.月" sim_var="UTC_WT_Online[2]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02B)" desc="北京时.日" sim_var="UTC_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02C)" desc="北京时.时" sim_var="UTC_WT_Online[4]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02D)" desc="北京时.分" sim_var="UTC_WT_Online[5]" init_var="false"/>
+				<Var expression="#(TGWT0001.DAHE@A02E)" desc="北京时.秒" sim_var="UTC_WT_Online[6]" init_var="false"/>
+				-->
+				<Var expression="#(TGTH0001.DAHE@DCKH8006)" desc="半长轴" sim_var="a_WT_Online" init_var="false"/>            	
+                <Var expression="#(TGTH0001.DAHE@DCKH8007)" desc="偏心率" sim_var="e_WT_Online" init_var="false"/>				
+                <Var expression="#(TGTH0001.DAHE@DCKH8010)" desc="近地点幅角" sim_var="omega_WT_Online" init_var="false"/>		
+                <Var expression="#(TGTH0001.DAHE@DCKH8009)" desc="升交点赤经" sim_var="OMEGA_WT_Online" init_var="false"/>		
+                <Var expression="#(TGTH0001.DAHE@DCKH8008)" desc="轨道倾角" sim_var="i_WT_Online" init_var="false"/>			
+                <Var expression="#(TGTH0001.DAHE@DCKH8012)" desc="真近点角" sim_var="f_WT_Online" init_var="false"/>
+				<Var expression="86400*#(TGTH0001.DAHE@DCSH34.d)+3600*#(TGTH0001.DAHE@DCSH34.h)+60*#(TGTH0001.DAHE@DCSH34.m)+#(TGTH0001.DAHE@DCSH34.s)+0.001*#(TGTH0001.DAHE@DCSH34.ms)" desc="绝对时间码" sim_var="relativetime_WT_Online" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11056)" desc="参考姿态相对轨道系四元数1" sim_var="QO_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11057)" desc="参考姿态相对轨道系四元数2" sim_var="QO_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11058)" desc="参考姿态相对轨道系四元数3" sim_var="QO_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11059)" desc="参考姿态相对轨道系四元数4" sim_var="QO_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11060)" desc="参考姿态相对惯性系四元数1" sim_var="QI_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11061)" desc="参考姿态相对惯性系四元数2" sim_var="QI_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11062)" desc="参考姿态相对惯性系四元数3" sim_var="QI_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH11063)" desc="参考姿态相对惯性系四元数4" sim_var="QI_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9033)" desc="惯性系下姿态角速度wx" sim_var="w_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9034)" desc="惯性系下姿态角速度wy" sim_var="w_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH9035)" desc="惯性系下姿态角速度wz" sim_var="w_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2063)" desc="右帆板beta转角" sim_var="SolarWingAngle_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH2057)" desc="左帆板beta转角" sim_var="SolarWingAngle_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1014)" desc="滚动角" sim_var="Att_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1015)" desc="俯仰角" sim_var="Att_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGTH0001.DAHE@DCKH1016)" desc="偏航角" sim_var="Att_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A029)" desc="北京时.年" sim_var="UTC_WT_Online[1]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02A)" desc="北京时.月" sim_var="UTC_WT_Online[2]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02B)" desc="北京时.日" sim_var="UTC_WT_Online[3]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02C)" desc="北京时.时" sim_var="UTC_WT_Online[4]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02D)" desc="北京时.分" sim_var="UTC_WT_Online[5]" init_var="false"/>
+				<Var expression="#(TGTH0001.DAHE@A02E)" desc="北京时.秒" sim_var="UTC_WT_Online[6]" init_var="false"/>
+            </Category>
+            <Category name="能源">
+                <Var expression="#(TGWT0001.DAHE@DCNW1047)" desc="电池组放电电量1" sim_var="DisChargeAh_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1357)" desc="电池组放电电量2" sim_var="DisChargeAh_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1647)" desc="电池组放电电量3" sim_var="DisChargeAh_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW1947)" desc="电池组放电电量4" sim_var="DisChargeAh_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW3447)" desc="电池组放电电量5" sim_var="DisChargeAh_WT_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW3757)" desc="电池组放电电量6" sim_var="DisChargeAh_WT_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW4047)" desc="电池组放电电量7" sim_var="DisChargeAh_WT_Online[7]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW4347)" desc="电池组放电电量8" sim_var="DisChargeAh_WT_Online[8]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态1" sim_var="SOC_WT_Online[1]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态2" sim_var="SOC_WT_Online[2]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态3" sim_var="SOC_WT_Online[3]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态4" sim_var="SOC_WT_Online[4]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态5" sim_var="SOC_WT_Online[5]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态6" sim_var="SOC_WT_Online[6]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态7" sim_var="SOC_WT_Online[7]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@XXX)" desc="电池组实际荷电状态8" sim_var="SOC_WT_Online[8]" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW265)" desc="功控Ia输入总电流" sim_var="GK_I_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW365)" desc="功控Ib输入总电流" sim_var="GK_I_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW465)" desc="功控Ic输入总电流" sim_var="GK_I_Current_WT_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW565)" desc="功控Id输入总电流" sim_var="GK_I_Current_WT_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW665)" desc="功控Ie输入总电流" sim_var="GK_I_Current_WT_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW765)" desc="功控If输入总电流" sim_var="GK_I_Current_WT_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW865)" desc="功控Ig输入总电流" sim_var="GK_I_Current_WT_Online[7]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW965)" desc="功控Ih输入总电流" sim_var="GK_I_Current_WT_Online[8]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1065)" desc="功控Ii输入总电流" sim_var="GK_I_Current_WT_Online[9]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1165)" desc="功控Ij输入总电流" sim_var="GK_I_Current_WT_Online[10]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1265)" desc="功控Ik输入总电流" sim_var="GK_I_Current_WT_Online[11]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1365)" desc="功控Il输入总电流" sim_var="GK_I_Current_WT_Online[12]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1465)" desc="功控Im输入总电流" sim_var="GK_I_Current_WT_Online[13]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1565)" desc="功控In输入总电流" sim_var="GK_I_Current_WT_Online[14]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW2565)" desc="功控II输入总电流" sim_var="GK_II_Current_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1633)" desc="功控IIIa输入总电流" sim_var="GK_IIIa_Current_WT_Online" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1709)" desc="供控Ia母线A输入电流" sim_var="GD_Ia_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1710)" desc="供控Ia母线B输入电流" sim_var="GD_Ia_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1809)" desc="供控Ib母线A输入电流" sim_var="GD_Ib_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1810)" desc="供控Ib母线B输入电流" sim_var="GD_Ib_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1909)" desc="供控Ic母线A输入电流" sim_var="GD_Ic_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCVW1910)" desc="供控Ic母线B输入电流" sim_var="GD_Ic_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DGVW242)" desc="供控II母线A输入电流" sim_var="GD_II_Current_WT_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DGVW243)" desc="供控II母线B输入电流" sim_var="GD_II_Current_WT_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW105)" desc="母线滤波a母线电压1" sim_var="BusFilter_WT_V_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2505)" desc="母线滤波b母线电压1" sim_var="BusFilter_WT_V_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW108)" desc="母线滤波a母线输出电流" sim_var="BusFilter_WT_A_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2508)" desc="母线滤波b母线输出电流" sim_var="BusFilter_WT_A_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW475)" desc="第1组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW476)" desc="第2组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW477)" desc="第3组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW478)" desc="第4组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW479)" desc="第5组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW480)" desc="第6组方阵输出电流-A" sim_var="SolarArrayWTA_I_Online[6]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2875)" desc="第1组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[1]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2876)" desc="第2组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[2]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2877)" desc="第3组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[3]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2878)" desc="第4组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[4]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2879)" desc="第5组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[5]" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCNW2880)" desc="第6组方阵输出电流-B" sim_var="SolarArrayWTB_I_Online[6]" init_var="false"/>
+            </Category>
+			<Category name="环热控">
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1舱压" sim_var="p_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1254)" desc="SYC1舱温" sim_var="T_air_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1255)" desc="SYC1相对湿度" sim_var="rhum_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW40)" desc="SYC1氧分压" sim_var="p_O2_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW1253)" desc="SYC1二氧化碳分压" sim_var="p_CO2_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1第一次遥测舱压" sim_var="P1_WT" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCBW138)" desc="SYC1第二次遥测舱压" sim_var="P2_WT" init_var="false"/>
+                <Var expression="#(TGWT0001.DAHE@DCRW7145)" desc="SYC1低温控制点温度" sim_var="T_n_WT_Online" init_var="true"/>
+                <Var expression="#(TGWT0001.DAHE@DCRW7146)" desc="SYC1中温控制点温度" sim_var="T_z_WT_Online" init_var="true"/>
+            </Category>
+        </GlobalVars>
+    </Sat>
+    <!--全局变量与遥测（或遥测表达式）一一对应-->
+    <!--look_back：回查一定时间的遥测，单位s-->
+</Config>
