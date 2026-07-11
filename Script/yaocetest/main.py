@@ -8,6 +8,7 @@ import sys
 import base64
 import traceback
 import json
+import re
 from datetime import datetime
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -503,7 +504,13 @@ class YaoCeLinkLayerApp:
             try:
                 return float(clean)
             except Exception:
+                pass
+            upper = clean.upper()
+            if upper in {"AA", "AAAA", "AA55", "55AA", "AAAAAAAA", "FFFFFFFF"}:
                 return None
+            if re.fullmatch(r"[0-9A-F]{1,4}", upper) and re.search(r"[A-F]", upper):
+                return float(int(upper, 16))
+            return None
 
         def is_valid_time_component(code, value):
             if value is None:
@@ -522,21 +529,15 @@ class YaoCeLinkLayerApp:
 
         emitted_sim_vars = {}
 
-        def add_to_sim_vars(name, val_str):
-            if isinstance(val_str, (int, float)):
-                numeric_value = float(val_str)
-            else:
-                clean_val = str(val_str).strip()
-                if not clean_val:
-                    numeric_value = 0.0
-                else:
-                    try:
-                        numeric_value = float(clean_val)
-                    except ValueError:
-                        # Satellite telemetry may contain placeholders such as AA55/AAAA.
-                        numeric_value = 0.0
-                    except Exception:
-                        numeric_value = 0.0
+        def add_to_sim_vars(name, val_str, source_code=None):
+            numeric_value = parse_numeric_value(val_str)
+            if numeric_value is None:
+                warn_key = (name, "invalid_numeric", str(val_str))
+                if warn_key not in self.reported_warnings:
+                    src = f" from {source_code}" if source_code else ""
+                    print(f"[WARN] Invalid telemetry numeric{src} for '{name}' ignored: {val_str}")
+                    self.reported_warnings.add(warn_key)
+                return False
 
             old_value = emitted_sim_vars.get(name)
             if old_value is not None:
@@ -545,13 +546,14 @@ class YaoCeLinkLayerApp:
                     if warn_key not in self.reported_warnings:
                         print(f"[WARN] Duplicate sim_var '{name}' in one telemetry packet ignored: keep {old_value}, drop {numeric_value}")
                         self.reported_warnings.add(warn_key)
-                return
+                return False
 
             emitted_sim_vars[name] = numeric_value
             svar = msg.sim_vars.add()
             svar.name = name
             svar.type = ddm_pb2.DDMData.SimVar.Double
             svar.double_value = numeric_value
+            return True
 
         def parse_clock_value(clock_str):
             parts = [p.strip() for p in clock_str.split(":")]
@@ -609,20 +611,20 @@ class YaoCeLinkLayerApp:
                 print(f"[DEBUG] First match for parameter: Original='{item.sys_ident}', Code='{mapped_name}', SimVar='{sim_var_name}', Value='{item.value}'")
                 self.reported_matches.add(mapped_name)
                 
-            is_any_field_added = True
-
             try:
                 # 现场日志中真正的绝对时间码是冒号分隔格式，例如 1138:22:45:54:278。
                 # 对 S0067/DCSM34 仅在收到该格式时才做时间码拆分，避免 T0067 等普通测点因后缀相同被误映射。
                 if mapped_name in clock_codes:
                     parsed_clock = parse_clock_value(item.value)
                     if parsed_clock is not None:
-                        add_to_sim_vars(sim_var_name, parsed_clock["total"])
+                        if add_to_sim_vars(sim_var_name, parsed_clock["total"], mapped_name):
+                            is_any_field_added = True
                         for code in ("A024", "A025", "A026", "A027", "A028"):
                             remember_time_value(code, parsed_clock[code])
                             component_sim_var = self.config_mgr.map_to_sim_var(code)
                             if component_sim_var:
-                                add_to_sim_vars(component_sim_var, parsed_clock[code])
+                                if add_to_sim_vars(component_sim_var, parsed_clock[code], code):
+                                    is_any_field_added = True
                     elif item.sys_ident == mapped_name:
                         warn_key = (mapped_name, "clock_fallback")
                         if warn_key not in self.reported_warnings:
@@ -636,16 +638,18 @@ class YaoCeLinkLayerApp:
                 elif mapped_name in time_component_codes or mapped_name in beijing_time_codes:
                     ok, numeric = remember_time_value(mapped_name, item.value)
                     if ok:
-                        add_to_sim_vars(sim_var_name, numeric)
+                        if add_to_sim_vars(sim_var_name, numeric, mapped_name):
+                            is_any_field_added = True
                 else:
-                    add_to_sim_vars(sim_var_name, item.value)
+                    if add_to_sim_vars(sim_var_name, item.value, mapped_name):
+                        is_any_field_added = True
             except Exception as e:
                 print(f"[!] Unexpected error mapping field '{mapped_name}': {e}")
 
         expr_values = self.config_mgr.evaluate_expression_mappings(time_values)
         for sim_var, value in expr_values.items():
-            add_to_sim_vars(sim_var, value)
-            is_any_field_added = True
+            if add_to_sim_vars(sim_var, value, "expression"):
+                is_any_field_added = True
                     
         return msg if is_any_field_added else None
 
