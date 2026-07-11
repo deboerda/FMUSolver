@@ -520,27 +520,38 @@ class YaoCeLinkLayerApp:
             if code in ("A02D", "A02E"): return 0 <= value <= 59
             return True
 
+        emitted_sim_vars = {}
+
         def add_to_sim_vars(name, val_str):
+            if isinstance(val_str, (int, float)):
+                numeric_value = float(val_str)
+            else:
+                clean_val = str(val_str).strip()
+                if not clean_val:
+                    numeric_value = 0.0
+                else:
+                    try:
+                        numeric_value = float(clean_val)
+                    except ValueError:
+                        # Satellite telemetry may contain placeholders such as AA55/AAAA.
+                        numeric_value = 0.0
+                    except Exception:
+                        numeric_value = 0.0
+
+            old_value = emitted_sim_vars.get(name)
+            if old_value is not None:
+                if abs(old_value - numeric_value) > 1e-9:
+                    warn_key = (name, "duplicate_sim_var")
+                    if warn_key not in self.reported_warnings:
+                        print(f"[WARN] Duplicate sim_var '{name}' in one telemetry packet ignored: keep {old_value}, drop {numeric_value}")
+                        self.reported_warnings.add(warn_key)
+                return
+
+            emitted_sim_vars[name] = numeric_value
             svar = msg.sim_vars.add()
             svar.name = name
             svar.type = ddm_pb2.DDMData.SimVar.Double
-
-            if isinstance(val_str, (int, float)):
-                svar.double_value = float(val_str)
-                return
-
-            clean_val = str(val_str).strip()
-            if not clean_val:
-                svar.double_value = 0.0
-                return
-            try:
-                svar.double_value = float(clean_val)
-            except ValueError:
-                # --- 修复：不再盲目进行十六进制转换 ---
-                # 卫星遥测中的 AA55/AAAA 是占位符，不应转为天文数字注入 FMU
-                svar.double_value = 0.0
-            except Exception:
-                svar.double_value = 0.0
+            svar.double_value = numeric_value
 
         def parse_clock_value(clock_str):
             parts = [p.strip() for p in clock_str.split(":")]
