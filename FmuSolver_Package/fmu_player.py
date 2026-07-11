@@ -310,14 +310,16 @@ def to_float32(value):
     return struct.unpack('<f', struct.pack('<f', float(value)))[0]
 
 def normalize_external_real_value(name, value):
-    return float(value)
+    clean_name = strip_source_prefix(name)
+    val = float(value)
+    if 'ShelterRatio_CJinput' in clean_name:
+        return max(0.0, min(1.0, val))
+    return val
 
 DEFAULT_INJECTION_BLACKLIST = {
     # Field tests showed these PE-driven values can make the FMU report
     # fmi2DoStep status 3. Keep them visible in PE/dashboard streams, but do
     # not write them into the FMU unless explicitly removed from the blacklist.
-    'ShelterRatio_CJinput[1]',
-    'ShelterRatio_CJinput[2]',
     'SolarAngle_CJinput[1]',
     'SolarAngle_CJinput[2]',
     'solar_CJinput[1]',

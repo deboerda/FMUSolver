@@ -1,13 +1,5 @@
 {
   "variables": {
-    "ShelterRatio_CJinput[1]": {
-      "reason": "Field protection: PE injection can make FMU doStep return status 3; keep visible but do not write into FMU.",
-      "time": "2026-07-11 16:00:00"
-    },
-    "ShelterRatio_CJinput[2]": {
-      "reason": "Field protection: PE injection can make FMU doStep return status 3; keep visible but do not write into FMU.",
-      "time": "2026-07-11 16:00:00"
-    },
     "SolarAngle_CJinput[1]": {
       "reason": "Field protection: PE injection can make FMU doStep return status 3; keep visible but do not write into FMU.",
       "time": "2026-07-11 16:00:00"
