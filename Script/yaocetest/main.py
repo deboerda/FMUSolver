@@ -600,7 +600,9 @@ class YaoCeLinkLayerApp:
             allowed, mapped_name = self.config_mgr.is_param_allowed(item.sys_ident)
             if not allowed: continue
             sim_var_name = self.config_mgr.map_to_sim_var(mapped_name)
-            if not sim_var_name:
+            is_clock_field = mapped_name in clock_codes
+            is_time_field = mapped_name in time_component_codes or mapped_name in beijing_time_codes
+            if not sim_var_name and not is_clock_field:
                 warn_key = (mapped_name, "unmapped_raw_telemetry")
                 if warn_key not in self.reported_warnings:
                     print(f"[WARN] Unmapped telemetry '{mapped_name}' ignored for PE/FMU/dashboard. Add it to DTS.TM.Sim.Relationship.xml to forward it.")
@@ -614,10 +616,10 @@ class YaoCeLinkLayerApp:
             try:
                 # 现场日志中真正的绝对时间码是冒号分隔格式，例如 1138:22:45:54:278。
                 # 对 S0067/DCSM34 仅在收到该格式时才做时间码拆分，避免 T0067 等普通测点因后缀相同被误映射。
-                if mapped_name in clock_codes:
+                if is_clock_field:
                     parsed_clock = parse_clock_value(item.value)
                     if parsed_clock is not None:
-                        if add_to_sim_vars(sim_var_name, parsed_clock["total"], mapped_name):
+                        if sim_var_name and add_to_sim_vars(sim_var_name, parsed_clock["total"], mapped_name):
                             is_any_field_added = True
                         for code in ("A024", "A025", "A026", "A027", "A028"):
                             remember_time_value(code, parsed_clock[code])
@@ -635,7 +637,7 @@ class YaoCeLinkLayerApp:
                         if warn_key not in self.reported_warnings:
                             print(f"[WARN] Ignored suffix-based remap '{item.sys_ident}' -> '{mapped_name}' because payload '{item.value}' is not a clock string.")
                             self.reported_warnings.add(warn_key)
-                elif mapped_name in time_component_codes or mapped_name in beijing_time_codes:
+                elif is_time_field:
                     ok, numeric = remember_time_value(mapped_name, item.value)
                     if ok:
                         if add_to_sim_vars(sim_var_name, numeric, mapped_name):

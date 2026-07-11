@@ -12,6 +12,7 @@
 					<Param parId="B1191" code="B1191" desc="梦天舱湿度"/>
 					<Param parId="B0073" code="B0073" desc="梦天舱氧分压"/>
 					<Param parId="B1189" code="B1189" desc="梦天舱CO2分压"/>
+					<Param parId="PF01" code="PF01" desc="MTC测控区标志"/>
 					<Param parId="R1994" code="R1994" desc="外回路控温值"/>
 					<Param parId="R1998" code="R1998" desc="中温回路控温值"/>
 					<Param parId="B0179" code="B0179" desc="货物气闸舱总压"/>
