@@ -319,20 +319,35 @@ def normalize_external_real_value(name, value):
         return round(val, 6)
     return val
 
+DEFAULT_INJECTION_BLACKLIST = {
+    # Field tests showed these PE-driven values can make the FMU report
+    # fmi2DoStep status 3. Keep them visible in PE/dashboard streams, but do
+    # not write them into the FMU unless explicitly removed from the blacklist.
+    'ShelterRatio_CJinput[1]',
+    'ShelterRatio_CJinput[2]',
+    'SolarAngle_CJinput[1]',
+    'SolarAngle_CJinput[2]',
+    'solar_CJinput[1]',
+    'solar_CJinput[2]',
+}
+
 def load_injection_blacklist(root_dir):
     path = os.path.join(root_dir, "fmu_injection_blacklist.json")
+    blacklist = set(DEFAULT_INJECTION_BLACKLIST)
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         if isinstance(data, dict):
             items = data.get("variables", data)
             if isinstance(items, dict):
-                return path, set(str(k) for k in items.keys())
+                blacklist.update(str(k) for k in items.keys())
+                return path, blacklist
             if isinstance(items, list):
-                return path, set(str(k) for k in items)
+                blacklist.update(str(k) for k in items)
+                return path, blacklist
     except Exception:
         pass
-    return path, set()
+    return path, blacklist
 
 def append_injection_blacklist(path, variable, reason):
     variable = str(variable or '').strip()
@@ -1177,10 +1192,11 @@ class FMUPlayer:
                     f.write(traceback.format_exc())
             except Exception:
                 pass
-            if "0xe06d7363" in str(e) and last_applied_injection:
+            error_text = str(e)
+            if last_applied_injection and ("0xe06d7363" in error_text or "fmi2DoStep failed with status 3" in error_text):
                 actual = last_applied_injection.get("actual")
-                append_injection_blacklist(blacklist_path, actual, f"Auto-added after FMU native exception at sim_time={last_applied_injection.get('sim_time')}: {e}")
-                print(f"[!] Auto-blacklisted injection variable after FMU native exception: {actual}", flush=True)
+                append_injection_blacklist(blacklist_path, actual, f"Auto-added after FMU step/native failure at sim_time={last_applied_injection.get('sim_time')}: {e}")
+                print(f"[!] Auto-blacklisted injection variable after FMU failure: {actual}", flush=True)
             # --- 深度诊断：如果是读取失败，尝试定位具体变量 ---
             if "fmi2GetReal" in str(e):
                 print("[*] Diagnostic: Checking which variable caused fmi2GetReal error...")
