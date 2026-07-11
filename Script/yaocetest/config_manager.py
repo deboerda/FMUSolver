@@ -27,6 +27,18 @@ class ConfigManager:
         self.local_injection_targets = set()
         self.config = {}
 
+    def add_filter_code(self, code):
+        if not code:
+            return
+        self.filter_params.add(code)
+        if len(code) >= 2:
+            num = code[1:]
+            self.filter_numeric.add(num)
+            if num not in self.filter_num_to_code:
+                self.filter_num_to_code[num] = []
+            if code not in self.filter_num_to_code[num]:
+                self.filter_num_to_code[num].append(code)
+
     def candidate_config_dirs(self):
         # Keep runtime telemetry configuration self-contained in the selected
         # yaocetest directory, avoiding stale XML files from other folders.
@@ -106,24 +118,13 @@ class ConfigManager:
             for param in root.findall('Param'):
                 code = param.get('code') or param.get('parId')
                 if code:
-                    self.filter_params.add(code)
-                    # 提取数字后缀（去掉第1个字母），长度5的标准ID
-                    if len(code) >= 2:
-                        num = code[1:]
-                        self.filter_numeric.add(num)
-                        if num not in self.filter_num_to_code: self.filter_num_to_code[num] = []
-                        if code not in self.filter_num_to_code[num]: self.filter_num_to_code[num].append(code)
+                    self.add_filter_code(code)
 
             # 情况2: 匹配 <Item name="xxx" ... /> (开发版)
             for item in root.findall('Item'):
                 name = item.get('name')
                 if name:
-                    self.filter_params.add(name)
-                    if len(name) >= 2:
-                        num = name[1:]
-                        self.filter_numeric.add(num)
-                        if num not in self.filter_num_to_code: self.filter_num_to_code[num] = []
-                        if name not in self.filter_num_to_code[num]: self.filter_num_to_code[num].append(name)
+                    self.add_filter_code(name)
 
             print(f"[*] Loaded {len(self.filter_params)} parameters for filtering.")
             print(f"[*] Numeric-suffix index built: {len(self.filter_numeric)} entries.")
@@ -147,7 +148,7 @@ class ConfigManager:
             ET = get_xml_parser()
             root = ET.parse(rel_path).getroot()
             for var in root.findall('.//Var'):
-                sim_var = (var.get('sim_var') or '').strip()
+                sim_var = (var.get('sim_var') or var.get('sim var') or var.get('sim-var') or '').strip()
                 expr = var.get('expression') or ''
                 if not sim_var:
                     continue
@@ -161,6 +162,10 @@ class ConfigManager:
                     continue
                 code = codes[0].strip()
                 self.telemetry_to_sim_map[code] = sim_var
+                # Relationship XML is the authoritative source for dashboard/PE
+                # forwarding, so direct mappings should be accepted even if
+                # ParamFilter.xml was not updated in lockstep.
+                self.add_filter_code(code)
             print(f"[*] Loaded {len(self.telemetry_to_sim_map)} telemetry->sim variable mappings and {len(self.expression_mappings)} expressions from {rel_path}")
         except MemoryError:
             print(f"[!] MemoryError parsing telemetry relationship XML: {rel_path}")
