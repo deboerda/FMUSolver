@@ -314,10 +314,13 @@ def normalize_external_real_value(name, value):
     val = to_float32(value)
     if 'ShelterRatio_CJinput' in clean_name:
         val = max(0.0, min(1.0, val))
-        return round(val, 6)
-    if 'SolarAngle_CJinput' in clean_name or 'solar_CJinput' in clean_name:
-        return round(val, 6)
-    return val
+    return round(val, 6)
+
+def format_external_real_value(value):
+    try:
+        return f"{float(value):.6f}"
+    except Exception:
+        return repr(value)
 
 DEFAULT_INJECTION_BLACKLIST = {
     # Field tests showed these PE-driven values can make the FMU report
@@ -1013,9 +1016,9 @@ class FMUPlayer:
                                     injected_count += 1
                                     injected_echo[str(k)] = normalized_v
                                     remember_injection(k, actual, "Real", normalized_v, "applied")
-                                    last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Real", "value": repr(normalized_v), "sim_time": current_time}
+                                    last_applied_injection = {"source": str(k), "actual": str(actual), "kind": "Real", "value": format_external_real_value(normalized_v), "sim_time": current_time}
                                     if time.perf_counter() - last_injection_stdout_wall > injection_stdout_interval:
-                                        print(f"[*] Injected Real {strip_source_prefix(k)} <- {k} = {normalized_v}", flush=True); last_injection_stdout_wall = time.perf_counter()
+                                        print(f"[*] Injected Real {strip_source_prefix(k)} <- {k} = {format_external_real_value(normalized_v)}", flush=True); last_injection_stdout_wall = time.perf_counter()
                                 except Exception as set_e:
                                     remember_injection(k, actual, "Real", v, f"setReal failed: {set_e}")
                                     missing_injection.append(f"{k}->{actual} setReal failed: {set_e}")
