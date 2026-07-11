@@ -168,7 +168,7 @@ class ConfigManager:
             print(f"[!] Error parsing telemetry relationship XML: {e}")
 
     def map_to_sim_var(self, telemetry_code):
-        return self.telemetry_to_sim_map.get(telemetry_code, telemetry_code)
+        return self.telemetry_to_sim_map.get(telemetry_code)
 
     def load_tm_protocol_config(self):
         candidates = []

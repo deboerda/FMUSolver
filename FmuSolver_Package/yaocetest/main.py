@@ -598,6 +598,12 @@ class YaoCeLinkLayerApp:
             allowed, mapped_name = self.config_mgr.is_param_allowed(item.sys_ident)
             if not allowed: continue
             sim_var_name = self.config_mgr.map_to_sim_var(mapped_name)
+            if not sim_var_name:
+                warn_key = (mapped_name, "unmapped_raw_telemetry")
+                if warn_key not in self.reported_warnings:
+                    print(f"[WARN] Unmapped telemetry '{mapped_name}' ignored for PE/FMU/dashboard. Add it to DTS.TM.Sim.Relationship.xml to forward it.")
+                    self.reported_warnings.add(warn_key)
+                continue
             
             if mapped_name not in self.reported_matches:
                 print(f"[DEBUG] First match for parameter: Original='{item.sys_ident}', Code='{mapped_name}', SimVar='{sim_var_name}', Value='{item.value}'")
@@ -614,7 +620,9 @@ class YaoCeLinkLayerApp:
                         add_to_sim_vars(sim_var_name, parsed_clock["total"])
                         for code in ("A024", "A025", "A026", "A027", "A028"):
                             remember_time_value(code, parsed_clock[code])
-                            add_to_sim_vars(self.config_mgr.map_to_sim_var(code), parsed_clock[code])
+                            component_sim_var = self.config_mgr.map_to_sim_var(code)
+                            if component_sim_var:
+                                add_to_sim_vars(component_sim_var, parsed_clock[code])
                     elif item.sys_ident == mapped_name:
                         warn_key = (mapped_name, "clock_fallback")
                         if warn_key not in self.reported_warnings:
