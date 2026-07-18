@@ -20,6 +20,12 @@
         </Subsys>
         <GlobalVars>
             <Category name="姿轨控">
+	<Var init_var="false" sim_var="UTC_MT_Online[1]" desc="北京时.年" expression="#(TGMT0001.DAHE@A029)"/>
+                <Var init_var="false" sim_var="UTC_MT_Online[2]" desc="北京时.月" expression="#(TGMT0001.DAHE@A02A)"/>
+                <Var init_var="false" sim_var="UTC_MT_Online[3]" desc="北京时.日" expression="#(TGMT0001.DAHE@A02B)"/>
+                <Var init_var="false" sim_var="UTC_MT_Online[4]" desc="北京时.时" expression="#(TGMT0001.DAHE@A02C)"/>
+                <Var init_var="false" sim_var="UTC_MT_Online[5]" desc="北京时.分" expression="#(TGMT0001.DAHE@A02D)"/>
+                <Var init_var="false" sim_var="UTC_MT_Online[6]" desc="北京时.秒" expression="#(TGMT0001.DAHE@A02E)"/>
                 <Var init_var="false" sim_var="d_MT_Online" desc="绝对时间码.日" expression="#(TGMTC101.DAHE@A024)"/>
                 <Var init_var="false" sim_var="h_MT_Online" desc="绝对时间码.时" expression="#(TGMTC101.DAHE@A025)"/>
                 <Var init_var="false" sim_var="m_MT_Online" desc="绝对时间码.分" expression="#(TGMTC101.DAHE@A026)"/>
@@ -39,7 +45,7 @@
                 <Var init_var="false" sim_var="w_MT_Online[1]" desc="MTC滚动角速度" expression="#(TGMTC101.DAHE@K0027)"/>
                 <Var init_var="false" sim_var="w_MT_Online[2]" desc="MTC俯仰角速度" expression="#(TGMTC101.DAHE@K0028)"/>
                 <Var init_var="false" sim_var="w_MT_Online[3]" desc="MTC偏航角速度" expression="#(TGMTC101.DAHE@K0029)"/>
-                <Var init_var="false" sim_var="Alpha_Online[1]" desc="左帆板Alpha转角信息" expression="#(TGMTC101.DAHE@K0182)"/>
+                <Var init_var="false" sim_var="Alpha_Online[1]" desc="左帆板Alpha转角信息" expression="#(TGMTC101.DAHE@N1842)"/>
                 <Var init_var="false" sim_var="Alpha_Online[2]" desc="右帆板Alpha转角信息" expression="#(TGMTC101.DAHE@K0191)"/>
                 <Var init_var="false" sim_var="Beta_Online[1]" desc="左帆板Beta转角信息" expression="#(TGMTC101.DAHE@K0180)"/>
                 <Var init_var="false" sim_var="Beta_Online[2]" desc="右帆板Beta转角信息" expression="#(TGMTC101.DAHE@K0189)"/>
@@ -111,7 +117,39 @@
                 <Var init_var="false" sim_var="TZ_Orien_Online" desc="调整机构电机转向信号" expression="#(TGMTC101.DAHE@Y0053)"/>
                 <Var init_var="false" sim_var="CSDW_Online" desc="初始到位信号" expression="#(TGMTC101.DAHE@Y0070)"/>
                 <Var init_var="false" sim_var="JXDW_Online" desc="极限到位信号" expression="#(TGMTC101.DAHE@Y0071)"/>
-            </Category>
+	
+	<Var init_var="false" sim_var="SXJ1_S_Online" desc="气闸舱摄像机100v供电通断状态" expression="#(TGMTC101.DAHE@V0469)"/>
+                <Var init_var="false" sim_var="SXJ2_S_Online" desc="气闸舱摄像机100v供电通断状态" expression="#(TGMTC101.DAHE@V0601)"/>
+                <Var init_var="false" sim_var="ZM1_S_Online" desc="气闸舱照明通断状态" expression="#(TGMTC101.DAHE@V0656)"/>
+                <Var init_var="false" sim_var="ZM2_S_Online" desc="气闸舱照明通断状态" expression="#(TGMTC101.DAHE@V1065)"/>
+	<Var init_var="false" sim_var="YTSXJ1_S_Online" desc="气闸舱舱内云台摄像机通断状态" expression="#(TGMTC101.DAHE@V1117)"/>
+	<Var init_var="false" sim_var="YTSXJ2_S_Online" desc="气闸舱舱内云台摄像机通断状态" expression="#(TGMTC101.DAHE@V0727)"/>
+	<Var init_var="false" sim_var="ZYJG1_S_Online" desc="气闸舱载荷转移机构控制器主机100v通断状态" expression="#(TGMTC101.DAHE@V1285)"/>
+	<Var init_var="false" sim_var="ZYJG2_S_Online" desc="气闸舱载荷转移机构控制器主机100v通断状态" expression="#(TGMTC101.DAHE@V1198)"/>
+	<Var init_var="false" sim_var="QJXJ1_S_Online" desc="舱外全景摄像机a通断状态" expression="#(TGMTC101.DAHE@V0914)"/>
+	<Var init_var="false" sim_var="QJXJ2_S_Online" desc="舱外全景摄像机a通断状态" expression="#(TGMTC101.DAHE@V1108)"/>
+	<Var init_var="false" sim_var="DXSXJ1_S_Online" desc="舱外定向摄像机b100v通断状态" expression="#(TGMTC101.DAHE@V0227)"/>
+                <Var init_var="false" sim_var="DXSXJ2_S_Online" desc="舱外定向摄像机b100v通断状态" expression="#(TGMTC101.DAHE@V0548)"/>
+                <Var init_var="false" sim_var="FGDc1_S_Online" desc="舱外泛光灯c通断状态" expression="#(TGMTC101.DAHE@V0820)"/>
+                <Var init_var="false" sim_var="FGDc2_S_Online" desc="舱外泛光灯c通断状态" expression="#(TGMTC101.DAHE@V0667)"/>
+	<Var init_var="false" sim_var="FYZJ1_S_Online" desc="气闸区复压组件通断状态" expression="#(TGMTC101.DAHE@V1452)"/>
+	<Var init_var="false" sim_var="FYZJ2_S_Online" desc="气闸区复压组件通断状态" expression="#(TGMTC101.DAHE@V1240)"/>
+	<Var init_var="false" sim_var="SRFJb1_S_Online" desc="梦天舱设备散热风机b通断状态" expression="#(TGMTC101.DAHE@V0934)"/>
+	<Var init_var="false" sim_var="SRFJb2_S_Online" desc="梦天舱设备散热风机b通断状态" expression="#(TGMTC101.DAHE@V1128)"/>
+	<Var init_var="false" sim_var="XYZJ1_S_Online" desc="气闸区泄压组件通断状态" expression="#(TGMTC101.DAHE@V1453)"/>
+	<Var init_var="false" sim_var="XYZJ2_S_Online" desc="气闸区泄压组件通断状态" expression="#(TGMTC101.DAHE@V1242)"/>
+	<Var init_var="false" sim_var="WCMK1_S_Online" desc="外舱门控制器主份100v通断状态" expression="#(TGMTC101.DAHE@V1459)"/>
+	<Var init_var="false" sim_var="WCMK2_S_Online" desc="外舱门控制器主份100v通断状态" expression="#(TGMTC101.DAHE@V1249)"/>
+	<Var init_var="false" sim_var="WCM1_S_Online" desc="气闸舱外舱门锁紧电机1转动方向" expression="#(TGMTC101.DAHE@J0168)"/>
+	<Var init_var="false" sim_var="WCM2_S_Online" desc="气闸舱外舱门锁紧电机2转动方向" expression="#(TGMTC101.DAHE@J0169)"/>
+	<Var init_var="false" sim_var="WCM3_S_Online" desc="气闸舱外舱门滑移电机转动方向" expression="#(TGMTC101.DAHE@J0170)"/>
+	<Var init_var="false" sim_var="ZCFSa1_S_Online" desc="座舱风扇a通断状态" expression="#(TGMTC101.DAHE@V0658)"/>
+	<Var init_var="false" sim_var="ZCFSa2_S_Online" desc="座舱风扇a通断状态" expression="#(TGMTC101.DAHE@V1066)"/>
+	<Var init_var="false" sim_var="ZCFSb1_S_Online" desc="座舱风扇b通断状态" expression="#(TGMTC101.DAHE@V0473)"/>
+	<Var init_var="false" sim_var="ZCFSb2_S_Online" desc="座舱风扇b通断状态" expression="#(TGMTC101.DAHE@V0603)"/>
+	<Var init_var="false" sim_var="JLYb1_S_Online" desc="一拖二快速检漏仪b通断状态" expression="#(TGMTC101.DAHE@V1462)"/>
+	<Var init_var="false" sim_var="JLYb2_S_Online" desc="一拖二快速检漏仪b通断状态" expression="#(TGMTC101.DAHE@V1252)"/>
+            </Category>	
         </GlobalVars>
     </Sat>
     <!--全局变量与遥测（或遥测表达式）一一对应-->

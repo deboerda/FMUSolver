@@ -9,7 +9,8 @@
     "dock_vars": {
       "one": [
         "SixRoot_MT[2]",
-        "SixRoot_MT[3]"
+        "SixRoot_MT[3]",
+        "YC.ms_MT_Online"
       ],
       "two": [
         "MTSatPos[3]",
@@ -27,72 +28,72 @@
         "DisChargeAh_MT[1]"
       ]
     },
-    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAAOOAAAC3vwCAAAABPwAAAAAAAAC3gAAAewA/////AEAAAAC/AAAAAAAAAGbAAABQAD////8AgAAAAP7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAAdoAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAQAAAAAAAAFtAAAA9AD////7AAAAEABEAG8AYwBrAF8AdAB3AG8BAAABcQAAAW0AAAD0AP////wAAAGfAAAB7wAAAUAA/////AIAAAAC+wAAABQARABvAGMAawBfAHQAaAByAGUAZQEAAAAAAAABbQAAAPQA////+wAAABAARABvAGMAawBfAG8AbgBlAQAAAXEAAAFtAAAA9AD////7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAAKAAAAAAAAAAAPsAAAAQAEQAbwBjAGsAXwBtAHQAcwAAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAGEAbABsAAAAAAAAAALeAAAAAAAAAAAAAAABAAADjgAAAt78AgAAAAL8AAAAAAAAAt4AAAAAAP////wCAAAAAfsAAAAQAEQAbwBjAGsAXwBzAGkAeAAAAAAAAAAC3gAAAAAAAAAA+wAAABAARABvAGMAawBfAHMAaQB4AQAAAAAAAAD0AAAAAAAAAAAAAAADAAADjgAAAt78AQAAAAL7AAAAEABEAG8AYwBrAF8AbQB0AHMAAAAAAAAAA44AAAAAAAAAAPsAAAAQAEQAbwBjAGsAXwBhAGwAbAAAAAHJAAABxQAAAAAAAAAAAAAAAAAAAt4AAAAEAAAABAAAAAgAAAAI/AAAAAA=",
+    "layout_state": "AAAA/wAAAAD9AAAAAwAAAAAAAALGAAAC3vwCAAAABPwAAAAAAAAC3gAAAewA/////AEAAAAC/AAAAAAAAAFAAAABQAD////8AgAAAAP7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAAdoAAAAAAAAAAPsAAAASAEQAbwBjAGsAXwBmAG8AdQByAQAAAAAAAAFtAAAA9AD////7AAAAEABEAG8AYwBrAF8AdAB3AG8BAAABcQAAAW0AAAD0AP////wAAAFEAAABggAAAUAA/////AIAAAAC+wAAABQARABvAGMAawBfAHQAaAByAGUAZQEAAAAAAAABbQAAAPQA////+wAAABAARABvAGMAawBfAG8AbgBlAQAAAXEAAAFtAAAA9AD////7AAAAHABEAG8AYwBrAF8ATQBhAGkAbgAgAFAAbABvAHQAAAAAAAAAAKAAAAAAAAAAAPsAAAAQAEQAbwBjAGsAXwBtAHQAcwAAAAAAAAAA8QAAAAAAAAAA+wAAABAARABvAGMAawBfAGEAbABsAAAAAAAAAALeAAAAAAAAAAAAAAABAAADjgAAAt78AgAAAAL8AAAAAAAAAt4AAAAAAP////wCAAAAAfsAAAAQAEQAbwBjAGsAXwBzAGkAeAAAAAAAAAAC3gAAAAAAAAAA+wAAABAARABvAGMAawBfAHMAaQB4AQAAAAAAAAD0AAAAAAAAAAAAAAADAAADjgAAAt78AQAAAAL7AAAAEABEAG8AYwBrAF8AbQB0AHMAAAAAAAAAA44AAAAAAAAAAPsAAAAQAEQAbwBjAGsAXwBhAGwAbAAAAAHJAAABxQAAAAAAAAAAAAAAAAAAAt4AAAAEAAAABAAAAAgAAAAI/AAAAAA=",
     "dock_geometry": {
       "one": {
         "floating": false,
-        "x": 415,
+        "x": 324,
         "y": 369,
-        "w": 495,
+        "w": 386,
         "h": 365
       },
       "two": {
         "floating": false,
         "x": 0,
         "y": 369,
-        "w": 411,
+        "w": 320,
         "h": 365
       },
       "three": {
         "floating": false,
-        "x": 415,
+        "x": 324,
         "y": 0,
-        "w": 495,
+        "w": 386,
         "h": 365
       },
       "four": {
         "floating": false,
         "x": 0,
         "y": 0,
-        "w": 411,
+        "w": 320,
         "h": 365
       },
       "__proportions__": {
         "bounds": {
           "x": 0,
           "y": 0,
-          "w": 910,
+          "w": 710,
           "h": 734
         },
         "items": {
           "one": {
-            "x_ratio": 0.45604395604395603,
+            "x_ratio": 0.4563380281690141,
             "y_ratio": 0.502724795640327,
-            "w_ratio": 0.5439560439560439,
+            "w_ratio": 0.543661971830986,
             "h_ratio": 0.49727520435967304
           },
           "two": {
             "x_ratio": 0.0,
             "y_ratio": 0.502724795640327,
-            "w_ratio": 0.45164835164835165,
+            "w_ratio": 0.4507042253521127,
             "h_ratio": 0.49727520435967304
           },
           "three": {
-            "x_ratio": 0.45604395604395603,
+            "x_ratio": 0.4563380281690141,
             "y_ratio": 0.0,
-            "w_ratio": 0.5439560439560439,
+            "w_ratio": 0.543661971830986,
             "h_ratio": 0.49727520435967304
           },
           "four": {
             "x_ratio": 0.0,
             "y_ratio": 0.0,
-            "w_ratio": 0.45164835164835165,
+            "w_ratio": 0.4507042253521127,
             "h_ratio": 0.49727520435967304
           }
         }
       }
     },
-    "active_dock": "four"
+    "active_dock": "one"
   },
   "case1": {
     "dock_order": [

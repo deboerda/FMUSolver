@@ -4,6 +4,10 @@ set PY32=C:\Py32\python.exe
 
 echo [*] Starting Comprehensive CLEAN Rebuild (32/64-bit)...
 
+echo [+] Updating visible build version...
+python update_build_version.py
+if errorlevel 1 exit /b 1
+
 :: 0. Clean old build artifacts
 echo [+] Cleaning old build artifacts...
 if exist "build" rd /s /q "build"

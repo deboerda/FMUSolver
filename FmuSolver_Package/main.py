@@ -6,6 +6,8 @@ import struct
 import os
 import sys
 import base64
+import traceback
+import json
 from datetime import datetime
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -40,17 +42,112 @@ except ImportError:
     print(f"[!] Warning: ddm_pb2 not found at {ddm_path}")
     ddm_pb2 = None
 
+def is_process_alive(pid):
+    try:
+        pid = int(pid)
+    except Exception:
+        return True
+    if pid <= 0 or pid == os.getpid():
+        return True
+    if sys.platform == 'win32':
+        try:
+            import ctypes
+            PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+            handle = ctypes.windll.kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+            if handle:
+                ctypes.windll.kernel32.CloseHandle(handle)
+                return True
+            return False
+        except Exception:
+            return True
+    try:
+        os.kill(pid, 0)
+        return True
+    except OSError:
+        return False
+
 class YaoCeLinkLayerApp:
     def __init__(self, root_dir):
         self.config_mgr = ConfigManager(root_dir)
-        self.data_queue = queue.Queue()
-        self.log_queue = queue.Queue()
+        self.data_queue = queue.Queue(maxsize=int(os.environ.get("FMUSOLVER_YC_DATA_QUEUE_MAX", "3000")))
+        self.log_queue = queue.Queue(maxsize=int(os.environ.get("FMUSOLVER_YC_LOG_QUEUE_MAX", "2000")))
         self.running = False
         self.reported_matches = set() # 记录已匹配过的参数名
         self.packet_count = 0
         self.reported_warnings = set()
         self.log_dir = os.path.join(self.config_mgr.root_dir, "logs")
-        self.max_log_bytes = 20 * 1024 * 1024
+        self.max_log_bytes = max(1, int(os.environ.get("FMUSOLVER_YC_MAX_LOG_MB", "5"))) * 1024 * 1024
+        self.raw_log_sample = max(1, int(os.environ.get("FMUSOLVER_YC_RAW_LOG_SAMPLE", "200")))
+        self.send_log_sample = max(1, int(os.environ.get("FMUSOLVER_YC_SEND_LOG_SAMPLE", "200")))
+        self.live_log_interval = max(1.0, float(os.environ.get("FMUSOLVER_YC_LIVE_LOG_INTERVAL", "5.0")))
+        self.rx_count = 0
+        self.rx_drop_count = 0
+        self.log_drop_count = 0
+        self.send_count = 0
+        self.send_error_count = 0
+        self.last_perf_log = time.time()
+        self.perf_log_path = os.path.join(self.log_dir, "yaoce_perf.log")
+        self.perf_log_max_bytes = max(1, int(os.environ.get("FMUSOLVER_YC_PERF_LOG_MB", "5"))) * 1024 * 1024
+        self.last_perf_rx = 0
+        self.last_perf_parsed = 0
+        self.last_perf_sent = 0
+        self.last_perf_time = self.last_perf_log
+        self.parent_pid = os.environ.get("FMUSOLVER_PARENT_PID", "")
+        self.worker_json_send_count = 0
+
+    def enqueue_latest(self, q, item, drop_attr):
+        try:
+            q.put_nowait(item)
+            return True
+        except queue.Full:
+            try:
+                q.get_nowait()
+                try: q.task_done()
+                except Exception: pass
+            except Exception:
+                pass
+            try:
+                q.put_nowait(item)
+            except Exception:
+                pass
+            setattr(self, drop_attr, getattr(self, drop_attr) + 1)
+            return False
+
+    def print_perf_stats(self, force=False):
+        now = time.time()
+        if not force and now - self.last_perf_log < 10.0:
+            return
+        elapsed = max(0.001, now - self.start_time) if hasattr(self, 'start_time') else 0.001
+        interval = max(0.001, now - self.last_perf_time)
+        rx_rate = (self.rx_count - self.last_perf_rx) / interval
+        parse_rate = (self.packet_count - self.last_perf_parsed) / interval
+        send_rate = (self.send_count - self.last_perf_sent) / interval
+        line = (
+            f"[PERF][YC] uptime={elapsed:.1f}s rx={self.rx_count} parsed={self.packet_count} "
+            f"sent={self.send_count} worker_json={self.worker_json_send_count} send_err={self.send_error_count} "
+            f"rx_rate={rx_rate:.1f}/s parse_rate={parse_rate:.1f}/s send_rate={send_rate:.1f}/s "
+            f"data_q={self.data_queue.qsize()}/{self.data_queue.maxsize} "
+            f"log_q={self.log_queue.qsize()}/{self.log_queue.maxsize} "
+            f"rx_drop={self.rx_drop_count} log_drop={self.log_drop_count}"
+        )
+        print(line, flush=True)
+        self.write_perf_log(line)
+        self.last_perf_rx = self.rx_count
+        self.last_perf_parsed = self.packet_count
+        self.last_perf_sent = self.send_count
+        self.last_perf_time = now
+        self.last_perf_log = now
+
+    def write_perf_log(self, line):
+        try:
+            os.makedirs(self.log_dir, exist_ok=True)
+            if os.path.exists(self.perf_log_path) and os.path.getsize(self.perf_log_path) > self.perf_log_max_bytes:
+                with open(self.perf_log_path, "w", encoding="utf-8") as f:
+                    f.write(f"--- YaoCe Perf Log Rotated at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+            with open(self.perf_log_path, "a", encoding="utf-8") as f:
+                f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {line}\n")
+        except Exception:
+            pass
         
     def start(self):
         self.config_mgr.load_config()
@@ -61,12 +158,25 @@ class YaoCeLinkLayerApp:
         print(f"[*] YaoCe -> DDM Bridge (SimVar Mode) Started.")
         print(f"[*] Filtered Parameters: {len(self.config_mgr.filter_params)}")
         print(f"[*] Targets: {self.config_mgr.targets}")
+        self.start_parent_watchdog()
         
         self.logger_thread = threading.Thread(target=self.logging_loop, daemon=True)
         self.logger_thread.start()
         self.process_thread = threading.Thread(target=self.processing_loop, daemon=True)
         self.process_thread.start()
         self.receive_loop()
+
+    def start_parent_watchdog(self):
+        if not self.parent_pid:
+            return
+        def watch_parent():
+            while self.running:
+                time.sleep(1.0)
+                if not is_process_alive(self.parent_pid):
+                    print(f"[SYS] Parent process {self.parent_pid} is gone; YaoCe worker exiting.", flush=True)
+                    self.running = False
+                    break
+        threading.Thread(target=watch_parent, daemon=True).start()
 
     def receive_loop(self):
         recv_port = self.config_mgr.config['RecvPort']
@@ -94,15 +204,22 @@ class YaoCeLinkLayerApp:
             try:
                 sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, 1024*1024)
             except: pass
+            sock.settimeout(1.0)
             
             print(f"[*] Listening on UDP {recv_port}...")
             
             while self.running:
-                data, addr = sock.recvfrom(65535)
+                try:
+                    data, addr = sock.recvfrom(65535)
+                except socket.timeout:
+                    continue
                 self.last_recv_time = time.time()
+                self.rx_count += 1
                 ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                self.data_queue.put(data)
-                self.log_queue.put(("original", data, addr, ts))
+                self.enqueue_latest(self.data_queue, data, 'rx_drop_count')
+                if self.rx_count <= 5 or self.rx_count % self.raw_log_sample == 0:
+                    self.enqueue_latest(self.log_queue, ("original", data, addr, ts), 'log_drop_count')
+                self.print_perf_stats()
         except Exception as e:
             print(f"[!] Receiver error: {e}")
         finally:
@@ -129,35 +246,54 @@ class YaoCeLinkLayerApp:
                 if ddm_msg:
                     try:
                         for target_ip, target_port in self.config_mgr.targets:
-                            msg_to_send = ddm_msg
                             if self.config_mgr.is_local_injection_target(target_ip, target_port):
-                                msg_to_send = self.clone_ddm_with_prefix(ddm_msg, "YC")
-                            raw_bytes = msg_to_send.SerializeToString()
-                            payload = base64.b64encode(raw_bytes)
+                                cmd = {}
+                                for var in ddm_msg.sim_vars:
+                                    name = var.name if str(var.name).startswith(("PE.", "YC.")) else "YC." + var.name
+                                    if var.type == ddm_pb2.DDMData.SimVar.Type.Value("Bool"):
+                                        cmd[name] = bool(var.bool_value)
+                                    elif var.type == ddm_pb2.DDMData.SimVar.Type.Value("Int"):
+                                        cmd[name] = int(var.int_value)
+                                    elif var.type == ddm_pb2.DDMData.SimVar.Type.Value("String"):
+                                        cmd[name] = var.string_value
+                                    else:
+                                        cmd[name] = float(var.double_value)
+                                payload = json.dumps(cmd, ensure_ascii=False).encode('utf-8')
+                                self.worker_json_send_count += 1
+                            else:
+                                raw_bytes = ddm_msg.SerializeToString()
+                                payload = base64.b64encode(raw_bytes)
                             send_sock.sendto(payload, (target_ip, target_port))
+                            self.send_count += 1
                         
                         # Log converted visible data to queue
                         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
-                        vars_str = ", ".join([f"{var.name}={var.double_value}" for var in ddm_msg.sim_vars])
-                        self.log_queue.put(("send", ddm_msg.sim_time, vars_str, ts))
+                        if self.packet_count <= 5 or self.packet_count % self.send_log_sample == 0:
+                            vars_str = ", ".join([f"{var.name}={var.double_value}" for var in ddm_msg.sim_vars])
+                            self.enqueue_latest(self.log_queue, ("send", ddm_msg.sim_time, vars_str, ts), 'log_drop_count')
 
                         # 严格按照用户要求的格式：[Live]Time: 38.00s | Sent40vars | Rate: 1.0x | Freq:50.0Hz
                         now = time.time()
-                        if now - self.last_log_time >= 1.0: # 每秒输出一次日志
+                        if now - self.last_log_time >= self.live_log_interval:
                             elapsed = now - self.start_time
                             freq = (self.packet_count - self.last_packet_count) / (now - self.last_log_time)
                             print(f"[Live]Time: {elapsed:.2f}s | Sent{len(ddm_msg.sim_vars)}vars | Rate: 1.0x | Freq:{freq:.1f}Hz")
                             self.last_log_time = now
                             self.last_packet_count = self.packet_count
                     except Exception as e:
+                        self.send_error_count += 1
                         print(f"[!] Send error: {e}")
                 else:
-                    if self.packet_count % 100 == 0:
+                    if time.time() - self.last_log_time >= self.live_log_interval:
                         elapsed = time.time() - self.start_time
                         print(f"[Live]Time: {elapsed:.2f}s | Sent0vars | Rate: 1.0x | Freq:0.0Hz")
+                        self.last_log_time = time.time()
+                        self.last_packet_count = self.packet_count
             except queue.Empty: continue
             except Exception as e:
                 print(f"[!] Processor error: {e}")
+            finally:
+                self.print_perf_stats()
 
     def clone_ddm_with_prefix(self, msg, prefix):
         cloned = ddm_pb2.DDMData()
@@ -215,7 +351,7 @@ class YaoCeLinkLayerApp:
                 print(f"[!] Logger loop error: {e}")
                 
             now = time.time()
-            if now - last_flush_time >= 1.0:
+            if now - last_flush_time >= 2.0:
                 try:
                     if f_orig: f_orig.flush()
                     if f_send: f_send.flush()
@@ -245,7 +381,43 @@ class YaoCeLinkLayerApp:
         except: msg.sim_time = 0.0
 
         is_any_field_added = False
-        clock_codes = {"S0067", "DCSM34"}
+        clock_codes = {"S0067", "DCSM34", "DCSH34", "DCSW34"}
+        time_component_codes = {"A024", "A025", "A026", "A027", "A028", "DCSH34.d", "DCSH34.h", "DCSH34.m", "DCSH34.s", "DCSH34.ms", "DCSW34.d", "DCSW34.h", "DCSW34.m", "DCSW34.s", "DCSW34.ms"}
+        beijing_time_codes = {"A029", "A02A", "A02B", "A02C", "A02D", "A02E"}
+        time_values = {}
+
+        def normalize_time_component_code(code):
+            mapping = {
+                "DCSH34.d": "A024", "DCSH34.h": "A025", "DCSH34.m": "A026", "DCSH34.s": "A027", "DCSH34.ms": "A028",
+                "DCSW34.d": "A024", "DCSW34.h": "A025", "DCSW34.m": "A026", "DCSW34.s": "A027", "DCSW34.ms": "A028",
+            }
+            return mapping.get(code, code)
+
+        def parse_numeric_value(val):
+            if isinstance(val, (int, float)):
+                return float(val)
+            clean = str(val).strip()
+            if not clean:
+                return None
+            try:
+                return float(clean)
+            except Exception:
+                return None
+
+        def is_valid_time_component(code, value):
+            if value is None:
+                return False
+            code = normalize_time_component_code(code)
+            if code == "A024": return 0 <= value <= 100000
+            if code == "A025": return 0 <= value <= 23
+            if code in ("A026", "A027"): return 0 <= value <= 59
+            if code == "A028": return 0 <= value <= 999
+            if code == "A029": return 1900 <= value <= 2200
+            if code == "A02A": return 1 <= value <= 12
+            if code == "A02B": return 1 <= value <= 31
+            if code == "A02C": return 0 <= value <= 23
+            if code in ("A02D", "A02E"): return 0 <= value <= 59
+            return True
 
         def add_to_sim_vars(name, val_str):
             svar = msg.sim_vars.add()
@@ -298,6 +470,18 @@ class YaoCeLinkLayerApp:
                 "total": total_seconds,
             }
 
+        def remember_time_value(code, value):
+            normalized = normalize_time_component_code(code)
+            numeric = parse_numeric_value(value)
+            if is_valid_time_component(normalized, numeric):
+                time_values[normalized] = numeric
+                return True, numeric
+            warn_key = (normalized, "invalid_time", str(value))
+            if warn_key not in self.reported_warnings:
+                print(f"[WARN] Invalid time component ignored: {normalized}={value}")
+                self.reported_warnings.add(warn_key)
+            return False, numeric
+
         for item in pkg.info_body_vct:
             allowed, mapped_name = self.config_mgr.is_param_allowed(item.sys_ident)
             if not allowed: continue
@@ -316,30 +500,69 @@ class YaoCeLinkLayerApp:
                     parsed_clock = parse_clock_value(item.value)
                     if parsed_clock is not None:
                         add_to_sim_vars(sim_var_name, parsed_clock["total"])
-                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A024"), parsed_clock["A024"])
-                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A025"), parsed_clock["A025"])
-                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A026"), parsed_clock["A026"])
-                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A027"), parsed_clock["A027"])
-                        add_to_sim_vars(self.config_mgr.map_to_sim_var("A028"), parsed_clock["A028"])
+                        for code in ("A024", "A025", "A026", "A027", "A028"):
+                            remember_time_value(code, parsed_clock[code])
+                            add_to_sim_vars(self.config_mgr.map_to_sim_var(code), parsed_clock[code])
                     elif item.sys_ident == mapped_name:
                         warn_key = (mapped_name, "clock_fallback")
                         if warn_key not in self.reported_warnings:
-                            print(f"[WARN] Clock field '{mapped_name}' has non-clock payload '{item.value}', forwarded as raw numeric fallback.")
+                            print(f"[WARN] Clock field '{mapped_name}' has non-clock payload '{item.value}', ignored for PE/FMU safety.")
                             self.reported_warnings.add(warn_key)
-                        add_to_sim_vars(sim_var_name, item.value)
                     else:
                         warn_key = (item.sys_ident, mapped_name, "clock_collision")
                         if warn_key not in self.reported_warnings:
                             print(f"[WARN] Ignored suffix-based remap '{item.sys_ident}' -> '{mapped_name}' because payload '{item.value}' is not a clock string.")
                             self.reported_warnings.add(warn_key)
+                elif mapped_name in time_component_codes or mapped_name in beijing_time_codes:
+                    ok, numeric = remember_time_value(mapped_name, item.value)
+                    if ok:
+                        add_to_sim_vars(sim_var_name, numeric)
                 else:
                     add_to_sim_vars(sim_var_name, item.value)
             except Exception as e:
                 print(f"[!] Unexpected error mapping field '{mapped_name}': {e}")
+
+        expr_values = self.config_mgr.evaluate_expression_mappings(time_values)
+        for sim_var, value in expr_values.items():
+            add_to_sim_vars(sim_var, value)
+            is_any_field_added = True
                     
         return msg if is_any_field_added else None
 
 if __name__ == "__main__":
-    root = os.path.dirname(os.path.abspath(__file__))
-    app = YaoCeLinkLayerApp(root)
-    app.start()
+    root = sys.argv[1] if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
+    try:
+        arch_bits = struct.calcsize('P') * 8
+        mem_note = ""
+        try:
+            if sys.platform == 'win32':
+                import ctypes
+                class MEMORYSTATUSEX(ctypes.Structure):
+                    _fields_ = [
+                        ('dwLength', ctypes.c_ulong), ('dwMemoryLoad', ctypes.c_ulong),
+                        ('ullTotalPhys', ctypes.c_ulonglong), ('ullAvailPhys', ctypes.c_ulonglong),
+                        ('ullTotalPageFile', ctypes.c_ulonglong), ('ullAvailPageFile', ctypes.c_ulonglong),
+                        ('ullTotalVirtual', ctypes.c_ulonglong), ('ullAvailVirtual', ctypes.c_ulonglong),
+                        ('ullAvailExtendedVirtual', ctypes.c_ulonglong),
+                    ]
+                stat = MEMORYSTATUSEX()
+                stat.dwLength = ctypes.sizeof(MEMORYSTATUSEX)
+                if ctypes.windll.kernel32.GlobalMemoryStatusEx(ctypes.byref(stat)):
+                    mem_note = f" avail_phys={stat.ullAvailPhys // (1024*1024)}MB avail_virtual={stat.ullAvailVirtual // (1024*1024)}MB load={stat.dwMemoryLoad}%"
+        except Exception:
+            pass
+        print(f"[SYS] YaoCe standalone entry. root={root} pid={os.getpid()} arch={arch_bits}bit python={sys.executable} cwd={os.getcwd()}{mem_note}", flush=True)
+        app = YaoCeLinkLayerApp(root)
+        app.start()
+    except Exception:
+        text = traceback.format_exc()
+        print(f"[!] YaoCe Fatal Error:\n{text}", flush=True)
+        try:
+            log_dir = os.path.join(root, "logs")
+            os.makedirs(log_dir, exist_ok=True)
+            with open(os.path.join(log_dir, "yaoce_fatal.log"), "a", encoding="utf-8") as f:
+                f.write(f"\n--- YaoCe Fatal {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+                f.write(text)
+        except Exception:
+            pass
+        raise

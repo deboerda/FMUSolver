@@ -95,16 +95,16 @@ class PacketParser:
                 
                 found = False
                 if filter_set:
-                    # 尝试匹配 6, 5, 4 位长度
-                    for length in [6, 5, 4]:
-                        if len(item_str) > length:
-                            potential_id = item_str[0:length]
-                            if potential_id in filter_set:
-                                sys_ident = potential_id
-                                exceed_code = item_str[length:length+1]
-                                value_part = item_str[length+1:]
-                                found = True
-                                break
+                    # 配置里可能出现 DCSH34.d / DCSW34.ms 这类长 ID，按长度倒序精确匹配。
+                    max_len = min(len(item_str) - 1, max((len(str(x)) for x in filter_set), default=6))
+                    for length in range(max_len, 3, -1):
+                        potential_id = item_str[0:length]
+                        if potential_id in filter_set:
+                            sys_ident = potential_id
+                            exceed_code = item_str[length:length+1]
+                            value_part = item_str[length+1:]
+                            found = True
+                            break
                                 
                 if not found:
                     # 保底逻辑：沿用 5 位长度
