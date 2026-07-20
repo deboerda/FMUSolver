@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0711.0207"
+APP_VERSION = "v26.0719.1055"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -1261,6 +1261,31 @@ def get_fmu_arch(fmu_path):
     except: pass
     return None
 
+def ensure_ascii_fmu_path(fmu_path, log_fn=None):
+    """32位打包Worker(旧PyInstaller引导器)会把含中文/非ASCII字符的argv按UTF-8
+    误解码成乱码，导致 FileNotFoundError。路径含非ASCII字符时，先把FMU复制到
+    纯ASCII的 C:\\FmuSolver_Runtime\\fmu_input 下，再把安全路径传给Worker。"""
+    try:
+        fmu_path.encode('ascii')
+        return fmu_path
+    except UnicodeEncodeError:
+        pass
+    import hashlib, shutil
+    safe_dir = r"C:\FmuSolver_Runtime\fmu_input"
+    try:
+        os.makedirs(safe_dir, exist_ok=True)
+        tag = hashlib.md5(fmu_path.encode('utf-8')).hexdigest()[:8]
+        safe_path = os.path.join(safe_dir, "input_%s.fmu" % tag)
+        if (not os.path.exists(safe_path)) or (os.path.getmtime(safe_path) < os.path.getmtime(fmu_path)):
+            shutil.copy2(fmu_path, safe_path)
+        if log_fn:
+            log_fn(f"[*] FMU路径含非ASCII字符，已复制到 {safe_path} 供Worker使用", "sys")
+        return safe_path
+    except Exception as e:
+        if log_fn:
+            log_fn(f"[!] FMU安全路径复制失败({e})，仍使用原路径，中文路径可能导致Worker报错", "error")
+        return fmu_path
+
 def _norm_existing(path):
     if path and os.path.exists(path): return os.path.normpath(path)
     return None
@@ -1592,6 +1617,10 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.connect(self._reset_ui)
         self.sig_orbit_done.connect(self._orbit_done_ui)
         self.sig_export_ready.connect(lambda: self.btn_export.setEnabled(True))
+        # Start the endpoint when the main window is ready; forwarding still
+        # requires a live FMU worker.
+        self.log("[*] 初始化后准备启动变量注入监听", "sys")
+        self._start_injection_listener()
         self.ui_heartbeat_timer = QTimer(self)
         self.ui_heartbeat_timer.timeout.connect(self._write_ui_heartbeat)
         self.ui_heartbeat_timer.start(10000)
@@ -2576,6 +2605,7 @@ class FmuSolverGUI(QMainWindow):
         # 恢复使用基于内容的架构探测，确保兼容任何命名的 FMU
         arch_val = get_fmu_arch(fmu_path)
         fmu_bit = str(arch_val) if arch_val else ("32" if "32" in fmu_path else "64")
+        fmu_path = ensure_ascii_fmu_path(fmu_path, self.olog)
         
         # 兼容源码运行与打包运行
         if getattr(sys, 'frozen', False):
@@ -2616,6 +2646,7 @@ class FmuSolverGUI(QMainWindow):
             threading.Thread(target=self._read_worker_logs, daemon=True).start()
             
             # 启动变量注入监听
+            self.log(f"[*] Worker 启动后准备重试变量注入监听 (inj_ip={self.inj_ip_edit.edit.text().strip() or '0.0.0.0'}, inj_port={self.inj_port_edit.edit.text() or '9988'})", "sys")
             self._start_injection_listener()
         except Exception as e:
             self.olog(f"[!] 启动失败: {e}", "error")
@@ -2722,6 +2753,7 @@ class FmuSolverGUI(QMainWindow):
             for ev in self.inj_stop_events:
                 try: ev.set()
                 except: pass
+        self._injection_listener_signature = None
 
 
     def stop_sim(self):
@@ -2846,17 +2878,32 @@ class FmuSolverGUI(QMainWindow):
 
     def _start_injection_listener(self):
         """启动后台 UDP 监听，接收外部变量注入"""
-        if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
-            for ev in self.inj_stop_events:
-                try: ev.set()
-                except: pass
-            
-        self.inj_stop_events = []
-        
         ip = self.inj_ip_edit.edit.text().strip() or "0.0.0.0"
         try:
             port = int(self.inj_port_edit.edit.text() or "9988")
         except: port = 9988
+
+        self.log(f"[*] _start_injection_listener 入口: ip={ip}, port={port}", "sys")
+
+        signature = (ip, port)
+        listener_threads = getattr(self, 'inj_listener_threads', [])
+        if (getattr(self, '_injection_listener_signature', None) == signature
+                and any(thread.is_alive() for thread in listener_threads)):
+            self.log(f"[*] 注入监听已存在且签名一致，跳过重复启动: {ip}:{port}", "sys")
+            return
+
+        if hasattr(self, 'inj_stop_events') and self.inj_stop_events:
+            for ev in self.inj_stop_events:
+                try: ev.set()
+                except: pass
+        self.inj_stop_events = []
+
+        for thread in listener_threads:
+            if thread.is_alive():
+                self.log(f"[*] 等待旧注入监听线程退出: {thread.name}", "sys")
+                thread.join(timeout=1.2)
+        self.inj_listener_threads = []
+        self._injection_listener_signature = signature
         
         # Only listen to the explicit PE/manual injection port. Telemetry is bridged
         # by YaoCe_LinkLayer directly to the FMU Worker to keep the UI out of the hot path.
@@ -2874,6 +2921,10 @@ class FmuSolverGUI(QMainWindow):
             
             def loop():
                 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                try:
+                    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                except Exception:
+                    pass
                 sock.settimeout(1.0)
                 fwd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 last_log_time = 0
@@ -2899,8 +2950,9 @@ class FmuSolverGUI(QMainWindow):
                         fwd_count += 1
                 
                 try:
+                    safe_log(f"[*] 尝试绑定变量注入监听: {ip}:{listen_port}", "info")
                     sock.bind((ip, listen_port))
-                    safe_log(f"[*] 变量注入监听已启动: {ip}:{listen_port}", "info")
+                    safe_log(f"[*] 变量注入监听已启动：{ip}:{listen_port}", "info")
                 except Exception as e:
                     safe_log(f"[!] 注入监听启动失败 (端口 {listen_port}): {e}", "error")
                     sock.close()
@@ -2962,6 +3014,21 @@ class FmuSolverGUI(QMainWindow):
                                     last_log_time = now
                                 continue
                             
+                            if not cmd_from_protobuf:
+                                control_keys = {
+                                    "sim_id", "exit", "pause", "resume", "sim_rate",
+                                    "step_size", "sim_time", "sample_freq", "yc_inject_freq",
+                                    "__apply_yc_now",
+                                }
+                                normalized_cmd = {}
+                                for key, value in cmd.items():
+                                    key_text = str(key)
+                                    if key_text in control_keys or key_text.startswith(("PE.", "YC.")):
+                                        normalized_cmd[key_text] = value
+                                    else:
+                                        normalized_cmd[f"PE.{key_text}"] = value
+                                cmd = normalized_cmd
+
                             if cmd_from_protobuf:
                                 source_prefix = "PE." if listen_port == port else "YC."
                                 normalized_cmd = {}
@@ -2995,9 +3062,14 @@ class FmuSolverGUI(QMainWindow):
                         break
                 sock.close()
                 fwd_sock.close()
+                safe_log(f"[*] [Port {listen_port}] 注入监听线程退出", "sys")
                 safe_log(f"[*] [Port {listen_port}] 变量注入监听已停止", "sys")
             
-            threading.Thread(target=loop, daemon=True).start()
+            thread = threading.Thread(target=loop, daemon=True, name=f"pe-injection-{listen_port}")
+            self.inj_listener_threads.append(thread)
+            self.log(f"[*] 创建注入监听线程: {thread.name} -> {ip}:{listen_port}", "sys")
+            thread.start()
+            self.log(f"[*] 注入监听线程已启动: {thread.name}", "sys")
 
         for p in ports_to_listen:
             create_listener(p)
@@ -3014,6 +3086,8 @@ class FmuSolverGUI(QMainWindow):
             
         if not os.path.exists(fmu_path):
             self.olog(f"[!] 找不到FMU文件: {fmu_path}", "error"); return
+
+        fmu_path = ensure_ascii_fmu_path(fmu_path, self.olog)
 
         params = {"Year": int(self.year_e.edit.text() or '2026'), "Mon": int(self.mon_e.edit.text() or '1'), "Day": int(self.day_e.edit.text() or '1'), "Hour": int(self.hour_e.edit.text() or '0'), "Min": int(self.min_e.edit.text() or '0'), "Sec": float(self.sec_e.edit.text() or '0.0'),
             "a_MT": float(self.a_e.edit.text() or '6766.71777'), "e_MT": float(self.ecc_e.edit.text() or '0.0011'), "i_MT": float(self.inc_e.edit.text() or '41.627'), "OMEGA_MT": float(self.om_e.edit.text() or '137.492'), "omega_MT": float(self.w_e.edit.text() or '77.010'), "f_MT": float(self.f_e.edit.text() or '57.552')}
@@ -3111,8 +3185,9 @@ class FmuSolverGUI(QMainWindow):
                         txt_dir = os.path.join(APP_DIR, "txt")
                         os.makedirs(txt_dir, exist_ok=True)
                         auto_save_p = os.path.join(txt_dir, "Orbit_Pre.txt")
-                        self._save_to_orbit_txt(auto_save_p)
-                        self.sig_olog.emit(f"[OK] 结果已自动同步至: {auto_save_p}", "info")
+                        # Disabled: this creates a lossy 7-column duplicate of the FMU's 22-column file.
+                        # self._save_to_orbit_txt(auto_save_p)
+                        self.sig_olog.emit("[*] 已禁用 7 列 Orbit_Pre.txt 自动保存，使用程序根目录的 FMU 原生结果。", "sys")
                     except Exception as e:
                         self.sig_olog.emit(f"[!] 自动保存失败: {e}", "error")
                 else:

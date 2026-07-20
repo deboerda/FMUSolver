@@ -319,17 +319,7 @@ def normalize_external_real_value(name, value):
         return round(val, 6)
     return val
 
-DEFAULT_INJECTION_BLACKLIST = {
-    # Field tests showed these PE-driven values can make the FMU report
-    # fmi2DoStep status 3. Keep them visible in PE/dashboard streams, but do
-    # not write them into the FMU unless explicitly removed from the blacklist.
-    'ShelterRatio_CJinput[1]',
-    'ShelterRatio_CJinput[2]',
-    'SolarAngle_CJinput[1]',
-    'SolarAngle_CJinput[2]',
-    'solar_CJinput[1]',
-    'solar_CJinput[2]',
-}
+DEFAULT_INJECTION_BLACKLIST = set()
 
 def load_injection_blacklist(root_dir):
     path = os.path.join(root_dir, "fmu_injection_blacklist.json")
@@ -736,6 +726,24 @@ class FMUPlayer:
                         fmu_instance.setString([v.valueReference], [abs_p])
                         print(f"[*] Overriding filepath: {v.name} -> {abs_p}")
 
+            # 旧版FMU允许在 enterInitializationMode 之前 setReal；
+            # 新版MWORKS(26.1.2+)导出的FMU会报 "invalid execution timing"，
+            # 需要在 InitializationMode 内设置。两阶段尝试以兼容新旧FMU。
+            deferred_sets = []
+
+            def _try_set(v_obj, t, val, label, defer=True):
+                try:
+                    if t == 'Real': fmu_instance.setReal([v_obj.valueReference], [float(val)])
+                    elif t == 'Integer': fmu_instance.setInteger([v_obj.valueReference], [int(val)])
+                    elif t == 'Boolean': fmu_instance.setBoolean([v_obj.valueReference], [bool(val)])
+                    return True
+                except Exception as e:
+                    if defer:
+                        deferred_sets.append((v_obj, t, val, label))
+                    else:
+                        print(f"[!] Cannot set {label} = {val} in either phase: {e}")
+                    return False
+
             if init_params:
                 print("[*] Injecting initialization parameters...")
                 for k, v in init_params.items():
@@ -748,7 +756,7 @@ class FMUPlayer:
                                         cands = [f"{k}[{i+1},{j+1}]", f"{k}[{i+1}, {j+1}]"]
                                         v_obj = next((mv for mv in vars_list if mv.name in cands), None)
                                         if v_obj:
-                                            fmu_instance.setReal([v_obj.valueReference], [float(val.strip())])
+                                            _try_set(v_obj, 'Real', val.strip(), f"{k}[{i+1},{j+1}]")
                                 print(f"[OK] Parsed and injected table {k} ({len(rows)}x{len(rows[0])})")
                         except Exception as e:
                             print(f"[!] Error parsing table {k}: {e}")
@@ -756,12 +764,16 @@ class FMUPlayer:
                         v_obj = next((mv for mv in vars_list if mv.name == k), None)
                         if v_obj:
                             t = getattr(v_obj, 'type', 'Real')
-                            if t == 'Real': fmu_instance.setReal([v_obj.valueReference], [float(v)])
-                            elif t == 'Integer': fmu_instance.setInteger([v_obj.valueReference], [int(v)])
-                            elif t == 'Boolean': fmu_instance.setBoolean([v_obj.valueReference], [bool(v)])
-                            print(f"[OK] Set param {k} = {v}")
+                            if _try_set(v_obj, t, v, k):
+                                print(f"[OK] Set param {k} = {v}")
 
             fmu_instance.enterInitializationMode()
+            if deferred_sets:
+                print(f"[*] Retrying {len(deferred_sets)} params inside InitializationMode (new MWORKS FMU)...")
+                retry_list, deferred_sets = deferred_sets, []
+                for v_obj, t, val, label in retry_list:
+                    if _try_set(v_obj, t, val, label, defer=False):
+                        print(f"[OK] Set param {label} = {val} (init mode)")
             fmu_instance.exitInitializationMode()
 
             # 建立 FMU 变量名查找索引 (支持模糊匹配)
@@ -998,6 +1010,11 @@ class FMUPlayer:
                             if is_rate_limited_external and current_time < ext_inject_grace_sim_sec:
                                 pending_limited_injection[str(k)] = v
                                 continue
+                            if is_rate_limited_external:
+                                display_value = v
+                                if isinstance(v, (int, float)) and not isinstance(v, bool):
+                                    display_value = normalize_external_real_value(k, v)
+                                injected_echo[str(k)] = display_value
                             if str(k) in missing_input_cache:
                                 continue
                             actual = resolve_input_name(k)
