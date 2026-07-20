@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0711.0207"
+APP_VERSION = "v26.0717.0241"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
