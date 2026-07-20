@@ -1565,6 +1565,7 @@ class FmuSolverGUI(QMainWindow):
     sig_reset_ui     = Signal()
     sig_orbit_done   = Signal()
     sig_export_ready = Signal()
+    sig_orbit_txt_ready = Signal(str)
 
     def __init__(self):
         super().__init__()
@@ -1578,6 +1579,7 @@ class FmuSolverGUI(QMainWindow):
         self.visualizer_process = None
         self.orbit_data = []
         self.orbit_proc = None
+        self.orbit_txt_path = ""
         self.current_sim_id = None
         self._yaoce_log_pos = 0
         self.runtime_log_path = os.path.join(APP_DIR, "fmusolver_runtime.log")
@@ -1617,6 +1619,7 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.connect(self._reset_ui)
         self.sig_orbit_done.connect(self._orbit_done_ui)
         self.sig_export_ready.connect(lambda: self.btn_export.setEnabled(True))
+        self.sig_orbit_txt_ready.connect(self._set_orbit_txt_ready)
         # Start the endpoint when the main window is ready; forwarding still
         # requires a live FMU worker.
         self.log("[*] 初始化后准备启动变量注入监听", "sys")
@@ -1820,6 +1823,11 @@ class FmuSolverGUI(QMainWindow):
             self.btn_pause_orbit.setText("⏸ 暂停")
         self.btn_stop_orbit.setEnabled(False)
         self.orbit_paused = False
+
+    def _set_orbit_txt_ready(self, path):
+        self.orbit_txt_path = path
+        if hasattr(self, 'btn_open_orbit_folder'):
+            self.btn_open_orbit_folder.setEnabled(os.path.exists(path))
 
     def _load_gui_config(self):
         if os.path.exists(self.gui_config_path):
@@ -2172,8 +2180,11 @@ class FmuSolverGUI(QMainWindow):
         act = QHBoxLayout(); act.setContentsMargins(0, 0, 0, 0); act.setSpacing(8)
         self.btn_run_orbit = btn("▶ 开始预示解答", True); self.btn_pause_orbit = btn("⏸ 暂停", False); self.btn_pause_orbit.setEnabled(False); self.orbit_paused = False; self.btn_stop_orbit = danger_btn("■ 停止运行"); self.btn_stop_orbit.setEnabled(False)
         self.btn_export = btn("↓ 导出结果", False); self.btn_export.setEnabled(False)
-        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_pause_orbit.clicked.connect(self.toggle_orbit_pause); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt)
-        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_pause_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addStretch()
+        self.btn_open_orbit_folder = btn("📂 打开当前文件", False)
+        self.btn_open_orbit_folder.setToolTip("打开并选中 FMU 当前正在使用的 Orbit_Pre.txt；运行中替换该文件可供 FMU 后续读取。")
+        self.btn_open_orbit_folder.setEnabled(False)
+        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_pause_orbit.clicked.connect(self.toggle_orbit_pause); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt); self.btn_open_orbit_folder.clicked.connect(self.open_orbit_txt_folder)
+        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_pause_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addWidget(self.btn_open_orbit_folder); act.addStretch()
         exec_l.addLayout(act)
         lay.addWidget(execution_panel)
 
@@ -2439,7 +2450,7 @@ class FmuSolverGUI(QMainWindow):
         """Structured runner logs are useful; raw FMU console chatter is throttled separately."""
         if not line:
             return False
-        prefixes = ("[*]", "[OK]", "[!]", "[ERROR]", "[SUCCESS]", "[EXPORT_READY]", "[Live]")
+        prefixes = ("[*]", "[OK]", "[!]", "[ERROR]", "[SUCCESS]", "[EXPORT_READY]", "[ORBIT_TXT_ACTIVE]", "[Live]")
         return line.startswith(prefixes) or line.startswith("Traceback") or "Fatal" in line
         
         
@@ -3120,6 +3131,9 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_progress.setValue(int(0))
         self.orbit_prog_lbl.setText("正在启动...")
         self.orbit_proc = None
+        self.orbit_txt_path = ""
+        if hasattr(self, 'btn_open_orbit_folder'):
+            self.btn_open_orbit_folder.setEnabled(False)
 
         def run_thread():
             total_t = float(self.o_dur_e.edit.text() or '86400.0')
@@ -3127,6 +3141,7 @@ class FmuSolverGUI(QMainWindow):
                 cf = 0x08000000 if os.name == 'nt' else 0
                 self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
                 ready_file = None
+                success_rows = None
                 last_ui_update = 0
                 last_log_update = 0
                 last_native_log_update = 0
@@ -3150,6 +3165,16 @@ class FmuSolverGUI(QMainWindow):
 
                     if "[EXPORT_READY]" in line_str:
                         ready_file = line_str.replace("[EXPORT_READY]", "").strip()
+                    if "[ORBIT_TXT_ACTIVE]" in line_str:
+                        active_txt = line_str.replace("[ORBIT_TXT_ACTIVE]", "").strip()
+                        if os.path.exists(active_txt):
+                            self.sig_orbit_txt_ready.emit(active_txt)
+                            self.sig_olog.emit(f"[*] 当前 FMU 正在使用 Orbit_Pre.txt: {active_txt}", "sys")
+                    if "[SUCCESS]" in line_str:
+                        m_rows = re.search(r'\[SUCCESS\]\s+(\d+)\s+rows', line_str)
+                        if m_rows:
+                            try: success_rows = int(m_rows.group(1))
+                            except Exception: pass
                     
                     # 只有关键信息才实时显示，普通 Live 信息 1s 更新一次
                     is_live = "[Live]" in line_str
@@ -3176,20 +3201,18 @@ class FmuSolverGUI(QMainWindow):
                 self.sig_orbit_prog.emit(100, f"计算完成: 100% (总时长 {total_t:.0f}s)")
 
                 if ready_file and os.path.exists(ready_file):
-                    with open(ready_file, 'r') as f:
-                        self.orbit_data = json.load(f)
-                    n = len(self.orbit_data)
+                    self.orbit_data = []
+                    n = int(success_rows or 0)
                     self.sig_export_ready.emit()
                     self.sig_olog.emit(f"[OK] 计算完成，共 {n} 行数据。", "info")
-                    try:
-                        txt_dir = os.path.join(APP_DIR, "txt")
-                        os.makedirs(txt_dir, exist_ok=True)
-                        auto_save_p = os.path.join(txt_dir, "Orbit_Pre.txt")
-                        # Disabled: this creates a lossy 7-column duplicate of the FMU's 22-column file.
-                        # self._save_to_orbit_txt(auto_save_p)
-                        self.sig_olog.emit("[*] 已禁用 7 列 Orbit_Pre.txt 自动保存，使用程序根目录的 FMU 原生结果。", "sys")
-                    except Exception as e:
-                        self.sig_olog.emit(f"[!] 自动保存失败: {e}", "error")
+                    self.sig_olog.emit("[*] 已跳过巨型 JSON 载入，直接使用 FMU 原生 Orbit_Pre.txt，避免 UI 卡顿。", "sys")
+                    active_txt_path = getattr(self, 'orbit_txt_path', '')
+                    ready_ext = os.path.splitext(ready_file)[1].lower()
+                    if ready_ext == ".txt" and os.path.exists(ready_file):
+                        self.sig_orbit_txt_ready.emit(ready_file)
+                        active_txt_path = ready_file
+                    if active_txt_path and os.path.exists(active_txt_path):
+                        self.sig_olog.emit(f"[*] 按钮当前指向 FMU 正在使用的文件: {active_txt_path}", "sys")
                 else:
                     self.sig_olog.emit(f"[!] 计算结束但未找到结果文件 (rc={rc})。", "error")
             except Exception as e:
@@ -3248,10 +3271,31 @@ class FmuSolverGUI(QMainWindow):
         f = QFileDialog.getSaveFileName(self, 'Save', 'Orbit_Pre.txt', 'Text Files (*.txt)')[0]
         if not f: return
         try:
-            self._save_to_orbit_txt(f)
+            src = getattr(self, 'orbit_txt_path', "")
+            if not os.path.exists(src):
+                raise FileNotFoundError(src)
+            import shutil
+            shutil.copy2(src, f)
             self.log(f"[OK] 导出成功: {f}", "info")
         except Exception as e:
             self.log(f"[!] 导出失败: {e}", "error")
+
+    def open_orbit_txt_folder(self):
+        path = getattr(self, 'orbit_txt_path', "")
+        if not os.path.exists(path):
+            QMessageBox.warning(self, "未找到文件", f"未找到 FMU 当前正在使用的 Orbit_Pre.txt：\n{path or '尚未生成活动文件路径'}")
+            return
+        folder = os.path.dirname(path)
+        try:
+            if os.name == 'nt':
+                subprocess.Popen(['explorer', f'/select,{os.path.normpath(path)}'])
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', folder])
+            else:
+                subprocess.Popen(['xdg-open', folder])
+            self.olog(f"[*] 已打开并选中当前 Orbit_Pre.txt: {path}", "sys")
+        except Exception as e:
+            QMessageBox.warning(self, "打开失败", f"无法打开文件夹：\n{folder}\n\n{e}")
 
 if __name__ == "__main__":
     try:
