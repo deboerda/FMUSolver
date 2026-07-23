@@ -705,5 +705,19 @@
     "type": "Real",
     "desc": "手动添加",
     "sync": true
+  },
+  {
+    "name": "Environment_A.SolarAngleInput",
+    "source": "Environment_A.SolarAngleInput",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "shieldRateCalA.ShieldCondition",
+    "source": "shieldRateCalA.ShieldCondition",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
   }
 ]

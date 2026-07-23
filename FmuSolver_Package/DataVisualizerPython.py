@@ -14,6 +14,7 @@ from ctypes import wintypes
 import ddm_pb2
 import datetime
 import traceback
+import hashlib
 
 def is_process_alive(pid):
     try:
@@ -45,18 +46,18 @@ except: pass
 try:
     from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                  QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
-                                 QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog,
+                                 QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
                                  QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox)
     from PySide6.QtCore import Qt, QTimer, Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
-    from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen
+    from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 6
 except ImportError:
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
-                               QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog,
+                               QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
                                QSpinBox, QComboBox, QGridLayout, QListView, QDockWidget, QFileDialog, QMessageBox)
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal as Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
-    from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen
+    from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 5
 import pyqtgraph as pg
 pg.setConfigOptions(antialias=True)
@@ -201,12 +202,18 @@ class TitleBar(QWidget):
         self.btn_sidebar.setObjectName("SidebarBtn")
         self.btn_sidebar.setToolTip("显示/隐藏配置面板")
         self.btn_sidebar.setFixedSize(30, 30)
+        self.btn_sidebar.setCheckable(True)
+        self.btn_sidebar.setChecked(True)
         self.btn_sidebar.clicked.connect(self.parent.toggle_sidebar)
         lay.addWidget(self.btn_sidebar)
         
         self.brand_lbl = QLabel("FmuSolver - Data Visualizer")
         self.brand_lbl.setObjectName("BrandLabel")
         lay.addWidget(self.brand_lbl)
+        self.version_lbl = QLabel(APP_VERSION)
+        self.version_lbl.setObjectName("VersionBadge")
+        self.version_lbl.setToolTip(f"Data Visualizer version {APP_VERSION}")
+        lay.addWidget(self.version_lbl)
         lay.addStretch()
         lay.addSpacing(10)
         
@@ -278,6 +285,24 @@ class PlotViewBox(pg.ViewBox):
         super().mouseDragEvent(ev, axis=axis)
 
 APP_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
+DEFAULT_CURVE_WIDTH = 5
+
+def load_app_version():
+    candidates = [
+        os.path.join(APP_DIR, "build_version.json"),
+        os.path.join(os.path.dirname(APP_DIR), "Script", "build_version.json"),
+    ]
+    for path in candidates:
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                version = str(json.load(f).get("version", "")).strip()
+                if version:
+                    return version
+        except Exception:
+            pass
+    return "dev"
+
+APP_VERSION = load_app_version()
 
 class ProfessionalVisualizer(QMainWindow):
     data_received = Signal(object)
@@ -289,6 +314,11 @@ class ProfessionalVisualizer(QMainWindow):
         pen.setJoinStyle(Qt.RoundJoin)
         pen.setCapStyle(Qt.RoundCap)
         return pen
+
+    def default_curve_style(self, tag, index=0):
+        seed = int(hashlib.md5(str(tag).encode("utf-8")).hexdigest()[:8], 16)
+        hue = (seed + index * 137) % 360
+        return {"color": QColor.fromHsv(hue, 230, 255), "width": DEFAULT_CURVE_WIDTH}
 
     def __init__(self, port=12345):
         super().__init__()
@@ -327,6 +357,8 @@ class ProfessionalVisualizer(QMainWindow):
         self.last_view_update = {}
         self.last_y_range = {}
         self.last_ui_idx = -1
+        self.data_revision = 0
+        self.last_ui_revision = -1
         self.max_dock_updates_per_tick = 2
         self.rx_packet_count = 0
         self.rx_error_count = 0
@@ -355,6 +387,8 @@ class ProfessionalVisualizer(QMainWindow):
         self.plot_widgets = {} 
         self.curves = {}       
         self.crosshairs = {}   
+        self.cursor_states = {}
+        self.cursor_updaters = {}
         self.dock_order = []
         self._restoring_preset = False
         self._session_memory_pause = 0
@@ -518,7 +552,7 @@ class ProfessionalVisualizer(QMainWindow):
                         self.ordered_tags.append(name)
                         self.data_store[name] = np.full(self.max_points, np.nan)
                         self.trend_store[name] = []
-                        self.var_styles[name] = {"color": pg.intColor(i, hues=max(10, len(self.vars_config))), "width": 2}
+                        self.var_styles[name] = self.default_curve_style(name, i)
                         self.vars_desc[name] = v.get('desc') or ""
                     return
                 except Exception as e:
@@ -649,6 +683,7 @@ class ProfessionalVisualizer(QMainWindow):
             border-bottom: 1px solid {border_soft};
         }}
         QLabel#BrandLabel {{ color: {text_c}; font-size: 14px; font-weight: 800; }}
+        QLabel#VersionBadge {{ color: {muted_text}; background: transparent; border: none; padding: 1px 0 0 2px; font-size: 10px; font-weight: 700; }}
         QLabel#Title {{ color: {text_c}; font-size: 12px; font-weight: 800; }}
         QLabel#Caption {{ color: {muted_text}; font-size: 11px; font-weight: 600; }}
         QLabel#StatusPill {{
@@ -730,11 +765,17 @@ class ProfessionalVisualizer(QMainWindow):
             max-width: 30px; 
         }}
         QPushButton#SidebarBtn:hover {{ background: rgba(0,0,0,0.1); }}
+        QPushButton#SidebarBtn:pressed {{ background: rgba(0,122,255,52); padding-top: 2px; }}
+        QPushButton#SidebarBtn:checked {{ background: rgba(0,122,255,62); border: 1px solid rgba(0,122,255,96); }}
         QPushButton {{ background: {btn_bg}; color: {text_c}; border: 1px solid {border_soft}; border-radius: 16px; padding: 0 14px; font-weight: 700; font-size: 12px; min-height: 32px; max-height: 32px; }}
         QPushButton:hover {{ background: {btn_hover}; border: 1px solid {border_strong}; }}
-        QPushButton:pressed {{ background: {btn_pressed}; }}
+        QPushButton:pressed {{ background: {btn_pressed}; border: 1px solid rgba(10,132,255,130); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton:checked {{ background: rgba(10,132,255,46); border: 1px solid rgba(10,132,255,122); color: {text_c}; }}
+        QPushButton:checked:hover {{ background: rgba(10,132,255,62); }}
         QPushButton#PrimaryButton {{ background: {accent}; color: white; border: 1px solid rgba(10,132,255,160); }}
         QPushButton#PrimaryButton:hover {{ background: #2591FF; }}
+        QPushButton#PrimaryButton:pressed {{ background: #0066D6; border: 1px solid rgba(0,74,173,220); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton#PrimaryButton:checked {{ background: #0057C2; color: white; border: 1px solid rgba(0,74,173,255); }}
         QPushButton#ControlBtn {{ padding: 0; border-radius: 50%; min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; }}
 
         QTableWidget, QListWidget {{ background: transparent; border: none; color: {text_c}; selection-background-color: rgba(10,132,255,40); selection-color: {text_c}; outline: none; alternate-background-color: rgba(255,255,255,0.30); }}
@@ -832,6 +873,14 @@ class ProfessionalVisualizer(QMainWindow):
         slay.addWidget(QLabel("Span (s):"), 2, 0)
         self.span_spin = QSpinBox(); self.span_spin.setRange(1, 3600); self.span_spin.setValue(60)
         slay.addWidget(self.span_spin, 2, 1)
+
+        slay.addWidget(QLabel("游标时间:"), 3, 0)
+        self.cursor_time_combo = QComboBox(); self.cursor_time_combo.addItems(["模型时间", "实际计时"])
+        cv = QListView(); cv.setObjectName("ComboView")
+        self.cursor_time_combo.setView(cv)
+        if cv.window(): cv.window().setAttribute(Qt.WA_TranslucentBackground, False)
+        self.cursor_time_combo.currentIndexChanged.connect(self.on_cursor_time_mode_changed)
+        slay.addWidget(self.cursor_time_combo, 3, 1)
         
         left_layout.addWidget(settings_box)
         
@@ -926,7 +975,9 @@ class ProfessionalVisualizer(QMainWindow):
             chk.setCheckState(Qt.Checked if saved_state else Qt.Unchecked)
             
             self.table.setItem(i, 0, chk)
-            self.table.setItem(i, 1, QTableWidgetItem(self.get_display_name(tag)))
+            name_item = QTableWidgetItem(self.get_display_name(tag))
+            name_item.setData(Qt.UserRole, tag)
+            self.table.setItem(i, 1, name_item)
             self.table.setItem(i, 2, QTableWidgetItem("0.0000"))
         
         self.table.itemChanged.connect(self.on_table_item_changed)
@@ -956,7 +1007,9 @@ class ProfessionalVisualizer(QMainWindow):
         chk.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
         chk.setCheckState(Qt.Unchecked)
         self.table.setItem(row, 0, chk)
-        self.table.setItem(row, 1, QTableWidgetItem(self.get_display_name(tag)))
+        name_item = QTableWidgetItem(self.get_display_name(tag))
+        name_item.setData(Qt.UserRole, tag)
+        self.table.setItem(row, 1, name_item)
         self.table.setItem(row, 2, QTableWidgetItem("0.0000"))
         self.table.blockSignals(False)
 
@@ -964,7 +1017,7 @@ class ProfessionalVisualizer(QMainWindow):
         self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
         self.data_store[tag] = np.full(self.max_points, np.nan)
         self.trend_store[tag] = []
-        self.var_styles[tag] = {"color": pg.intColor(len(self.ordered_tags) - 1, hues=max(10, len(self.ordered_tags))), "width": 2}
+        self.var_styles[tag] = self.default_curve_style(tag, len(self.ordered_tags) - 1)
         self.vars_desc[tag] = desc
 
     def auto_load_last_layout(self):
@@ -1527,6 +1580,7 @@ class ProfessionalVisualizer(QMainWindow):
         s = {
             "title_size": self.title_size_spin.value(),
             "name_mode": self.name_mode_combo.currentIndex(),
+            "cursor_time_mode": self.cursor_time_combo.currentIndex() if hasattr(self, 'cursor_time_combo') else 0,
             "span": self.span_spin.value(),
             "accumulate_enabled": self.chk_accumulate.isChecked() if hasattr(self, 'chk_accumulate') else False,
             "sidebar_visible": self.left_panel.isVisible(),
@@ -1554,6 +1608,8 @@ class ProfessionalVisualizer(QMainWindow):
 
         self.title_size_spin.setValue(int(s.get("title_size", self.title_size_spin.value())))
         self.name_mode_combo.setCurrentIndex(int(s.get("name_mode", self.name_mode_combo.currentIndex())))
+        if hasattr(self, 'cursor_time_combo'):
+            self.cursor_time_combo.setCurrentIndex(max(0, min(1, int(s.get("cursor_time_mode", self.cursor_time_combo.currentIndex())))))
         self.span_spin.setValue(int(s.get("span", self.span_spin.value())))
         if hasattr(self, 'chk_accumulate'):
             self.chk_accumulate.setChecked(bool(s.get("accumulate_enabled", False)))
@@ -1583,6 +1639,7 @@ class ProfessionalVisualizer(QMainWindow):
     def toggle_sidebar(self):
         is_visible = self.left_panel.isVisible()
         if is_visible:
+            self.title_bar.btn_sidebar.setChecked(False)
             current_sizes = self.main_splitter.sizes()
             if current_sizes and current_sizes[0] > 40:
                 self.last_sidebar_width = current_sizes[0]
@@ -1594,6 +1651,7 @@ class ProfessionalVisualizer(QMainWindow):
             self.main_splitter.setSizes([0, total])
             QTimer.singleShot(0, lambda: self.main_splitter.setSizes([0, max(1, self.main_splitter.width())]))
         else:
+            self.title_bar.btn_sidebar.setChecked(True)
             self.left_panel.setMinimumWidth(0)
             self.left_panel.setMaximumWidth(520)
             self.left_panel.setFixedWidth(max(260, min(self.last_sidebar_width, 520)))
@@ -1864,6 +1922,19 @@ class ProfessionalVisualizer(QMainWindow):
                     if dock_name in self.curves[tag]:
                         pw.plotItem.legend.addItem(self.curves[tag][dock_name], self.get_display_name(tag))
 
+    def on_cursor_time_mode_changed(self, *_):
+        self.save_ui_settings()
+        for dock_name, enabled in list(self.cursor_states.items()):
+            if not enabled:
+                continue
+            updater = self.cursor_updaters.get(dock_name)
+            cursor_line = self.crosshairs.get(dock_name, (None, None))[0]
+            if updater and cursor_line is not None:
+                try:
+                    updater(float(cursor_line.value()))
+                except Exception:
+                    pass
+
     def set_active_dock(self, name):
         if name in self.docks:
             self.active_dock_name = name
@@ -1896,7 +1967,12 @@ class ProfessionalVisualizer(QMainWindow):
         item = self.table.itemAt(pos)
         if not item: return
         row = item.row()
-        tag = self.table.item(row, 1).text()
+        name_item = self.table.item(row, 1)
+        if not name_item:
+            return
+        tag = name_item.data(Qt.UserRole) or name_item.text()
+        if tag not in self.var_styles:
+            return
         
         menu = QMenu(self)
         action_color = menu.addAction("🎨 修改线条颜色")
@@ -2114,7 +2190,7 @@ class ProfessionalVisualizer(QMainWindow):
         if plot_widget.plotItem.legend is not None and hasattr(self, 'plot_axis_text'):
             plot_widget.plotItem.legend.setLabelTextColor(self.plot_axis_text)
         plot_widget.setContentsMargins(5, 5, 5, 10)
-        plot_widget.getPlotItem().getViewBox().setMouseMode(pg.ViewBox.RectMode)
+        plot_widget.getPlotItem().getViewBox().setMouseMode(pg.ViewBox.PanMode)
         plot_widget.getPlotItem().getViewBox().setDefaultPadding(0.02)
         plot_widget.getPlotItem().getViewBox().disableAutoRange()
         plot_widget.getPlotItem().hideButtons()
@@ -2122,62 +2198,153 @@ class ProfessionalVisualizer(QMainWindow):
         plot_widget.getPlotItem().getAxis('left').setWidth(72)
         plot_widget.getPlotItem().getAxis('bottom').setStyle(tickTextOffset=8)
         
-        # 十字光标功能 (CursorLine & CursorLabel)
-        vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('#f59e0b', width=1, style=Qt.DashLine))
-        label = pg.TextItem(text="", color=getattr(self, 'plot_axis_text', QColor('white')), fill=getattr(self, 'plot_label_fill', pg.mkBrush(0,0,0,150)), border=getattr(self, 'plot_label_border', None))
+        # 可拖动曲线游标：右键开启；点击定位；拖动竖线查看同一时刻曲线交点值。
+        vLine = pg.InfiniteLine(angle=90, movable=True, pen=pg.mkPen('#f59e0b', width=1, style=Qt.DashLine), hoverPen=pg.mkPen('#f97316', width=2))
+        time_bg = QGraphicsRectItem()
+        time_bg.setBrush(QBrush(QColor(255, 255, 255, 218)))
+        time_bg.setPen(QPen(QColor('#94a3b8')))
+        time_label = QGraphicsTextItem("")
+        time_label.setDefaultTextColor(getattr(self, 'plot_axis_text', QColor('white')))
+        value_labels = {}
+        vLine.setZValue(1000)
+        time_bg.setZValue(1001)
+        time_label.setZValue(1002)
         plot_widget.addItem(vLine, ignoreBounds=True)
-        plot_widget.addItem(label, ignoreBounds=True)
+        plot_widget.scene().addItem(time_bg)
+        plot_widget.scene().addItem(time_label)
         vLine.setVisible(False)
-        label.setVisible(False)
+        time_bg.setVisible(False)
+        time_label.setVisible(False)
         
-        # 鼠标移动事件处理
-        def mouseMoved(evt):
-            pos = evt
-            if plot_widget.sceneBoundingRect().contains(pos):
-                mousePoint = plot_widget.plotItem.vb.mapSceneToView(pos)
-                # Use the same sanitized series as the renderer to avoid cursor drift after wraparound.
-                t_array, y_store = self.get_active_series()
-                    
-                if len(t_array) > 0:
-                    index = (np.abs(t_array - mousePoint.x())).argmin()
-                    if index >= 0:
-                        vLine.setPos(mousePoint.x())
-                        vLine.setVisible(True)
-                        
-                        if self.base_datetime is not None:
-                            dt = self.base_datetime + datetime.timedelta(seconds=(t_array[index] - self.base_sim_time))
-                            text = f"时间: {dt.strftime('%Y-%m-%d %H:%M:%S')}\n"
-                        else:
-                            text = f"时间: {t_array[index]:.2f}s\n"
-                        
-                        has_data = False
-                        for tag in self.curves:
-                            if name in self.curves[tag]:
-                                y_array = y_store.get(tag)
-                                if y_array is None or index >= len(y_array) or not np.isfinite(y_array[index]):
-                                    continue
-                                val = y_array[index]
-                                text += f"{self.get_display_name(tag)}: {val:.4f}\n"
-                                has_data = True
-                        
-                        if has_data:
-                            label.setText(text)
-                            label.setPos(mousePoint.x(), mousePoint.y())
-                            label.setVisible(True)
-                        else:
-                            label.setVisible(False)
-            else:
-                vLine.setVisible(False)
-                label.setVisible(False)
+        def set_cursor_visible(visible):
+            vLine.setVisible(visible)
+            time_bg.setVisible(visible)
+            time_label.setVisible(visible)
+            for item in value_labels.values():
+                item.setVisible(visible)
 
-        plot_widget.scene().sigMouseMoved.connect(mouseMoved)
+        def update_cursor(cursor_x=None):
+            if not self.cursor_states.get(name, False):
+                set_cursor_visible(False)
+                return
+            active_tags = [tag for tag, dock_map in self.curves.items() if name in dock_map and tag in self.data_store]
+            t_array, y_store = self.get_active_series(active_tags)
+            if len(t_array) == 0:
+                set_cursor_visible(False)
+                return
+            if cursor_x is None:
+                x_min, x_max = plot_widget.getViewBox().viewRange()[0]
+                visible_idx = np.where((t_array >= float(x_min)) & (t_array <= float(x_max)))[0]
+                if visible_idx.size:
+                    cursor_x = float(t_array[int(visible_idx[visible_idx.size // 2])])
+                else:
+                    cursor_x = (float(x_min) + float(x_max)) / 2.0
+            index = int((np.abs(t_array - cursor_x)).argmin())
+            cursor_x = float(t_array[index])
+            try:
+                vLine.blockSignals(True)
+                vLine.setPos(cursor_x)
+            finally:
+                vLine.blockSignals(False)
+            vLine.setVisible(True)
+
+            cursor_time_mode = self.cursor_time_combo.currentIndex() if hasattr(self, 'cursor_time_combo') else 0
+            if cursor_time_mode == 1:
+                elapsed_sec = max(0.0, cursor_x - float(self.base_sim_time or 0.0))
+                hh = int(elapsed_sec // 3600)
+                mm = int((elapsed_sec % 3600) // 60)
+                ss = elapsed_sec % 60
+                time_text = f"{hh:02d}:{mm:02d}:{ss:05.2f}"
+            elif self.base_datetime is not None:
+                dt = self.base_datetime + datetime.timedelta(seconds=(cursor_x - self.base_sim_time))
+                time_text = dt.strftime('%H:%M:%S')
+            else:
+                time_text = f"{cursor_x:.2f}"
+
+            visible_tags = set()
+            label_rows = []
+            for tag in self.curves:
+                if name in self.curves[tag]:
+                    y_array = y_store.get(tag)
+                    if y_array is None or index >= len(y_array) or not np.isfinite(y_array[index]):
+                        continue
+                    value = float(y_array[index])
+                    visible_tags.add(tag)
+                    if tag not in value_labels:
+                        color = self.var_styles.get(tag, {}).get("color", QColor("#2563eb"))
+                        value_label = pg.TextItem(
+                            text="",
+                            color=QColor(color),
+                            fill=pg.mkBrush(255, 255, 255, 210),
+                            border=pg.mkPen(QColor(color), width=1),
+                            anchor=(0, 0.5),
+                        )
+                        value_label.setZValue(1002)
+                        plot_widget.addItem(value_label, ignoreBounds=True)
+                        value_labels[tag] = value_label
+                    value_labels[tag].setText(f"{value:.10g}")
+                    value_labels[tag].setVisible(True)
+                    label_rows.append((tag, value))
+
+            for tag, item in value_labels.items():
+                if tag not in visible_tags:
+                    item.setVisible(False)
+
+            x_min, x_max = plot_widget.getViewBox().viewRange()[0]
+            y_min, y_max = plot_widget.getViewBox().viewRange()[1]
+            if label_rows:
+                vb = plot_widget.getViewBox()
+                view_height = max(1.0, vb.sceneBoundingRect().height())
+                data_per_px = (float(y_max) - float(y_min)) / view_height if y_max != y_min else 1.0
+                min_gap = data_per_px * 22.0
+                top_pad = data_per_px * 14.0
+                bottom_pad = data_per_px * 14.0
+                lower_bound = float(y_min) + bottom_pad
+                upper_bound = float(y_max) - top_pad
+
+                arranged = []
+                for tag, value in sorted(label_rows, key=lambda item: item[1]):
+                    y_pos = min(max(float(value), lower_bound), upper_bound)
+                    if arranged and y_pos - arranged[-1][1] < min_gap:
+                        y_pos = arranged[-1][1] + min_gap
+                    arranged.append((tag, y_pos))
+
+                overflow = arranged[-1][1] - upper_bound if arranged else 0.0
+                if overflow > 0:
+                    arranged = [(tag, y_pos - overflow) for tag, y_pos in arranged]
+                    adjusted = []
+                    for tag, y_pos in arranged:
+                        y_pos = max(y_pos, lower_bound)
+                        if adjusted and y_pos - adjusted[-1][1] < min_gap:
+                            y_pos = adjusted[-1][1] + min_gap
+                        adjusted.append((tag, min(y_pos, upper_bound)))
+                    arranged = adjusted
+
+                for tag, y_pos in arranged:
+                    value_labels[tag].setPos(cursor_x, y_pos)
+
+            view_scene_rect = vb.sceneBoundingRect()
+            cursor_scene = vb.mapViewToScene(pg.Point(cursor_x, y_min))
+            time_label.setPlainText(time_text)
+            text_rect = time_label.boundingRect()
+            pad_x, pad_y = 6.0, 2.0
+            box_w = text_rect.width() + pad_x * 2.0
+            box_h = text_rect.height() + pad_y * 2.0
+            box_x = cursor_scene.x() - box_w / 2.0
+            box_y = view_scene_rect.bottom() + 4.0
+            time_bg.setRect(0, 0, box_w, box_h)
+            time_bg.setPos(box_x, box_y)
+            time_label.setPos(box_x + pad_x, box_y + pad_y - 2.0)
+            is_time_visible = bool(visible_tags) and x_min <= cursor_x <= x_max
+            time_bg.setVisible(is_time_visible)
+            time_label.setVisible(is_time_visible)
+
+        vLine.sigPositionChanged.connect(lambda _line: update_cursor(float(vLine.value())))
+        self.cursor_updaters[name] = update_cursor
         
-        # 增加鼠标离开自动隐藏逻辑 (EventFilter 方案)
+        # 保留游标位置；鼠标离开图表后不自动隐藏，便于读数和截图。
         class LeaveFilter(QObject):
             def eventFilter(self, obj, event):
-                if event.type() == QEvent.Leave:
-                    vLine.setVisible(False)
-                    label.setVisible(False)
                 return False
         
         self.leave_filter = LeaveFilter(self)
@@ -2185,16 +2352,37 @@ class ProfessionalVisualizer(QMainWindow):
         
         # 用户手动拖拽或缩放时，自动取消画面跟随
         plot_widget.getViewBox().sigRangeChangedManually.connect(lambda: self.chk_autoscroll.setChecked(False))
+
+        def show_plot_menu(pos):
+            menu = QMenu(plot_widget)
+            cursor_enabled = self.cursor_states.get(name, False)
+            action_cursor = menu.addAction("关闭游标" if cursor_enabled else "开启游标")
+            action = menu.exec_(plot_widget.mapToGlobal(pos)) if QT_VERSION == 5 else menu.exec(plot_widget.mapToGlobal(pos))
+            if action == action_cursor:
+                enabled = not self.cursor_states.get(name, False)
+                self.cursor_states[name] = enabled
+                if enabled:
+                    update_cursor(None)
+                else:
+                    set_cursor_visible(False)
+
+        plot_widget.setContextMenuPolicy(Qt.CustomContextMenu)
+        plot_widget.customContextMenuRequested.connect(show_plot_menu)
         
         # 点击激活窗口机制
         def mouseClicked(evt):
             self.set_active_dock(name)
+            if self.cursor_states.get(name, False) and evt.button() == Qt.LeftButton and plot_widget.sceneBoundingRect().contains(evt.scenePos()):
+                mouse_point = plot_widget.plotItem.vb.mapSceneToView(evt.scenePos())
+                update_cursor(float(mouse_point.x()))
+                evt.accept()
         plot_widget.scene().sigMouseClicked.connect(mouseClicked)
         
         dock.setWidget(plot_widget)
         self.docks[name] = dock
         self.plot_widgets[name] = plot_widget
-        self.crosshairs[name] = (vLine, label)
+        self.crosshairs[name] = (vLine, time_label, time_bg)
+        self.cursor_states[name] = False
         if name not in self.dock_order:
             self.dock_order.append(name)
         self.save_ui_settings()
@@ -2224,6 +2412,12 @@ class ProfessionalVisualizer(QMainWindow):
     def on_dock_closed(self, name):
         if name not in self.docks:
             return
+        cursor_items = self.crosshairs.get(name, ())
+        for item in cursor_items[1:]:
+            try:
+                self.plot_widgets[name].scene().removeItem(item)
+            except Exception:
+                pass
         # 清理对应的曲线
         for tag in list(self.curves.keys()):
             if name in self.curves[tag]:
@@ -2231,6 +2425,8 @@ class ProfessionalVisualizer(QMainWindow):
         del self.plot_widgets[name]
         del self.docks[name]
         del self.crosshairs[name]
+        self.cursor_states.pop(name, None)
+        self.cursor_updaters.pop(name, None)
         self.dock_order = [dock_name for dock_name in self.dock_order if dock_name != name]
         
         if hasattr(self, 'active_dock_name') and self.active_dock_name == name:
@@ -2396,11 +2592,31 @@ class ProfessionalVisualizer(QMainWindow):
         t = pb_data.sim_time
         self.process_packet_count += 1
         self.process_var_count_total += len(pb_data.sim_vars)
-        
-        # 环形写入
-        idx = self.current_idx % self.max_points
-        self.times[idx] = t
-        
+
+        # 同一仿真时刻可能会被分成多个 UDP 包发送；这些包必须合并到同一帧。
+        # 否则看板去重时只保留第一包，后续包中的变量曲线会在终点/分包点断线。
+        merge_tolerance = 1e-9
+        if self.current_idx > 0:
+            prev_idx = (self.current_idx - 1) % self.max_points
+            same_frame = abs(float(self.times[prev_idx]) - float(t)) <= merge_tolerance
+        else:
+            same_frame = False
+
+        if same_frame:
+            idx = prev_idx
+            is_new_frame = False
+        else:
+            idx = self.current_idx % self.max_points
+            self.times[idx] = t
+            is_new_frame = True
+            if self.current_idx > 0:
+                source_idx = (self.current_idx - 1) % self.max_points
+                for values in self.data_store.values():
+                    values[idx] = values[source_idx]
+            else:
+                for values in self.data_store.values():
+                    values[idx] = np.nan
+
         var_map = {}
         for v in pb_data.sim_vars:
             try:
@@ -2431,6 +2647,8 @@ class ProfessionalVisualizer(QMainWindow):
             except: pass
 
         for name in var_map:
+            if str(name).startswith("__FMUSOLVER_"):
+                continue
             if name not in self.data_store:
                 self.register_runtime_variable(name)
 
@@ -2439,8 +2657,10 @@ class ProfessionalVisualizer(QMainWindow):
                 val = var_map[name]
                 self.data_store[name][idx] = val
                 self.latest_values[name] = val
-                
-        self.current_idx += 1
+
+        if is_new_frame:
+            self.current_idx += 1
+        self.data_revision += 1
 
     def update_ui(self):
         ui_start = time.perf_counter()
@@ -2448,10 +2668,11 @@ class ProfessionalVisualizer(QMainWindow):
         if self.current_idx == 0:
             self.write_perf_log(0.0)
             return
-        if self.current_idx == self.last_ui_idx:
+        if self.data_revision == self.last_ui_revision:
             self.write_perf_log(0.0)
             return
         self.last_ui_idx = self.current_idx
+        self.last_ui_revision = self.data_revision
         self.ui_tick_count += 1
         
         # 1. 极致性能优化：仅更新数值发生变化的表格单元格 (Dirty Check)
@@ -2549,7 +2770,7 @@ class ProfessionalVisualizer(QMainWindow):
                     continue
 
                 update_key = (dock_name, tag)
-                if self.chk_autoscroll.isChecked() and not self.accumulate_enabled and self.last_curve_update_idx.get(update_key) == self.current_idx:
+                if self.chk_autoscroll.isChecked() and not self.accumulate_enabled and self.last_curve_update_idx.get(update_key) == self.data_revision:
                     continue
 
                 y_full = y_store.get(tag)
@@ -2569,9 +2790,17 @@ class ProfessionalVisualizer(QMainWindow):
                         continue
                     self.curves[tag][dock_name].setData(x=t_plot_render, y=y_plot, connect='finite')
                     rendered_y_arrays.append(y_plot)
-                self.last_curve_update_idx[update_key] = self.current_idx
+                self.last_curve_update_idx[update_key] = self.data_revision
 
             self.update_dock_y_range(dock_name, vb, rendered_y_arrays)
+            if self.cursor_states.get(dock_name, False):
+                updater = self.cursor_updaters.get(dock_name)
+                if updater:
+                    try:
+                        cursor_line = self.crosshairs.get(dock_name, (None, None))[0]
+                        updater(float(cursor_line.value()) if cursor_line is not None else None)
+                    except Exception:
+                        pass
             if rendered_y_arrays:
                 updated_docks += 1
                 self.ui_curve_updates += len(rendered_y_arrays)

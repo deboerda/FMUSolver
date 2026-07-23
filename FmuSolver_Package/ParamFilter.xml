@@ -21,7 +21,7 @@
 <Param parId="K0027" code="K0027" desc="滚动角速度预估"/>
 <Param parId="K0028" code="K0028" desc="俯仰角速度预估"/>
 <Param parId="K0029" code="K0029" desc="偏航角速度预估"/>
-<Param parId="K0182" code="K0182" desc="左帆板Alpha转角信息"/>
+<Param parId="N1842" code="N1842" desc="左帆板Alpha转角信息"/>
 <Param parId="K0191" code="K0191" desc="右帆板Alpha转角信息"/>
 <Param parId="K0180" code="K0180" desc="左帆板Beta转角信息"/>
 <Param parId="K0189" code="K0189" desc="右帆板Beta转角信息"/>
@@ -100,4 +100,38 @@
 <Param desc="北京时.时" parId="A02C" code="A02C" subsys="自定义"/>
 <Param desc="北京时.分" parId="A02D" code="A02D" subsys="自定义"/>
 <Param desc="北京时.秒" parId="A02E" code="A02E" subsys="自定义"/>
+
+<Param parId="V0469" code="V0469" desc="气闸舱摄像机100v供电通断状态"/>
+<Param parId="V0601" code="V0601" desc="气闸舱摄像机100v供电通断状态"/>
+<Param parId="V0656" code="V0656" desc="气闸舱照明通断状态"/>
+<Param parId="V1065" code="V1065" desc="气闸舱照明通断状态"/>
+<Param parId="V1117" code="V1117" desc="气闸舱舱内云台摄像机通断状态"/>
+<Param parId="V0727" code="V0727" desc="气闸舱舱内云台摄像机通断状态"/>
+<Param parId="V1285" code="V1285" desc="气闸舱载荷转移机构控制器主机100v通断状态"/>
+<Param parId="V1198" code="V1198" desc="气闸舱载荷转移机构控制器主机100v通断状态"/>
+<Param parId="V0914" code="V0914" desc="舱外全景摄像机a通断状态"/>
+<Param parId="V1108" code="V1108" desc="舱外全景摄像机a通断状态"/>
+<Param parId="V0227" code="V0227" desc="舱外定向摄像机b100v通断状态"/>
+<Param parId="V0548" code="V0548" desc="舱外定向摄像机b100v通断状态"/>
+<Param parId="V0820" code="V0820" desc="舱外泛光灯c通断状态"/>
+<Param parId="V0667" code="V0667" desc="舱外泛光灯c通断状态"/>
+<Param parId="V1452" code="V1452" desc="气闸区复压组件通断状态"/>
+<Param parId="V1240" code="V1240" desc="气闸区复压组件通断状态"/>
+<Param parId="V0934" code="V0934" desc="梦天舱设备散热风机b通断状态"/>
+<Param parId="V1128" code="V1128" desc="梦天舱设备散热风机b通断状态"/>
+
+<Param parId="V1453" code="V1453" desc="气闸区泄压组件通断状态"/>
+<Param parId="V1242" code="V1242" desc="气闸区泄压组件通断状态"/>
+<Param parId="V1459" code="V1459" desc="外舱门控制器主份100v通断状态"/>
+<Param parId="V1249" code="V1249" desc="外舱门控制器主份100v通断状态"/>
+<Param parId="J0168" code="J0168" desc="气闸舱外舱门锁紧电机1转动方向"/>
+<Param parId="J0169" code="J0169" desc="气闸舱外舱门锁紧电机2转动方向"/>
+<Param parId="J0170" code="J0170" desc="气闸舱外舱门滑移电机转动方向"/>
+<Param parId="V0658" code="V0658" desc="座舱风扇a通断状态"/>
+<Param parId="V1066" code="V1066" desc="座舱风扇a通断状态"/>
+<Param parId="V0473" code="V0473" desc="座舱风扇b通断状态"/>
+<Param parId="V0603" code="V0603" desc="座舱风扇b通断状态"/>
+<Param parId="V1462" code="V1462" desc="一拖二快速检漏仪b通断状态"/>
+<Param parId="V1252" code="V1252" desc="一拖二快速检漏仪b通断状态"/>
+
  </Root>

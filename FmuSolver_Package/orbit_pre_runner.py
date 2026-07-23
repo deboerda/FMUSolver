@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("fmu_path")
     parser.add_argument("--params",      default="{}")
     parser.add_argument("--stop_time",   type=float, default=86400.0)
-    parser.add_argument("--step_size",   type=float, default=10.0)
+    parser.add_argument("--step_size",   type=float, default=1.0)
     parser.add_argument("--sample_freq", type=float, default=0.1)
     parser.add_argument("--sim_rate",    type=float, default=0.0)
     parser.add_argument("--seed_path",   default=None, help="Optional external Orbit_Pre.txt to use as seed")
@@ -160,11 +160,8 @@ if __name__ == "__main__":
     user_params     = json.loads(args.params)
     output_interval = (1.0 / args.sample_freq) if args.sample_freq > 0 else args.step_size
 
-    # FMU requires step size = multiple of 10s (matches internal integration interval)
-    fmu_step = args.step_size
-    if fmu_step < 10.0 or abs(round(fmu_step / 10.0) * 10.0 - fmu_step) > 1e-6:
-        fmu_step = max(10.0, round(fmu_step / 10.0) * 10.0)
-        log(f"[!] Step snapped to {fmu_step}s (FMU requires multiples of 10s)")
+    # Match MWorks/Sysplorer simulation settings: use the configured fixed output step directly.
+    fmu_step = max(1e-9, float(args.step_size))
 
     stop_time = max(fmu_step, round(args.stop_time / fmu_step) * fmu_step)
 
@@ -324,18 +321,46 @@ if __name__ == "__main__":
         var_map = {v.name: v for v in model_desc.modelVariables}
         params_to_set = dict(user_params)
         params_to_set['Year'] = float(eff_year)   # Force valid year
+        # 新版FMU内部按 endtime/sampletime 写表头行数(endtime/5+1)，
+        # 必须与实际仿真时长一致，否则表头行数与实际数据行数不符
+        params_to_set.setdefault('endtime', float(stop_time))
+        params_to_set.setdefault('sampletime', float(output_interval))
 
+        # 关键：必须按变量类型分发 set 调用。
+        # 新版MWORKS(26.1.2+)FMU对 Integer 变量(Year/Mon/Day/Hour/Min)调 fmi2SetReal
+        # 会报错并把实例置为错误状态，之后连正确类型的调用都会报
+        # "invalid execution timing"（enterInitializationMode 可清除该状态）。
+        def _set_var(k, val):
+            v = var_map[k]
+            t = getattr(v, 'type', 'Real')
+            if t == 'Integer':
+                fmu_inst.setInteger([v.valueReference], [int(round(float(val)))])
+            elif t == 'Boolean':
+                fmu_inst.setBoolean([v.valueReference], [bool(val)])
+            else:
+                fmu_inst.setReal([v.valueReference], [float(val)])
+
+        deferred_params = {}
         for k, val in params_to_set.items():
             if k in var_map:
                 try:
-                    fmu_inst.setReal([var_map[k].valueReference], [float(val)])
+                    _set_var(k, val)
                     log(f"[*] Set {k} = {val}")
-                except Exception as e:
-                    log(f"[!] Cannot set {k}: {e}")
+                except Exception:
+                    deferred_params[k] = val
 
         # ─── Initialize ───
         log("[*] enterInitializationMode...")
         fmu_inst.enterInitializationMode()
+        if deferred_params:
+            # 兜底：个别FMU只在 InitializationMode 内接受设参
+            log(f"[*] Retrying {len(deferred_params)} params inside InitializationMode...")
+            for k, val in deferred_params.items():
+                try:
+                    _set_var(k, val)
+                    log(f"[*] Set {k} = {val} (init mode)")
+                except Exception as e:
+                    log(f"[!] Cannot set {k} in either phase: {e}")
         log("[*] exitInitializationMode (This may take a while)...")
         fmu_inst.exitInitializationMode()
         log("[OK] Initialization complete.")
@@ -416,15 +441,32 @@ if __name__ == "__main__":
 
         os.chdir(app_dir)
         orbit_txt_active = os.path.join(bin_dir, "Orbit_Pre.txt")
+        canonical_orbit_txt = os.path.join(app_dir, "Orbit_Pre.txt")
+        exported_orbit_txt = None
 
         # Keep the FMU-native Orbit_Pre.txt in the active runtime workspace.
         if os.path.exists(orbit_txt_active):
-            log(f"[OK] Generated Orbit_Pre.txt ready in active workspace.")
+            # 防止把 Worker 自己写的种子文件(2行×7列)误当成FMU结果导出
+            with open(orbit_txt_active) as fchk:
+                header_1 = fchk.readline()
+                header_2 = fchk.readline()
+                first_data = fchk.readline()
+            n_cols = len(first_data.split()) if first_data else 0
+            if header_1 and header_2 and first_data and n_cols >= 22:
+                log(f"[OK] Generated Orbit_Pre.txt ready in active workspace ({sample_count} sampled rows, {n_cols} cols).")
+                shutil.copy2(orbit_txt_active, canonical_orbit_txt)
+                exported_orbit_txt = canonical_orbit_txt
+                log(f"[OK] Orbit_Pre.txt copied to package directory: {canonical_orbit_txt}")
+            else:
+                log(f"[!] Warning: Orbit_Pre.txt in {bin_dir} is only the seed file "
+                    f"({n_cols} cols) — FMU did not write results. NOT exported.")
         else:
             log(f"[!] Warning: Orbit_Pre.txt was not generated by the FMU in {bin_dir}.")
 
         log(f"[SUCCESS] {sample_count} rows exported.")
-        if os.path.exists(orbit_txt_active):
+        if exported_orbit_txt and os.path.exists(exported_orbit_txt):
+            log(f"[EXPORT_READY] {exported_orbit_txt}")
+        elif os.path.exists(orbit_txt_active):
             log(f"[EXPORT_READY] {orbit_txt_active}")
 
     except Exception as e:

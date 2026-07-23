@@ -1,0 +1,709 @@
+[
+  {
+    "name": "Year",
+    "source": "Year",
+    "type": "Real",
+    "desc": "时间初值，年",
+    "sync": true
+  },
+  {
+    "name": "Mon",
+    "source": "Mon",
+    "type": "Real",
+    "desc": "时间初值，月",
+    "sync": true
+  },
+  {
+    "name": "Day",
+    "source": "Day",
+    "type": "Real",
+    "desc": "时间初值，日",
+    "sync": true
+  },
+  {
+    "name": "Hour",
+    "source": "Hour",
+    "type": "Real",
+    "desc": "时间初值，时",
+    "sync": true
+  },
+  {
+    "name": "Min",
+    "source": "Min",
+    "type": "Real",
+    "desc": "时间初值，分",
+    "sync": true
+  },
+  {
+    "name": "Sec",
+    "source": "Sec",
+    "type": "Real",
+    "desc": "时间初值，秒",
+    "sync": true
+  },
+  {
+    "name": "MTSatPos[1]",
+    "source": "MTSatPos[1]",
+    "type": "Real",
+    "desc": "J2000位置矢量km",
+    "sync": true
+  },
+  {
+    "name": "MTSatPos[2]",
+    "source": "MTSatPos[2]",
+    "type": "Real",
+    "desc": "J2000位置矢量km",
+    "sync": true
+  },
+  {
+    "name": "MTSatPos[3]",
+    "source": "MTSatPos[3]",
+    "type": "Real",
+    "desc": "J2000位置矢量km",
+    "sync": true
+  },
+  {
+    "name": "MTSatVel[1]",
+    "source": "MTSatVel[1]",
+    "type": "Real",
+    "desc": "J2000速度矢量km/s",
+    "sync": true
+  },
+  {
+    "name": "MTSatVel[2]",
+    "source": "MTSatVel[2]",
+    "type": "Real",
+    "desc": "J2000速度矢量km/s",
+    "sync": true
+  },
+  {
+    "name": "MTSatVel[3]",
+    "source": "MTSatVel[3]",
+    "type": "Real",
+    "desc": "J2000速度矢量km/s",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[1]",
+    "source": "SixRoot_MT[1]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[2]",
+    "source": "SixRoot_MT[2]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[3]",
+    "source": "SixRoot_MT[3]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[4]",
+    "source": "SixRoot_MT[4]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[5]",
+    "source": "SixRoot_MT[5]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "SixRoot_MT[6]",
+    "source": "SixRoot_MT[6]",
+    "type": "Real",
+    "desc": "轨道六根数,km,deg,a e i Ra w  f",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[1]",
+    "source": "DisChargeAh_MT[1]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[2]",
+    "source": "DisChargeAh_MT[2]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[3]",
+    "source": "DisChargeAh_MT[3]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[4]",
+    "source": "DisChargeAh_MT[4]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[5]",
+    "source": "DisChargeAh_MT[5]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[6]",
+    "source": "DisChargeAh_MT[6]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[7]",
+    "source": "DisChargeAh_MT[7]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "DisChargeAh_MT[8]",
+    "source": "DisChargeAh_MT[8]",
+    "type": "Real",
+    "desc": "MTC电池组aAh容量，初值设置",
+    "sync": true
+  },
+  {
+    "name": "BusFilter_MT_V[1]",
+    "source": "BusFilter_MT_V[1]",
+    "type": "Real",
+    "desc": "母线滤波器A电压",
+    "sync": true
+  },
+  {
+    "name": "BusFilter_MT_V[2]",
+    "source": "BusFilter_MT_V[2]",
+    "type": "Real",
+    "desc": "母线滤波器B电压",
+    "sync": true
+  },
+  {
+    "name": "BusFilter_MT_A[1]",
+    "source": "BusFilter_MT_A[1]",
+    "type": "Real",
+    "desc": "母线滤波器A输出电流",
+    "sync": true
+  },
+  {
+    "name": "BusFilter_MT_A[2]",
+    "source": "BusFilter_MT_A[2]",
+    "type": "Real",
+    "desc": "母线滤波器B输出电流",
+    "sync": true
+  },
+  {
+    "name": "ISolar[1]",
+    "source": "ISolar[1]",
+    "type": "Real",
+    "desc": "A/B通道发电总电流",
+    "sync": true
+  },
+  {
+    "name": "ISolar[2]",
+    "source": "ISolar[2]",
+    "type": "Real",
+    "desc": "A/B通道发电总电流",
+    "sync": true
+  },
+  {
+    "name": "InSunArea",
+    "source": "InSunArea",
+    "type": "Real",
+    "desc": "阴影区标志,大于10为阳照区",
+    "sync": true
+  },
+  {
+    "name": "Ah_MT_Pre[1]",
+    "source": "Ah_MT_Pre[1]",
+    "type": "Real",
+    "desc": "预示的A/B通道Ah容量（两圈）",
+    "sync": true
+  },
+  {
+    "name": "Ah_MT_Pre[2]",
+    "source": "Ah_MT_Pre[2]",
+    "type": "Real",
+    "desc": "预示的A/B通道Ah容量（两圈）",
+    "sync": true
+  },
+  {
+    "name": "enviroment.ShelterRatio[1]",
+    "source": "enviroment.ShelterRatio[1]",
+    "type": "Real",
+    "desc": "大阳翼A遮挡率",
+    "sync": true
+  },
+  {
+    "name": "enviroment.ShelterRatio[2]",
+    "source": "enviroment.ShelterRatio[2]",
+    "type": "Real",
+    "desc": "太阳翼B遮挡率",
+    "sync": true
+  },
+  {
+    "name": "enviroment.SolarAngle[1]",
+    "source": "enviroment.SolarAngle[1]",
+    "type": "Real",
+    "desc": "太阳翼A太阳入射角",
+    "sync": true
+  },
+  {
+    "name": "enviroment.SolarAngle[2]",
+    "source": "enviroment.SolarAngle[2]",
+    "type": "Real",
+    "desc": "太阳翼B太阳入射角",
+    "sync": true
+  },
+  {
+    "name": "enviroment.solar",
+    "source": "enviroment.solar",
+    "type": "Real",
+    "desc": "太阳光强",
+    "sync": true
+  },
+  {
+    "name": "Sys_ISolar_A",
+    "source": "Sys_ISolar_A",
+    "type": "Real",
+    "desc": "太阳电池翼A发电电流【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_ISolar_A_TM",
+    "source": "Sys_ISolar_A_TM",
+    "type": "Real",
+    "desc": "太阳电池翼A发电电流【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ubus_A",
+    "source": "Sys_Ubus_A",
+    "type": "Real",
+    "desc": "母线滤波器A电压【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ubus_A_TM",
+    "source": "Sys_Ubus_A_TM",
+    "type": "Real",
+    "desc": "母线滤波器A电压【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ibus_A",
+    "source": "Sys_Ibus_A",
+    "type": "Real",
+    "desc": "母线滤波器A输出电流【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ibus_A_TM",
+    "source": "Sys_Ibus_A_TM",
+    "type": "Real",
+    "desc": "母线滤波器A输出电流【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_DisChargeAh_A",
+    "source": "Sys_DisChargeAh_A",
+    "type": "Real",
+    "desc": "A通道蓄电池组容量【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_DisChargeAh_A_TM",
+    "source": "Sys_DisChargeAh_A_TM",
+    "type": "Real",
+    "desc": "A通道蓄电池组容量【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "DOD_A",
+    "source": "DOD_A",
+    "type": "Real",
+    "desc": "A通道蓄电池组放电深度【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_ISolar_B",
+    "source": "Sys_ISolar_B",
+    "type": "Real",
+    "desc": "太阳电池翼B发电总电流【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_ISolar_B_TM",
+    "source": "Sys_ISolar_B_TM",
+    "type": "Real",
+    "desc": "太阳电池翼B发电总电流【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ubus_B",
+    "source": "Sys_Ubus_B",
+    "type": "Real",
+    "desc": "母线滤波器B电压【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ubus_B_TM",
+    "source": "Sys_Ubus_B_TM",
+    "type": "Real",
+    "desc": "母线滤波器B电压【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ibus_B",
+    "source": "Sys_Ibus_B",
+    "type": "Real",
+    "desc": "母线滤波器B输出电流【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_Ibus_B_TM",
+    "source": "Sys_Ibus_B_TM",
+    "type": "Real",
+    "desc": "母线滤波器B输出电流【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_DisChargeAh_B",
+    "source": "Sys_DisChargeAh_B",
+    "type": "Real",
+    "desc": "B通道电池组容量【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "Sys_DisChargeAh_B_TM",
+    "source": "Sys_DisChargeAh_B_TM",
+    "type": "Real",
+    "desc": "B通道电池组容量【遥测值】",
+    "sync": true
+  },
+  {
+    "name": "DOD_B",
+    "source": "DOD_B",
+    "type": "Real",
+    "desc": "B通道蓄电池组放电深度【仿真值】",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[1]",
+    "source": "enviroment.uTCG.LCLG[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[2]",
+    "source": "enviroment.uTCG.LCLG[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[3]",
+    "source": "enviroment.uTCG.LCLG[3]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[4]",
+    "source": "enviroment.uTCG.LCLG4]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[5]",
+    "source": "enviroment.uTCG.LCLG[5]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.LCLG[6]",
+    "source": "enviroment.uTCG.LCLG[6]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[1]",
+    "source": "enviroment.uTCG.UTC[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[2]",
+    "source": "enviroment.uTCG.UTC[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[3]",
+    "source": "enviroment.uTCG.UTC[3]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[4]",
+    "source": "enviroment.uTCG.UTC[4]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[5]",
+    "source": "enviroment.uTCG.UTC[5]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.uTCG.UTC[6]",
+    "source": "enviroment.uTCG.UTC[6]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.alpha_x",
+    "source": "enviroment.panelAngle.alpha_x",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.beta_y",
+    "source": "enviroment.panelAngle.beta_y",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.AlphaAngle",
+    "source": "enviroment.panelAngle.AlphaAngle",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.BetaAngle[1]",
+    "source": "enviroment.panelAngle.BetaAngle[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.BetaAngle[2]",
+    "source": "enviroment.panelAngle.BetaAngle[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Alpha_in.y",
+    "source": "enviroment.Alpha_in.y",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Beta_in[1].y",
+    "source": "enviroment.Beta_in[1].y",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Beta_in[2].y",
+    "source": "enviroment.Beta_in[2].y",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.phi",
+    "source": "enviroment.phi",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.theta",
+    "source": "enviroment.theta",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.psi",
+    "source": "enviroment.psi",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Alpha",
+    "source": "enviroment.Alpha",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Beta_L",
+    "source": "enviroment.Beta_L",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.Beta_R",
+    "source": "enviroment.Beta_R",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "Shelt_Alpha[1]",
+    "source": "Shelt_Alpha[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "Shelt_Alpha[2]",
+    "source": "Shelt_Alpha[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "Shelt_Beta[1]",
+    "source": "Shelt_Beta[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "Shelt_Beta[2]",
+    "source": "Shelt_Beta[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.Shelt.Alpha[1]",
+    "source": "enviroment.panelAngle.Shelt.Alpha[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.Shelt.Alpha[2]",
+    "source": "enviroment.panelAngle.Shelt.Alpha[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.Shelt.Beta[1]",
+    "source": "enviroment.panelAngle.Shelt.Beta[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.panelAngle.Shelt.Beta[2]",
+    "source": "enviroment.panelAngle.Shelt.Beta[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.R",
+    "source": "enviroment.hPOP.R",
+    "type": "Real",
+    "desc": "地心向径",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.fai",
+    "source": "enviroment.hPOP.fai",
+    "type": "Real",
+    "desc": "地心纬度",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.lamda",
+    "source": "enviroment.hPOP.lamda",
+    "type": "Real",
+    "desc": "地心经度",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.r_ECRF[1]",
+    "source": "enviroment.hPOP.r_ECRF[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.r_ECRF[2]",
+    "source": "enviroment.hPOP.r_ECRF[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.r_ECRF[3]",
+    "source": "enviroment.hPOP.r_ECRF[3]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.v_ECRF[1]",
+    "source": "enviroment.hPOP.v_ECRF[1]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.v_ECRF[2]",
+    "source": "enviroment.hPOP.v_ECRF[2]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  },
+  {
+    "name": "enviroment.hPOP.v_ECRF[3]",
+    "source": "enviroment.hPOP.v_ECRF[3]",
+    "type": "Real",
+    "desc": "手动添加",
+    "sync": true
+  }
+]
