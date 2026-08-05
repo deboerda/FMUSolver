@@ -359,6 +359,8 @@ class ProfessionalVisualizer(QMainWindow):
         self.last_ui_idx = -1
         self.data_revision = 0
         self.last_ui_revision = -1
+        self.last_end_marker_time = None
+        self.force_curve_update_revision = -1
         self.max_dock_updates_per_tick = 2
         self.rx_packet_count = 0
         self.rx_error_count = 0
@@ -1751,6 +1753,13 @@ class ProfessionalVisualizer(QMainWindow):
         self.trim_accumulate_buffers()
 
     def append_trend_sample(self, t, var_map):
+        if self.trend_times and abs(float(self.trend_times[-1]) - float(t)) <= 1e-9:
+            for tag, value in var_map.items():
+                if tag in self.trend_store and self.trend_store[tag]:
+                    self.trend_store[tag][-1] = float(value)
+                self.trend_bucket_last_values[tag] = value
+            return
+
         if self.trend_bucket_start is None:
             self.trend_bucket_start = t
             self.trend_bucket_end = t
@@ -1771,6 +1780,35 @@ class ProfessionalVisualizer(QMainWindow):
                 value = var_map[tag]
                 self.trend_bucket_values.setdefault(tag, []).append(value)
                 self.trend_bucket_last_values[tag] = value
+
+    def append_trend_boundary(self, t):
+        self.flush_trend_bucket()
+        if self.trend_times and abs(float(self.trend_times[-1]) - float(t)) <= 1e-9:
+            return
+        active_tags = self.get_plotted_tags() or set(self.ordered_tags[:min(len(self.ordered_tags), 80)])
+        if not active_tags:
+            return
+        self.trend_times.append(t)
+        target_len = len(self.trend_times)
+        for tag in active_tags:
+            self.trend_store.setdefault(tag, [])
+            if tag in self.trend_bucket_last_values:
+                value = self.trend_bucket_last_values[tag]
+            elif tag in self.latest_values:
+                value = self.latest_values[tag]
+            elif self.trend_store[tag]:
+                value = self.trend_store[tag][-1]
+            else:
+                value = np.nan
+            self.trend_store[tag].append(float(value) if np.isfinite(value) else np.nan)
+        for tag in list(self.trend_store.keys()):
+            if len(self.trend_store[tag]) < target_len:
+                fill_value = self.trend_store[tag][-1] if self.trend_store[tag] else np.nan
+                self.trend_store[tag].extend([fill_value] * (target_len - len(self.trend_store[tag])))
+        self.trend_bucket_start = None
+        self.trend_bucket_end = None
+        self.trend_bucket_values = {}
+        self.trim_accumulate_buffers()
 
     def sanitize_active_series(self, t_data, y_data):
         t_arr = np.asarray(t_data, dtype=float)
@@ -2250,7 +2288,9 @@ class ProfessionalVisualizer(QMainWindow):
 
             cursor_time_mode = self.cursor_time_combo.currentIndex() if hasattr(self, 'cursor_time_combo') else 0
             if cursor_time_mode == 1:
-                elapsed_sec = max(0.0, cursor_x - float(self.base_sim_time or 0.0))
+                # 实际计时显示仿真从 0s 开始后的经过时间；不能减第一帧时间。
+                # 第一帧通常是 step=0.02s，若减掉它，20s 终点会误显示为 19.98s。
+                elapsed_sec = max(0.0, cursor_x)
                 hh = int(elapsed_sec // 3600)
                 mm = int((elapsed_sec % 3600) // 60)
                 ss = elapsed_sec % 60
@@ -2528,7 +2568,9 @@ class ProfessionalVisualizer(QMainWindow):
             f"rx={self.rx_packet_count} rx_err={self.rx_error_count} rx_drop={self.rx_drop_count} processed={self.process_packet_count} "
             f"queue={pending}/{self.packet_queue.maxsize} avg_rx_vars={avg_rx_vars:.1f} avg_proc_vars={avg_proc_vars:.1f} "
             f"ui_ticks={self.ui_tick_count} curve_updates={self.ui_curve_updates} skipped_docks={self.ui_skipped_docks} "
-            f"last_ui_ms={ui_elapsed_ms:.2f} docks={len(self.plot_widgets)} vars={len(self.data_store)} idx={self.current_idx}\n"
+            f"last_ui_ms={ui_elapsed_ms:.2f} docks={len(self.plot_widgets)} vars={len(self.data_store)} idx={self.current_idx} "
+            f"rev={self.data_revision} force_rev={self.force_curve_update_revision} latest_t={(float(self.times[(self.current_idx - 1) % self.max_points]) if self.current_idx > 0 else 0.0):.9f} "
+            f"trend_latest={(float(self.trend_times[-1]) if self.trend_times else -1.0):.9f}\n"
         )
         try:
             with open(self.perf_log_file, "a", encoding="utf-8") as f:
@@ -2633,28 +2675,41 @@ class ProfessionalVisualizer(QMainWindow):
                     var_map[v.name] = float(v.double_value)
             except Exception:
                 continue
+
+        has_end_marker = "__FMUSOLVER_SIM_END_TIME__" in var_map
+        public_var_map = {name: val for name, val in var_map.items() if not str(name).startswith("__FMUSOLVER_")}
+        if has_end_marker and self.last_end_marker_time != t:
+            self.last_end_marker_time = t
+            self.force_curve_update_revision = self.data_revision + 1
+            try:
+                with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                    f.write(f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] [SNAPSHOT][VIZ] final time marker received: sim_time={float(t):.9f}s vars={len(pb_data.sim_vars)} idx={self.current_idx}\n")
+            except Exception:
+                pass
+
         if self.accumulate_enabled:
-            self.append_trend_sample(t, var_map)
+            if has_end_marker and not public_var_map:
+                self.append_trend_boundary(t)
+            else:
+                self.append_trend_sample(t, public_var_map)
         
         # 解析绝对时间基准
-        if self.base_datetime is None and 'Year' in var_map:
+        if self.base_datetime is None and 'Year' in public_var_map:
             try:
-                y, m, d = int(var_map['Year']), int(var_map['Mon']), int(var_map['Day'])
-                h, minute, s = int(var_map['Hour']), int(var_map['Min']), int(var_map['Sec'])
+                y, m, d = int(public_var_map['Year']), int(public_var_map['Mon']), int(public_var_map['Day'])
+                h, minute, s = int(public_var_map['Hour']), int(public_var_map['Min']), int(public_var_map['Sec'])
                 if y > 1900:
                     self.base_sim_time = t
                     self.base_datetime = datetime.datetime(y, m, d, h, minute, s)
             except: pass
 
-        for name in var_map:
-            if str(name).startswith("__FMUSOLVER_"):
-                continue
+        for name in public_var_map:
             if name not in self.data_store:
                 self.register_runtime_variable(name)
 
         for name in self.data_store:
-            if name in var_map:
-                val = var_map[name]
+            if name in public_var_map:
+                val = public_var_map[name]
                 self.data_store[name][idx] = val
                 self.latest_values[name] = val
 
@@ -2728,7 +2783,8 @@ class ProfessionalVisualizer(QMainWindow):
                 self.ui_skipped_docks += 1
                 continue
 
-            if self.accumulate_enabled and (self.current_idx % self.accumulate_update_stride) != 0:
+            force_curve_update = self.data_revision == self.force_curve_update_revision
+            if self.accumulate_enabled and not force_curve_update and (self.current_idx % self.accumulate_update_stride) != 0:
                 self.ui_skipped_docks += 1
                 continue
             

@@ -337,20 +337,27 @@ DEFAULT_INJECTION_BLACKLIST = set()
 def load_injection_blacklist(root_dir):
     path = os.path.join(root_dir, "fmu_injection_blacklist.json")
     blacklist = set(DEFAULT_INJECTION_BLACKLIST)
+    allowlist = set()
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         if isinstance(data, dict):
             items = data.get("variables", data)
             if isinstance(items, dict):
-                blacklist.update(str(k) for k in items.keys())
-                return path, blacklist
+                for k, meta in items.items():
+                    name = str(k)
+                    if isinstance(meta, dict) and meta.get("blocked", True) is False:
+                        allowlist.add(name)
+                        blacklist.discard(name)
+                    else:
+                        blacklist.add(name)
+                return path, blacklist, allowlist
             if isinstance(items, list):
                 blacklist.update(str(k) for k in items)
-                return path, blacklist
+                return path, blacklist, allowlist
     except Exception:
         pass
-    return path, blacklist
+    return path, blacklist, allowlist
 
 def append_injection_blacklist(path, variable, reason):
     variable = str(variable or '').strip()
@@ -368,7 +375,11 @@ def append_injection_blacklist(path, variable, reason):
                     data["variables"] = {str(k): v for k, v in old.items()}
     except Exception:
         pass
+    existing = data.get("variables", {}).get(variable)
+    if isinstance(existing, dict) and existing.get("blocked", True) is False:
+        return
     data.setdefault("variables", {})[variable] = {
+        "blocked": True,
         "reason": reason,
         "time": time.strftime('%Y-%m-%d %H:%M:%S'),
     }
@@ -693,9 +704,8 @@ class FMUPlayer:
         dll_path = os.path.abspath(os.path.join(self.processor.temp_dir, "binaries", host_arch))
         root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
         canonical_orbit_txt = os.path.join(root_dir, "Orbit_Pre.txt")
-        blacklist_path, injection_blacklist = load_injection_blacklist(root_dir)
-        if injection_blacklist:
-            print(f"[*] Injection blacklist loaded: {len(injection_blacklist)} vars from {blacklist_path}", flush=True)
+        blacklist_path, injection_blacklist, injection_allowlist = load_injection_blacklist(root_dir)
+        print(f"[*] Injection blacklist loaded: blocked={len(injection_blacklist)} allowed={len(injection_allowlist)} from {blacklist_path}", flush=True)
         perf_log_path = os.path.join(root_dir, "fmu_worker_perf.log")
         perf_logger = AsyncRotatingFileLogger(
             perf_log_path,
@@ -1040,11 +1050,14 @@ class FMUPlayer:
                         if "yc_inject_freq" in cmd:
                             limited_inject_freq = max(0.1, float(cmd["yc_inject_freq"]))
                             limited_inject_interval = 1.0 / limited_inject_freq
+                        if cmd.get("__reload_injection_blacklist"):
+                            blacklist_path, injection_blacklist, injection_allowlist = load_injection_blacklist(root_dir)
+                            print(f"[*] Injection blacklist reloaded: blocked={len(injection_blacklist)} allowed={len(injection_allowlist)} from {blacklist_path}", flush=True)
                         injected_count = 0
                         missing_injection = []
                         injected_echo = {}
                         for k, v in cmd.items():
-                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now"):
+                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now", "__reload_injection_blacklist"):
                                 continue
                             is_rate_limited_external = str(k).startswith(("PE.", "YC."))
                             if str(k).startswith("YC."):
@@ -1156,6 +1169,8 @@ class FMUPlayer:
                         except Exception: pass
                 if stop_requested:
                     run_ok = True
+                    if sim_time != float('inf') and sim_time - current_time < 0.5:
+                        current_time = sim_time
                     print("[*] Simulation exit requested.", flush=True)
                     break
                 self.comm.last_received_data = None
@@ -1238,7 +1253,7 @@ class FMUPlayer:
             else:
                 run_ok = True
 
-            if run_ok and sim_time != float('inf') and not stop_requested:
+            if run_ok and sim_time != float('inf'):
                 final_out = read_output_variables()
                 now_for_yc = time.perf_counter()
                 stale_yc = [name for name, (_, ts) in latest_telemetry_for_pe.items() if now_for_yc - ts > telemetry_ttl_sec]

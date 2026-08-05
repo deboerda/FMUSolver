@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0722.1353"
+APP_VERSION = "v26.0724.0946"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -1469,6 +1469,8 @@ class FieldsDialog(QDialog):
         """)
         content_lay.addWidget(self.table)
         vlay.addWidget(content)
+        self.table.itemChanged.connect(self._on_table_item_changed)
+        self.table.itemClicked.connect(self._on_table_item_changed)
         self.load_data()
         
     def add_manual(self):
@@ -1620,10 +1622,27 @@ class InjectionBlacklistDialog(QDialog):
 
     def _add_row(self, name, blocked=True, reason=""):
         row = self.table.rowCount()
+        self.table.blockSignals(True)
         self.table.insertRow(row)
         self.table.setItem(row, 0, QTableWidgetItem(name))
-        self.table.setCellWidget(row, 1, self._create_center_cb(blocked))
+        block_item = QTableWidgetItem("拦截" if blocked else "允许")
+        block_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        block_item.setCheckState(Qt.Checked if blocked else Qt.Unchecked)
+        block_item.setTextAlignment(Qt.AlignCenter)
+        self.table.setItem(row, 1, block_item)
         self.table.setItem(row, 2, QTableWidgetItem(reason))
+        self.table.blockSignals(False)
+
+    def _on_table_item_changed(self, item):
+        if item is None or item.column() != 1:
+            return
+        self.table.blockSignals(True)
+        try:
+            blocked = item.checkState() == Qt.Checked
+            item.setText("拦截" if blocked else "允许")
+            item.setTextAlignment(Qt.AlignCenter)
+        finally:
+            self.table.blockSignals(False)
 
     def add_manual(self):
         self._add_row("NewVariable", True, "手动添加")
@@ -1651,8 +1670,13 @@ class InjectionBlacklistDialog(QDialog):
                     data = json.load(f)
                 variables = data.get("variables", {}) if isinstance(data, dict) else {}
                 for name, meta in variables.items():
-                    reason = meta.get("reason", "") if isinstance(meta, dict) else str(meta or "")
-                    self._add_row(name, True, reason)
+                    if isinstance(meta, dict):
+                        reason = meta.get("reason", "")
+                        blocked = bool(meta.get("blocked", True))
+                    else:
+                        reason = str(meta or "")
+                        blocked = True
+                    self._add_row(name, blocked, reason)
                 loaded = True
             except Exception:
                 loaded = False
@@ -1661,21 +1685,27 @@ class InjectionBlacklistDialog(QDialog):
                 self._add_row(name, True, reason)
 
     def save_and_close(self):
-        variables = {}
-        now_text = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        for r in range(self.table.rowCount()):
-            name_it = self.table.item(r, 0)
-            if not name_it or not name_it.text().strip():
-                continue
-            name = name_it.text().strip()
-            cb_w = self.table.cellWidget(r, 1)
-            blocked = cb_w.cb.isChecked() if cb_w and hasattr(cb_w, 'cb') else True
-            if not blocked:
-                continue
-            reason_it = self.table.item(r, 2)
-            reason = reason_it.text().strip() if reason_it else ""
-            variables[name] = {"reason": reason or "Manually blocked in UI.", "time": now_text}
         try:
+            variables = {}
+            now_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            for r in range(self.table.rowCount()):
+                name_it = self.table.item(r, 0)
+                if not name_it or not name_it.text().strip():
+                    continue
+                name = name_it.text().strip()
+                block_item = self.table.item(r, 1)
+                if block_item is not None:
+                    blocked = block_item.checkState() == Qt.Checked
+                else:
+                    cb_w = self.table.cellWidget(r, 1)
+                    blocked = cb_w.cb.isChecked() if cb_w and hasattr(cb_w, 'cb') else True
+                reason_it = self.table.item(r, 2)
+                reason = reason_it.text().strip() if reason_it else ""
+                variables[name] = {
+                    "blocked": bool(blocked),
+                    "reason": reason or ("Manually blocked in UI." if blocked else "Manually allowed in UI."),
+                    "time": now_text,
+                }
             with open(self.blacklist_path, 'w', encoding='utf-8') as f:
                 json.dump({"variables": variables}, f, indent=2, ensure_ascii=False)
             self.accept()
@@ -2564,7 +2594,32 @@ class FmuSolverGUI(QMainWindow):
     def _open_injection_blacklist(self):
         blacklist_path = os.path.join(APP_DIR, "fmu_injection_blacklist.json")
         dlg = InjectionBlacklistDialog(blacklist_path, self)
-        dlg.exec()
+        if dlg.exec():
+            self.log(f"[*] 注入黑名单已保存: {blacklist_path}", "info")
+            self._reload_worker_injection_blacklist()
+
+    def _send_worker_control(self, payload):
+        if not payload:
+            return False
+        try:
+            msg = {"sim_id": getattr(self, 'current_sim_id', "")}
+            msg.update(payload)
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+            finally:
+                s.close()
+            return True
+        except Exception as e:
+            self.log(f"[!] Worker控制命令发送失败: {e}", "error")
+            return False
+
+    def _reload_worker_injection_blacklist(self):
+        if self.worker_process and self.worker_process.poll() is None:
+            if self._send_worker_control({"__reload_injection_blacklist": True}):
+                self.log("[*] 已通知运行中的 Worker 重新加载注入黑名单。", "info")
+        else:
+            self.log("[*] 当前未运行仿真；黑名单将在下次启动仿真时生效。", "sys")
 
     # ─── Business Logic ───
     def _browse_orbit_fmu(self):
@@ -3278,7 +3333,7 @@ class FmuSolverGUI(QMainWindow):
                                 control_keys = {
                                     "sim_id", "exit", "pause", "resume", "sim_rate",
                                     "step_size", "sim_time", "sample_freq", "yc_inject_freq",
-                                    "__apply_yc_now",
+                                    "__apply_yc_now", "__reload_injection_blacklist",
                                 }
                                 normalized_cmd = {}
                                 for key, value in cmd.items():
@@ -3679,4 +3734,3 @@ if __name__ == "__main__":
         window.setWindowTitle("FmuSolver") # 必须设置，以便单实例检测查找
         window.show()
         sys.exit(app.exec())
-

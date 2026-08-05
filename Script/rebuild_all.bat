@@ -53,6 +53,10 @@ copy /Y ".\dist\DataVisualizer32.exe" "%DIST_DIR%\Visualizer\"
 :: Sync source snapshots for debugging/reference, avoid stale duplicate scripts in package
 copy /Y ".\FmuLauncherUniversal.py" "%DIST_DIR%\"
 copy /Y ".\DataVisualizerPython.py" "%DIST_DIR%\"
+copy /Y ".\fmu_player.py" "%DIST_DIR%\"
+copy /Y ".\orbit_pre_runner.py" "%DIST_DIR%\"
+copy /Y ".\build_version.json" "%DIST_DIR%\"
+copy /Y ".\build_version.json" "%DIST_DIR%\Visualizer\"
 
 :: Sync FMU Models
 if not exist "%DIST_DIR%\FMU" mkdir "%DIST_DIR%\FMU"
@@ -61,6 +65,7 @@ copy /Y "c:\Spaceship\FMU\*.fmu" "%DIST_DIR%\FMU\"
 :: Sync Configs
 copy /Y sync_fields.json "%DIST_DIR%\"
 copy /Y gui_config.json "%DIST_DIR%\"
+copy /Y fmu_injection_blacklist.json "%DIST_DIR%\"
 copy /Y fmusolver_full.ico "%DIST_DIR%\"
 
 echo [*] Full Clean Build Completed.
