@@ -1,5 +1,5 @@
 @echo off
-set DIST_DIR=c:\Spaceship\FMUSOLVER\FmuSolver_Package
+set DIST_DIR=E:\FMUSOLVER\FmuSolver_Package
 set PY32=C:\Py32\python.exe
 
 echo [*] Starting Comprehensive CLEAN Rebuild (32/64-bit)...
@@ -60,7 +60,7 @@ copy /Y ".\build_version.json" "%DIST_DIR%\Visualizer\"
 
 :: Sync FMU Models
 if not exist "%DIST_DIR%\FMU" mkdir "%DIST_DIR%\FMU"
-copy /Y "c:\Spaceship\FMU\*.fmu" "%DIST_DIR%\FMU\"
+copy /Y "E:\FMUSOLVER\Script\xml\*.fmu" "%DIST_DIR%\FMU\"
 
 :: Sync Configs
 copy /Y sync_fields.json "%DIST_DIR%\"

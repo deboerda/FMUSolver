@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0724.0946"
+APP_VERSION = "v26.0806.1540"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -2932,6 +2932,8 @@ class FmuSolverGUI(QMainWindow):
             # 源码模式下使用对应的 Python 环境
             player_script = os.path.join(APP_DIR, "fmu_player.py")
             py_exe = sys.executable if fmu_bit == "64" else r"C:\Py32\python.exe"
+            if not os.path.exists(py_exe):
+                py_exe = sys.executable  # fallback: no 32-bit Python
             cmd = [py_exe, player_script, fmu_path] + sim_args
 
         self.sim_paused = False
@@ -2945,11 +2947,20 @@ class FmuSolverGUI(QMainWindow):
         
         try:
             # --- 可视化终端同步启动 ---
+            worker_env = self._child_env()
             if self.chk_auto_vis.isChecked():
-                self._launch_viz_manual()
+                viz_ready_file = os.path.join(APP_DIR, f"viz_ready_{self.current_sim_id}.flag")
+                try:
+                    if os.path.exists(viz_ready_file):
+                        os.remove(viz_ready_file)
+                except Exception:
+                    pass
+                visualizer_already_ready = self._launch_viz_manual(viz_ready_file)
+                if not visualizer_already_ready:
+                    worker_env["FMUSOLVER_VIZ_READY_FILE"] = viz_ready_file
 
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
-            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=worker_env, creationflags=cf)
             self._sim_starting = False
             self.log(f"[OK] FMU Worker 已启动: pid={self.worker_process.pid} cwd={APP_DIR}", "info")
             QTimer.singleShot(2000, self.update_params) # 延迟2秒同步参数
@@ -3008,19 +3019,33 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.emit()
 
 
-    def _launch_viz_manual(self):
-        # 如果已经有看板在运行，则尝试置顶
+    def _launch_viz_manual(self, ready_file=None):
+        if isinstance(ready_file, bool):
+            ready_file = None
+        # Always try to bring an existing DataVisualizer window to front,
+        # regardless of whether we spawned it (covers cross-session reuse).
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+            if hwnd:
+                # SW_RESTORE in case it is minimized, then bring to front
+                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                # Briefly set TOPMOST then release so it pops above other apps
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                HWND_TOPMOST = -1
+                HWND_NOTOPMOST = -2
+                ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                self.log("[*] 看板已在运行，已置顶", "sys")
+                return True
+        except Exception:
+            pass
+
+        # Fallback: our own tracked process is still alive
         if self.visualizer_process and self.visualizer_process.poll() is None:
-            try:
-                import ctypes
-                hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
-                if hwnd:
-                    ctypes.windll.user32.ShowWindow(hwnd, 5) # SW_SHOW
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
-                    return
-            except: pass
-            # 如果置顶失败，且进程还活着，直接返回不重复开
-            return
+            return True
 
         try:
             viz_dir = os.path.join(APP_DIR, "Visualizer")
@@ -3038,6 +3063,8 @@ class FmuSolverGUI(QMainWindow):
             viz_env.setdefault("FMUSOLVER_VIZ_MEMORY_SOFT_LIMIT_MB", "900")
             viz_env.setdefault("OPENBLAS_NUM_THREADS", "1")
             viz_env.setdefault("OMP_NUM_THREADS", "1")
+            if ready_file:
+                viz_env["FMUSOLVER_VIZ_READY_FILE"] = os.path.abspath(ready_file)
             
             if os.path.exists(viz_exe):
                 self.log(f"[*] Launching Visualizer EXE: {viz_exe}", "sys")
@@ -3048,8 +3075,11 @@ class FmuSolverGUI(QMainWindow):
                 self.visualizer_process = subprocess.Popen([sys.executable, python_viz, "--port", "22345"], cwd=APP_DIR, env=viz_env, creationflags=cf)
             else:
                 self.log(f"[!] Visualizer NOT FOUND (EXE or Script)", "error")
+                return False
+            return False
         except Exception as e:
             self.log(f"[!] Manual viz launch failed: {str(e)}", "error")
+            return False
 
 
     def _reset_ui(self):
@@ -3403,6 +3433,8 @@ class FmuSolverGUI(QMainWindow):
             worker_path = os.path.join(APP_DIR, exe_name)
         else:
             worker_path = sys.executable if fmu_bit == "64" else r"C:\Py32\python.exe"
+            if not os.path.exists(worker_path):
+                worker_path = sys.executable  # fallback: no 32-bit Python
             
         if not os.path.exists(fmu_path):
             self.olog(f"[!] 找不到FMU文件: {fmu_path}", "error")
@@ -3725,8 +3757,16 @@ if __name__ == "__main__":
         if kernel32.GetLastError() == 183: # ERROR_ALREADY_EXISTS
             hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver")
             if hwnd:
-                ctypes.windll.user32.ShowWindow(hwnd, 5) # SW_SHOW
+                # SW_RESTORE in case minimized, then bring to front
+                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
                 ctypes.windll.user32.SetForegroundWindow(hwnd)
+                # Briefly TOPMOST then release to ensure it pops above other apps
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                HWND_TOPMOST = -1
+                HWND_NOTOPMOST = -2
+                ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
             sys.exit(0)
 
         app = QApplication(sys.argv)
