@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['yaocetest\\main.py'],
+    ['yaocetest/main.py'],
     pathex=[],
     binaries=[],
     datas=[],

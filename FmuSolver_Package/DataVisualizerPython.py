@@ -47,7 +47,7 @@ try:
     from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                  QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                  QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
-                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox)
+                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PySide6.QtCore import Qt, QTimer, Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 6
@@ -55,7 +55,7 @@ except ImportError:
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
-                               QSpinBox, QComboBox, QGridLayout, QListView, QDockWidget, QFileDialog, QMessageBox)
+                               QSpinBox, QComboBox, QGridLayout, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal as Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 5
@@ -95,6 +95,53 @@ class PlotDockWidget(QDockWidget):
         self.closed.emit(self.dock_key)
         super().closeEvent(event)
 
+
+class EditableTitleLabel(QLabel):
+    """双击可编辑标题的 QLabel 子类"""
+    titleChanged = Signal(str)
+
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self._edit = None
+        self._saved_text = ""
+        self.setToolTip("双击编辑标题")
+
+    def mouseDoubleClickEvent(self, event):
+        """双击进入编辑模式"""
+        if self._edit is not None:
+            return
+        self._saved_text = self.text()
+        self.setText("")  # 隐藏原文字，避免透过半透明编辑框可见
+        self._edit = QLineEdit(self._saved_text, self)
+        self._edit.setAlignment(self.alignment())
+        self._edit.setFont(self.font())
+        self._edit.setFrame(False)
+        self._edit.setStyleSheet("background: transparent; border: none; padding: 0px; color: inherit;")
+        self._edit.setGeometry(self.rect())
+        self._edit.selectAll()
+        self._edit.setFocus()
+        self._edit.editingFinished.connect(self._finish_edit)
+        self._edit.show()
+        self._edit.raise_()
+
+    def _finish_edit(self):
+        """完成编辑，恢复 QLabel"""
+        if self._edit is None:
+            return
+        new_text = self._edit.text().strip()
+        self._edit.deleteLater()
+        self._edit = None
+        if new_text:
+            self.setText(new_text)
+            self.titleChanged.emit(new_text)
+        else:
+            self.setText(self._saved_text)  # 恢复原标题
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._edit is not None:
+            self._edit.setGeometry(self.rect())
+
 class DockTitleBar(QWidget):
     def __init__(self, title, dock, parent=None):
         super().__init__(parent)
@@ -109,10 +156,11 @@ class DockTitleBar(QWidget):
         self.left_spacer.setFixedSize(24, 24)
         self.layout.addWidget(self.left_spacer, 0, Qt.AlignVCenter)
 
-        self.title_label = QLabel(title)
+        self.title_label = EditableTitleLabel(title)
         self.title_label.setObjectName("DockTitleLabel")
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setWordWrap(False)
+        self.title_label.titleChanged.connect(self._on_title_changed)
         self.layout.addWidget(self.title_label, 1)
 
         self.btn_close = QPushButton("×")
@@ -123,6 +171,27 @@ class DockTitleBar(QWidget):
         self.layout.addWidget(self.btn_close, 0, Qt.AlignRight | Qt.AlignVCenter)
 
         self.setTitleSize(self.current_point_size)
+
+    def _on_title_changed(self, new_title):
+        """标题编辑完成后同步更新 dock 窗口标题并保存"""
+        if hasattr(self.dock, 'setWindowTitle'):
+            self.dock.setWindowTitle(new_title)
+        try:
+            # 沿父链查找主窗口（浮动 dock 时 self.window() 返回的是浮动窗口）
+            main_win = self.dock
+            while main_win is not None:
+                if hasattr(main_win, 'save_preset'):
+                    break
+                main_win = main_win.parent()
+            if main_win is None:
+                main_win = self.window()
+            if main_win is not None and hasattr(main_win, 'save_preset'):
+                preset_name = getattr(main_win, 'current_preset_name', 'LastSession') or 'LastSession'
+                main_win.save_preset(preset_name, refresh_list=False)
+                if preset_name != 'LastSession':
+                    main_win.save_preset('LastSession', refresh_list=False)
+        except:
+            pass
 
     def setTitle(self, title):
         self.title_label.setText(title)
@@ -255,7 +324,15 @@ class TimeAxisItem(pg.AxisItem):
 
     def tickStrings(self, values, scale, spacing):
         strings = []
-        for v in values:
+        axis_width = self.width()
+        # A narrow dock still receives the default number of ticks from
+        # pyqtgraph. Keep only every second/third label so the two-line date
+        # text has enough horizontal room instead of drawing over its neighbor.
+        label_step = 3 if 0 < axis_width < 320 else (2 if 0 < axis_width < 460 else 1)
+        for index, v in enumerate(values):
+            if label_step > 1 and index % label_step:
+                strings.append("")
+                continue
             if self.visualizer.base_datetime is not None:
                 dt = self.visualizer.base_datetime + datetime.timedelta(seconds=(v - self.visualizer.base_sim_time))
                 strings.append(f"{dt.year}-{dt.month:02d}-{dt.day:02d}\n{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}")
@@ -285,7 +362,18 @@ class PlotViewBox(pg.ViewBox):
         super().mouseDragEvent(ev, axis=axis)
 
 APP_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
-DEFAULT_CURVE_WIDTH = 5
+DEFAULT_CURVE_WIDTH = 1
+SELECTED_CURVE_MIN_WIDTH = 3
+CURVE_COLOR_PALETTE = (
+    "#0000ff",  # 蓝色
+    "#ff0000",  # 红色
+    "#008000",  # 绿色
+    "#ff00ff",  # 粉色
+    "#00A6C8",  # 青色
+    "#ffc125",  # 金色
+    "#aa00ff",  # 紫色
+    "#802a2a",  # 棕色
+)
 
 def load_app_version():
     candidates = [
@@ -307,9 +395,23 @@ APP_VERSION = load_app_version()
 class ProfessionalVisualizer(QMainWindow):
     data_received = Signal(object)
 
-    def make_curve_pen(self, style):
+    def make_curve_pen(self, style, selected=False):
         pen = QPen(QColor(style["color"]))
-        pen.setWidthF(float(style["width"]))
+        width = float(style["width"])
+        if selected:
+            width = max(SELECTED_CURVE_MIN_WIDTH, width)
+        pen.setWidthF(width)
+        pen.setCosmetic(True)
+        pen.setJoinStyle(Qt.RoundJoin)
+        pen.setCapStyle(Qt.RoundCap)
+        return pen
+
+    def make_gap_pen(self, style):
+        color = QColor(style["color"])
+        color.setAlpha(150)
+        pen = QPen(color)
+        pen.setWidthF(max(1.0, float(style["width"])))
+        pen.setStyle(Qt.DashLine)
         pen.setCosmetic(True)
         pen.setJoinStyle(Qt.RoundJoin)
         pen.setCapStyle(Qt.RoundCap)
@@ -317,8 +419,8 @@ class ProfessionalVisualizer(QMainWindow):
 
     def default_curve_style(self, tag, index=0):
         seed = int(hashlib.md5(str(tag).encode("utf-8")).hexdigest()[:8], 16)
-        hue = (seed + index * 137) % 360
-        return {"color": QColor.fromHsv(hue, 230, 255), "width": DEFAULT_CURVE_WIDTH}
+        color = CURVE_COLOR_PALETTE[(seed + index) % len(CURVE_COLOR_PALETTE)]
+        return {"color": QColor(color), "width": DEFAULT_CURVE_WIDTH}
 
     def __init__(self, port=12345):
         super().__init__()
@@ -334,7 +436,11 @@ class ProfessionalVisualizer(QMainWindow):
         self.max_points = int(os.environ.get("FMUSOLVER_VIZ_MAX_POINTS", "12000"))
         self.current_idx = 0
         self.times = np.zeros(self.max_points)
-        self.data_store = {} 
+        self.data_store = {}
+        # Keep a history for variables that are received but are not currently
+        # part of the dashboard.  This lets a variable added mid-simulation
+        # reuse samples collected since t=0 instead of starting at click time.
+        self.background_data_store = {}
         self.accumulate_enabled = False
         self.accumulate_max_render_points = int(os.environ.get("FMUSOLVER_VIZ_ACC_RENDER_POINTS", "1000"))
         self.accumulate_update_stride = 10
@@ -388,7 +494,10 @@ class ProfessionalVisualizer(QMainWindow):
         self.docks = {}        
         self.plot_widgets = {} 
         self.curves = {}       
-        self.crosshairs = {}   
+        self.gap_curves = {}
+        self.selected_curve_tag = None
+        self.selected_curve_dock = None
+        self.crosshairs = {}
         self.cursor_states = {}
         self.cursor_updaters = {}
         self.dock_order = []
@@ -778,11 +887,18 @@ class ProfessionalVisualizer(QMainWindow):
         QPushButton#PrimaryButton:hover {{ background: #2591FF; }}
         QPushButton#PrimaryButton:pressed {{ background: #0066D6; border: 1px solid rgba(0,74,173,220); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
         QPushButton#PrimaryButton:checked {{ background: #0057C2; color: white; border: 1px solid rgba(0,74,173,255); }}
+        QPushButton#ExportButton {{ background: #34C759; color: white; border: 1px solid rgba(30, 150, 65, 190); }}
+        QPushButton#ExportButton:hover {{ background: #42D968; border: 1px solid rgba(30, 150, 65, 230); }}
+        QPushButton#ExportButton:pressed {{ background: #248A3D; border: 1px solid rgba(20, 105, 45, 235); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton#CollapsibleHeader {{ background: {subcard_bg}; color: {text_c}; border: 1px solid {border_soft}; border-radius: 12px; text-align: left; padding: 0 12px; }}
+        QPushButton#CollapsibleHeader:hover {{ background: {btn_hover}; border: 1px solid {border_strong}; }}
+        QPushButton#CollapsibleHeader:checked {{ background: rgba(10,132,255,32); border: 1px solid rgba(10,132,255,90); }}
         QPushButton#ControlBtn {{ padding: 0; border-radius: 50%; min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; }}
 
         QTableWidget, QListWidget {{ background: transparent; border: none; color: {text_c}; selection-background-color: rgba(10,132,255,40); selection-color: {text_c}; outline: none; alternate-background-color: rgba(255,255,255,0.30); }}
         QTableWidget::item, QListWidget::item {{ padding: 7px 8px; border-radius: 10px; border-bottom: 1px solid {border_soft}; }}
-        QTableWidget::item:selected, QListWidget::item:selected {{ background: rgba(10,132,255,0.08); }}
+        QTableWidget::item:selected {{ background: rgba(10,132,255,52); color: {accent}; border: 1px solid rgba(10,132,255,82); }}
+        QListWidget::item:selected {{ background: rgba(10,132,255,36); }}
         QHeaderView::section {{ background: transparent; color: {muted_text}; font-size: 11px; font-weight: 800; border: none; border-bottom: 1px solid {border_soft}; padding: 6px 4px; }}
         QTableCornerButton::section {{ background: transparent; border: none; }}
 
@@ -842,24 +958,35 @@ class ProfessionalVisualizer(QMainWindow):
         add_dock_btn.clicked.connect(self.create_new_dock)
         ctrl_row.addWidget(add_dock_btn)
         export_word_btn = QPushButton("导出 Word")
+        export_word_btn.setObjectName("ExportButton")
         export_word_btn.clicked.connect(self.export_charts_to_word)
         ctrl_row.addWidget(export_word_btn)
-        self.chk_autoscroll = QCheckBox("Realtime"); self.chk_autoscroll.setChecked(True)
-        self.chk_autoscroll.toggled.connect(self.on_realtime_toggled)
-        ctrl_row.addWidget(self.chk_autoscroll)
         left_layout.addLayout(ctrl_row)
 
-        trend_row = QHBoxLayout(); trend_row.setSpacing(6)
-        trend_row.addStretch()
+        self.plot_settings_toggle = QPushButton("绘图设置  ▸")
+        self.plot_settings_toggle.setObjectName("CollapsibleHeader")
+        self.plot_settings_toggle.setCheckable(True)
+        self.plot_settings_toggle.setChecked(False)
+        self.plot_settings_toggle.toggled.connect(self.set_plot_settings_expanded)
+        left_layout.addWidget(self.plot_settings_toggle)
+
+        self.plot_settings_panel = QFrame(); self.plot_settings_panel.setObjectName("PanelInset")
+        settings_layout = QVBoxLayout(self.plot_settings_panel)
+        settings_layout.setContentsMargins(10, 10, 10, 10)
+        settings_layout.setSpacing(8)
+
+        mode_row = QHBoxLayout(); mode_row.setSpacing(12)
+        self.chk_autoscroll = QCheckBox("Realtime"); self.chk_autoscroll.setChecked(True)
+        self.chk_autoscroll.toggled.connect(self.on_realtime_toggled)
+        mode_row.addWidget(self.chk_autoscroll)
+        mode_row.addStretch()
         self.chk_accumulate = QCheckBox("累积趋势")
         self.chk_accumulate.setChecked(False)
         self.chk_accumulate.toggled.connect(self.on_accumulate_toggled)
-        trend_row.addWidget(self.chk_accumulate)
-        left_layout.addLayout(trend_row)
+        mode_row.addWidget(self.chk_accumulate)
+        settings_layout.addLayout(mode_row)
         
-        # Compact Settings Area
-        settings_box = QFrame(); settings_box.setObjectName("PanelInset")
-        slay = QGridLayout(settings_box); slay.setContentsMargins(10, 10, 10, 10); slay.setSpacing(6)
+        slay = QGridLayout(); slay.setContentsMargins(0, 0, 0, 0); slay.setSpacing(6)
         
         slay.addWidget(QLabel("Title:"), 0, 0)
         self.title_size_spin = QSpinBox(); self.title_size_spin.setRange(8, 30); self.title_size_spin.setValue(13)
@@ -883,8 +1010,9 @@ class ProfessionalVisualizer(QMainWindow):
         if cv.window(): cv.window().setAttribute(Qt.WA_TranslucentBackground, False)
         self.cursor_time_combo.currentIndexChanged.connect(self.on_cursor_time_mode_changed)
         slay.addWidget(self.cursor_time_combo, 3, 1)
-        
-        left_layout.addWidget(settings_box)
+        settings_layout.addLayout(slay)
+        self.plot_settings_panel.setVisible(False)
+        left_layout.addWidget(self.plot_settings_panel)
         
         # 使用 QSplitter 让变量表格和预设列表可以上下拖动调整高度
         self.left_splitter = QSplitter(Qt.Vertical)
@@ -908,6 +1036,7 @@ class ProfessionalVisualizer(QMainWindow):
         self.table.verticalHeader().setVisible(False)
         self.table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.table.customContextMenuRequested.connect(self.show_table_menu)
+        self.table.itemClicked.connect(self.on_variable_item_clicked)
         
         self.table_container = QFrame(); self.table_container.setObjectName("SubPanel")
         table_vlay = QVBoxLayout(self.table_container); table_vlay.setContentsMargins(10,10,10,10); table_vlay.setSpacing(8)
@@ -984,6 +1113,7 @@ class ProfessionalVisualizer(QMainWindow):
         
         self.table.itemChanged.connect(self.on_table_item_changed)
 
+        self.current_preset_name = "LastSession"
         self.load_presets()
         self.load_ui_settings()
         # 初始加载默认或上一次的布局
@@ -1017,7 +1147,8 @@ class ProfessionalVisualizer(QMainWindow):
 
         self.ordered_tags.append(tag)
         self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
-        self.data_store[tag] = np.full(self.max_points, np.nan)
+        history = self.background_data_store.pop(tag, None)
+        self.data_store[tag] = history if history is not None else np.full(self.max_points, np.nan)
         self.trend_store[tag] = []
         self.var_styles[tag] = self.default_curve_style(tag, len(self.ordered_tags) - 1)
         self.vars_desc[tag] = desc
@@ -1368,9 +1499,17 @@ class ProfessionalVisualizer(QMainWindow):
                     active_vars.append(tag)
             dock_data[d_name] = active_vars
         
+        dock_titles = {}
+        for d_name, d_obj in self.docks.items():
+            if hasattr(d_obj, 'title_bar_widget') and hasattr(d_obj.title_bar_widget, 'title_label'):
+                t = d_obj.title_bar_widget.title_label.text()
+                if t and t != d_name:
+                    dock_titles[d_name] = t
+
         preset = {
             "dock_order": [dock_name for dock_name in self.dock_order if dock_name in self.docks],
             "dock_vars": dock_data,
+            "dock_titles": dock_titles,
             "layout_state": self.serialize_dock_layout(),
             "dock_geometry": self.serialize_dock_geometry(),
             "active_dock": self.active_dock_name if getattr(self, 'active_dock_name', None) in self.docks else (self.dock_order[0] if self.dock_order else None)
@@ -1415,6 +1554,7 @@ class ProfessionalVisualizer(QMainWindow):
 
     def load_preset(self, name):
         if name not in self.presets: return
+        self.current_preset_name = name
         data = self.presets[name]
         self._restoring_preset = True
         self.pause_session_memory()
@@ -1428,6 +1568,14 @@ class ProfessionalVisualizer(QMainWindow):
             self.dock_order = []
             self.active_dock_name = None
             self.curves = {}
+            self.gap_curves = {}
+            # Newly restored curve items must render immediately, even when the
+            # data revision has not changed since the previous preset.
+            self.last_curve_update_idx.clear()
+            self.last_view_update.clear()
+            self.last_y_range.clear()
+            self.selected_curve_tag = None
+            self.selected_curve_dock = None
 
             # 2. 重新创建 Dock 容器
             dock_vars = data.get("dock_vars", {})
@@ -1436,6 +1584,14 @@ class ProfessionalVisualizer(QMainWindow):
 
             for d_name in saved_order:
                 self.create_dock_internal(d_name)
+
+            # 2.5 恢复自定义标题
+            dock_titles = data.get("dock_titles", {})
+            for d_name, custom_title in dock_titles.items():
+                if d_name in self.docks:
+                    dock = self.docks[d_name]
+                    if hasattr(dock, 'title_bar_widget') and hasattr(dock.title_bar_widget, 'title_label'):
+                        dock.title_bar_widget.title_label.setText(custom_title)
 
             # 3. 恢复变量勾选和曲线绘制
             all_active = set()
@@ -1466,6 +1622,12 @@ class ProfessionalVisualizer(QMainWindow):
                 QTimer.singleShot(0, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
                 QTimer.singleShot(60, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
                 QTimer.singleShot(140, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
+            # A single non-floating dock can retain the old saved width and
+            # leave the dock host's central area blank after restore. Refill
+            # the available canvas once the dock layout has settled.
+            if len(self.docks) == 1 and not next(iter(self.docks.values())).isFloating():
+                QTimer.singleShot(220, self.normalize_dock_sizes)
+                QTimer.singleShot(420, self.normalize_dock_sizes)
 
             active_name = data.get("active_dock")
             if active_name in self.docks:
@@ -1483,13 +1645,32 @@ class ProfessionalVisualizer(QMainWindow):
         if state == Qt.Checked or state == 2:
             if tag not in self.curves: self.curves[tag] = {}
             if dock_name not in self.curves[tag]:
+                # The curve may have been removed and re-added at the same
+                # data revision. Invalidate the old marker so its history is
+                # rendered immediately instead of waiting for new samples.
+                self.last_curve_update_idx.pop((dock_name, tag), None)
                 pw = self.plot_widgets[dock_name]
-                c = pw.plot(pen=pg.mkPen(self.var_styles[tag]["color"], width=self.var_styles[tag]["width"]), name=tag)
+                selected = tag == self.selected_curve_tag and dock_name == self.selected_curve_dock
+                c = pw.plot(
+                    pen=self.make_curve_pen(self.var_styles[tag], selected=selected),
+                    name=self.get_display_name(tag),
+                    autoDownsample=False,
+                    skipFiniteCheck=True,
+                    connect='finite',
+                    antialias=True,
+                )
                 self.curves[tag][dock_name] = c
+                self.configure_curve_selection(c, tag, dock_name)
+                self.create_gap_curve(tag, dock_name)
+                self.request_curve_refresh()
+                self.render_curve_history(tag, dock_name)
         else:
             if tag in self.curves and dock_name in self.curves[tag]:
                 self.plot_widgets[dock_name].removeItem(self.curves[tag][dock_name])
                 del self.curves[tag][dock_name]
+                self.remove_gap_curve(tag, dock_name)
+                if tag == self.selected_curve_tag and dock_name == self.selected_curve_dock:
+                    self.selected_curve_dock = None
 
     def delete_preset(self):
         item = self.preset_list.currentItem()
@@ -1550,6 +1731,33 @@ class ProfessionalVisualizer(QMainWindow):
             self.sync_states[tag] = (state == Qt.Checked or state == 2)
             self.save_sync_state()
             self.remember_last_session()
+
+    def request_curve_refresh(self):
+        """Invalidate the UI revision so a newly added curve renders all history immediately."""
+        self.last_ui_revision = -1
+        self.force_curve_update_revision = self.data_revision
+
+    def render_curve_history(self, tag, dock_name):
+        """Paint a newly added curve immediately, without waiting for a new packet."""
+        curve = self.curves.get(tag, {}).get(dock_name)
+        if curve is None or self.current_idx <= 0 or tag not in self.data_store:
+            return
+        try:
+            t_data, y_store = self.get_active_series({tag})
+            y_data = y_store.get(tag)
+            if y_data is None or len(t_data) == 0:
+                return
+            t_plot, y_plot = (
+                self.build_trend_plot_data(t_data, y_data, self.accumulate_max_render_points)
+                if self.accumulate_enabled else
+                self.build_realtime_plot_data(t_data, y_data, self.realtime_max_render_points)
+            )
+            if len(t_plot) == 0:
+                return
+            curve.setData(x=t_plot, y=y_plot, connect='finite')
+            self.update_dock_y_range(dock_name, self.plot_widgets[dock_name].getViewBox(), [y_plot])
+        except Exception:
+            pass
             
     def load_sync_state(self):
         self.sync_states = {}
@@ -1585,6 +1793,7 @@ class ProfessionalVisualizer(QMainWindow):
             "cursor_time_mode": self.cursor_time_combo.currentIndex() if hasattr(self, 'cursor_time_combo') else 0,
             "span": self.span_spin.value(),
             "accumulate_enabled": self.chk_accumulate.isChecked() if hasattr(self, 'chk_accumulate') else False,
+            "plot_settings_expanded": self.plot_settings_toggle.isChecked() if hasattr(self, 'plot_settings_toggle') else False,
             "sidebar_visible": self.left_panel.isVisible(),
             "last_sidebar_width": self.last_sidebar_width,
             "main_splitter": self.main_splitter.sizes() if hasattr(self, 'main_splitter') else [],
@@ -1615,6 +1824,12 @@ class ProfessionalVisualizer(QMainWindow):
         self.span_spin.setValue(int(s.get("span", self.span_spin.value())))
         if hasattr(self, 'chk_accumulate'):
             self.chk_accumulate.setChecked(bool(s.get("accumulate_enabled", False)))
+        if hasattr(self, 'plot_settings_toggle'):
+            expanded = bool(s.get("plot_settings_expanded", False))
+            self.plot_settings_toggle.blockSignals(True)
+            self.plot_settings_toggle.setChecked(expanded)
+            self.plot_settings_toggle.blockSignals(False)
+            self.set_plot_settings_expanded(expanded, save=False)
         sidebar_visible = bool(s.get("sidebar_visible", True))
         self.left_panel.setVisible(sidebar_visible)
         self.last_sidebar_width = int(s.get("last_sidebar_width", 320))
@@ -1625,6 +1840,15 @@ class ProfessionalVisualizer(QMainWindow):
             main_sizes = [0, max(1, self.width())]
         QTimer.singleShot(0, lambda: self.main_splitter.setSizes(main_sizes))
         QTimer.singleShot(0, lambda: self.left_splitter.setSizes(left_sizes))
+
+    def set_plot_settings_expanded(self, expanded, save=True):
+        expanded = bool(expanded)
+        if hasattr(self, 'plot_settings_panel'):
+            self.plot_settings_panel.setVisible(expanded)
+        if hasattr(self, 'plot_settings_toggle'):
+            self.plot_settings_toggle.setText("绘图设置  ▾" if expanded else "绘图设置  ▸")
+        if save and hasattr(self, 'left_splitter'):
+            self.save_ui_settings()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton: self._drag_pos = event.globalPosition().toPoint()
@@ -1731,21 +1955,24 @@ class ProfessionalVisualizer(QMainWindow):
             return
 
         bucket_time = self.trend_bucket_end
-        self.trend_times.append(bucket_time)
+        history_len = len(self.trend_times)
         active_tags = self.get_plotted_tags() or set(self.ordered_tags[:min(len(self.ordered_tags), 80)])
         for tag in active_tags:
             self.trend_store.setdefault(tag, [])
+            if len(self.trend_store[tag]) < history_len:
+                missing = history_len - len(self.trend_store[tag])
+                self.trend_store[tag][0:0] = [np.nan] * missing
+            elif len(self.trend_store[tag]) > history_len:
+                self.trend_store[tag] = self.trend_store[tag][-history_len:] if history_len else []
             values = self.trend_bucket_values.get(tag, [])
             if values:
                 self.trend_store[tag].append(float(values[-1]))
             else:
                 self.trend_store[tag].append(self.trend_bucket_last_values.get(tag, np.nan))
-        target_len = len(self.trend_times)
+        self.trend_times.append(bucket_time)
         for tag in list(self.trend_store.keys()):
             if tag not in active_tags:
                 self.trend_store[tag] = []
-            elif len(self.trend_store[tag]) < target_len:
-                self.trend_store[tag].extend([np.nan] * (target_len - len(self.trend_store[tag])))
 
         self.trend_bucket_start = None
         self.trend_bucket_end = None
@@ -1754,10 +1981,30 @@ class ProfessionalVisualizer(QMainWindow):
 
     def append_trend_sample(self, t, var_map):
         if self.trend_times and abs(float(self.trend_times[-1]) - float(t)) <= 1e-9:
+            active_tags = self.get_plotted_tags() or set(var_map.keys())
             for tag, value in var_map.items():
-                if tag in self.trend_store and self.trend_store[tag]:
-                    self.trend_store[tag][-1] = float(value)
+                if tag in active_tags:
+                    values = self.trend_store.setdefault(tag, [])
+                    if len(values) < len(self.trend_times):
+                        values[0:0] = [np.nan] * (len(self.trend_times) - len(values))
+                    if values:
+                        values[-1] = float(value)
                 self.trend_bucket_last_values[tag] = value
+            return
+
+        # The exact FMU initialization snapshot is a real boundary sample. Keep it
+        # outside the accumulation bucket so its timestamp cannot move to ~1 second.
+        if abs(float(t)) <= 1e-9 and not self.trend_times and var_map:
+            active_tags = self.get_plotted_tags() or set(var_map.keys())
+            for tag in active_tags:
+                self.trend_store.setdefault(tag, [])
+                value = var_map.get(tag, np.nan)
+                self.trend_store[tag].append(float(value) if np.isfinite(value) else np.nan)
+            self.trend_times.append(0.0)
+            self.trend_bucket_last_values.update(var_map)
+            self.trend_bucket_start = None
+            self.trend_bucket_end = None
+            self.trend_bucket_values = {}
             return
 
         if self.trend_bucket_start is None:
@@ -1788,10 +2035,14 @@ class ProfessionalVisualizer(QMainWindow):
         active_tags = self.get_plotted_tags() or set(self.ordered_tags[:min(len(self.ordered_tags), 80)])
         if not active_tags:
             return
-        self.trend_times.append(t)
-        target_len = len(self.trend_times)
+        history_len = len(self.trend_times)
         for tag in active_tags:
             self.trend_store.setdefault(tag, [])
+            if len(self.trend_store[tag]) < history_len:
+                missing = history_len - len(self.trend_store[tag])
+                self.trend_store[tag][0:0] = [np.nan] * missing
+            elif len(self.trend_store[tag]) > history_len:
+                self.trend_store[tag] = self.trend_store[tag][-history_len:] if history_len else []
             if tag in self.trend_bucket_last_values:
                 value = self.trend_bucket_last_values[tag]
             elif tag in self.latest_values:
@@ -1801,10 +2052,7 @@ class ProfessionalVisualizer(QMainWindow):
             else:
                 value = np.nan
             self.trend_store[tag].append(float(value) if np.isfinite(value) else np.nan)
-        for tag in list(self.trend_store.keys()):
-            if len(self.trend_store[tag]) < target_len:
-                fill_value = self.trend_store[tag][-1] if self.trend_store[tag] else np.nan
-                self.trend_store[tag].extend([fill_value] * (target_len - len(self.trend_store[tag])))
+        self.trend_times.append(t)
         self.trend_bucket_start = None
         self.trend_bucket_end = None
         self.trend_bucket_values = {}
@@ -1815,9 +2063,14 @@ class ProfessionalVisualizer(QMainWindow):
         if t_arr.size == 0:
             return np.asarray([], dtype=float), {tag: np.asarray([], dtype=float) for tag in y_data}
 
-        min_len = min([t_arr.size] + [len(values) for values in y_data.values()]) if y_data else t_arr.size
-        t_arr = t_arr[:min_len]
-        y_arrs = {tag: np.asarray(values, dtype=float)[:min_len] for tag, values in y_data.items()}
+        y_arrs = {}
+        for tag, values in y_data.items():
+            values_arr = np.asarray(values, dtype=float)
+            if values_arr.size < t_arr.size:
+                values_arr = np.concatenate((np.full(t_arr.size - values_arr.size, np.nan), values_arr))
+            elif values_arr.size > t_arr.size:
+                values_arr = values_arr[-t_arr.size:]
+            y_arrs[tag] = values_arr
         finite_time = np.isfinite(t_arr)
         if not finite_time.any():
             return np.asarray([], dtype=float), {tag: np.asarray([], dtype=float) for tag in y_data}
@@ -1846,6 +2099,9 @@ class ProfessionalVisualizer(QMainWindow):
         else:
             active_tags = [tag for tag in active_tags if tag in self.data_store]
         if self.accumulate_enabled and self.trend_times:
+            for tag in active_tags:
+                if len(self.trend_store.get(tag, [])) < len(self.trend_times):
+                    self.backfill_trend_history(tag)
             self.flush_trend_bucket()
             t_data = np.asarray(self.trend_times, dtype=float)
             return self.sanitize_active_series(t_data, {tag: self.trend_store.get(tag, []) for tag in active_tags})
@@ -1866,33 +2122,66 @@ class ProfessionalVisualizer(QMainWindow):
                 y_data[tag] = self.data_store[tag][:valid_len]
         return self.sanitize_active_series(t_data, y_data)
 
+    def backfill_trend_history(self, tag):
+        """Rebuild an accumulated curve from raw samples when it is added late."""
+        if tag not in self.data_store or not self.trend_times or self.current_idx <= 0:
+            return
+        valid_len = min(self.current_idx, self.max_points)
+        if self.current_idx > self.max_points:
+            start = self.current_idx % self.max_points
+            raw_t = np.concatenate((self.times[start:], self.times[:start]))
+            raw_y = np.concatenate((self.data_store[tag][start:], self.data_store[tag][:start]))
+        else:
+            raw_t = self.times[:valid_len]
+            raw_y = self.data_store[tag][:valid_len]
+        finite = np.isfinite(raw_t)
+        raw_t = np.asarray(raw_t[finite], dtype=float)
+        raw_y = np.asarray(raw_y[finite], dtype=float)
+        if raw_t.size == 0:
+            self.trend_store[tag] = [np.nan] * len(self.trend_times)
+            return
+        # Use the last raw sample at or before each accumulated timestamp.
+        positions = np.searchsorted(raw_t, np.asarray(self.trend_times, dtype=float), side="right") - 1
+        values = np.full(len(self.trend_times), np.nan, dtype=float)
+        valid = positions >= 0
+        values[valid] = raw_y[np.clip(positions[valid], 0, len(raw_y) - 1)]
+        self.trend_store[tag] = values.tolist()
+
     def build_realtime_plot_data(self, x_data, y_data, max_points):
         x_arr = np.asarray(x_data, dtype=float)
         y_arr = np.asarray(y_data, dtype=float)
-        finite_mask = np.isfinite(x_arr) & np.isfinite(y_arr)
-        if not finite_mask.any():
+        finite_time = np.isfinite(x_arr)
+        if not finite_time.any():
             return np.asarray([], dtype=float), np.asarray([], dtype=float)
 
-        x_arr = x_arr[finite_mask]
-        y_arr = y_arr[finite_mask]
+        x_arr = x_arr[finite_time]
+        y_arr = y_arr[finite_time]
+        if not np.isfinite(y_arr).any():
+            return np.asarray([], dtype=float), np.asarray([], dtype=float)
         total = len(x_arr)
         target = max(16, int(max_points))
         if total <= target:
             return x_arr, y_arr
 
         sampled_idx = np.linspace(0, total - 1, target, dtype=int)
-        sampled_idx = np.asarray(sorted(set(sampled_idx.tolist() + [total - 1])), dtype=int)
+        transitions = np.where(np.diff(np.isfinite(y_arr).astype(np.int8)) != 0)[0]
+        gap_edges = []
+        for transition in transitions:
+            gap_edges.extend([int(transition), int(transition) + 1])
+        sampled_idx = np.asarray(sorted(set(sampled_idx.tolist() + gap_edges + [0, total - 1])), dtype=int)
         return x_arr[sampled_idx], y_arr[sampled_idx]
 
     def build_trend_plot_data(self, x_data, y_data, max_points):
         x_arr = np.asarray(x_data, dtype=float)
         y_arr = np.asarray(y_data, dtype=float)
-        finite_mask = np.isfinite(x_arr) & np.isfinite(y_arr)
-        if not finite_mask.any():
+        finite_time = np.isfinite(x_arr)
+        if not finite_time.any():
             return np.asarray([], dtype=float), np.asarray([], dtype=float)
 
-        x_arr = x_arr[finite_mask]
-        y_arr = y_arr[finite_mask]
+        x_arr = x_arr[finite_time]
+        y_arr = y_arr[finite_time]
+        if not np.isfinite(y_arr).any():
+            return np.asarray([], dtype=float), np.asarray([], dtype=float)
         total = len(x_arr)
         if total <= max_points:
             return x_arr, y_arr
@@ -1909,11 +2198,14 @@ class ProfessionalVisualizer(QMainWindow):
                 continue
 
             segment = y_arr[start:end]
-            if segment.size == 0:
+            finite_segment = np.flatnonzero(np.isfinite(segment))
+            if finite_segment.size == 0:
+                sampled_idx.extend([start, end - 1])
                 continue
 
-            local_min = start + int(np.argmin(segment))
-            local_max = start + int(np.argmax(segment))
+            finite_values = segment[finite_segment]
+            local_min = start + int(finite_segment[int(np.argmin(finite_values))])
+            local_max = start + int(finite_segment[int(np.argmax(finite_values))])
             candidates = sorted({start, local_min, local_max, end - 1})
             sampled_idx.extend(candidates)
 
@@ -1924,6 +2216,13 @@ class ProfessionalVisualizer(QMainWindow):
             keep = np.linspace(0, sampled_idx.size - 1, target, dtype=int)
             sampled_idx = sampled_idx[keep]
             sampled_idx = np.asarray(sorted(set(sampled_idx.tolist() + [0, total - 1])), dtype=int)
+
+        transitions = np.where(np.diff(np.isfinite(y_arr).astype(np.int8)) != 0)[0]
+        gap_edges = []
+        for transition in transitions:
+            gap_edges.extend([int(transition), int(transition) + 1])
+        if gap_edges:
+            sampled_idx = np.asarray(sorted(set(sampled_idx.tolist() + gap_edges)), dtype=int)
 
         return x_arr[sampled_idx], y_arr[sampled_idx]
             
@@ -1945,7 +2244,10 @@ class ProfessionalVisualizer(QMainWindow):
         title_size = self.title_size_spin.value()
         for dock_name, dock in self.docks.items():
             if dock and hasattr(dock, 'title_bar_widget'):
-                dock.title_bar_widget.setTitle(dock_name)
+                if hasattr(dock.title_bar_widget, 'title_label'):
+                    cur = dock.title_bar_widget.title_label.text()
+                    if not cur or cur == dock_name:
+                        dock.title_bar_widget.title_label.setText(dock_name)
                 dock.title_bar_widget.setTitleSize(title_size)
                 dock.title_bar_widget.updateGeometry()
                 dock.title_bar_widget.update()
@@ -2012,11 +2314,16 @@ class ProfessionalVisualizer(QMainWindow):
         if tag not in self.var_styles:
             return
         
+        self.show_curve_style_menu(tag, self.table.viewport().mapToGlobal(pos))
+
+    def show_curve_style_menu(self, tag, global_pos):
+        if tag not in self.var_styles:
+            return
         menu = QMenu(self)
         action_color = menu.addAction("🎨 修改线条颜色")
         action_width = menu.addAction("📏 修改线条粗细")
         
-        action = menu.exec_(self.table.viewport().mapToGlobal(pos)) if QT_VERSION == 5 else menu.exec(self.table.viewport().mapToGlobal(pos))
+        action = menu.exec_(global_pos) if QT_VERSION == 5 else menu.exec(global_pos)
         
         if action == action_color:
             color = QColorDialog.getColor(self.var_styles[tag]["color"], self, "选择颜色")
@@ -2033,7 +2340,149 @@ class ProfessionalVisualizer(QMainWindow):
         if tag in self.curves:
             style = self.var_styles[tag]
             for dock_name, curveItem in self.curves[tag].items():
-                curveItem.setPen(self.make_curve_pen(style))
+                selected = tag == self.selected_curve_tag and dock_name == self.selected_curve_dock
+                curveItem.setPen(self.make_curve_pen(style, selected=selected))
+                try:
+                    curveItem.setCurveClickable(True, width=max(8, int(style["width"]) + 6))
+                except Exception:
+                    pass
+            for gap_item in self.gap_curves.get(tag, {}).values():
+                gap_item.setPen(self.make_gap_pen(style))
+
+    def create_gap_curve(self, tag, dock_name):
+        if dock_name not in self.plot_widgets or tag not in self.var_styles:
+            return None
+        self.gap_curves.setdefault(tag, {})
+        if dock_name in self.gap_curves[tag]:
+            return self.gap_curves[tag][dock_name]
+        gap_item = self.plot_widgets[dock_name].plot(
+            pen=self.make_gap_pen(self.var_styles[tag]),
+            name=None,
+            autoDownsample=False,
+            skipFiniteCheck=True,
+            connect='finite',
+            antialias=True,
+        )
+        gap_item.setZValue(20.0)
+        self.gap_curves[tag][dock_name] = gap_item
+        return gap_item
+
+    def remove_gap_curve(self, tag, dock_name):
+        gap_item = self.gap_curves.get(tag, {}).pop(dock_name, None)
+        if gap_item is not None and dock_name in self.plot_widgets:
+            self.plot_widgets[dock_name].removeItem(gap_item)
+        if tag in self.gap_curves and not self.gap_curves[tag]:
+            del self.gap_curves[tag]
+
+    def build_gap_bridge_data(self, x_data, y_data):
+        x_arr = np.asarray(x_data, dtype=float)
+        y_arr = np.asarray(y_data, dtype=float)
+        count = min(x_arr.size, y_arr.size)
+        if count < 3:
+            return np.asarray([], dtype=float), np.asarray([], dtype=float)
+        x_arr = x_arr[:count]
+        y_arr = y_arr[:count]
+        finite = np.isfinite(x_arr) & np.isfinite(y_arr)
+        gap_x = []
+        gap_y = []
+        index = 1
+        while index < count - 1:
+            if finite[index]:
+                index += 1
+                continue
+            gap_start = index
+            while index < count and not finite[index]:
+                index += 1
+            left_index = gap_start - 1
+            right_index = index
+            if left_index >= 0 and right_index < count and finite[left_index] and finite[right_index]:
+                gap_x.extend([x_arr[left_index], x_arr[right_index], np.nan])
+                gap_y.extend([y_arr[left_index], y_arr[right_index], np.nan])
+        return np.asarray(gap_x, dtype=float), np.asarray(gap_y, dtype=float)
+
+    def configure_curve_selection(self, curve_item, tag, dock_name):
+        try:
+            curve_item.setCurveClickable(True, width=max(8, int(self.var_styles[tag]["width"]) + 6))
+            curve_item.sigClicked.connect(
+                lambda _item, event, selected_tag=tag, selected_dock=dock_name: self.on_curve_clicked(
+                    event, selected_tag, selected_dock
+                )
+            )
+        except Exception:
+            pass
+
+    def on_curve_clicked(self, event, tag, dock_name):
+        if event.button() == Qt.RightButton:
+            self.show_curve_style_menu(tag, QCursor.pos())
+            event.accept()
+            return
+        if event.button() != Qt.LeftButton:
+            return
+        if tag == self.selected_curve_tag and dock_name == self.selected_curve_dock:
+            self.clear_curve_selection()
+        else:
+            self.select_curve_variable(tag, dock_name)
+        event.accept()
+
+    def clear_curve_selection(self):
+        self.selected_curve_tag = None
+        self.selected_curve_dock = None
+        for curve_tag, dock_curves in self.curves.items():
+            style = self.var_styles.get(curve_tag)
+            if not style:
+                continue
+            for curve_item in dock_curves.values():
+                curve_item.setPen(self.make_curve_pen(style, selected=False))
+                curve_item.setZValue(0.0)
+        self.table.clearSelection()
+
+    def on_variable_item_clicked(self, item):
+        row = item.row()
+        if not 0 <= row < len(self.ordered_tags):
+            return
+        tag = self.ordered_tags[row]
+        dock_name = self.active_dock_name if getattr(self, 'active_dock_name', None) in self.plot_widgets else None
+        self.select_curve_variable(tag, dock_name, select_table=False)
+
+    def select_curve_variable(self, tag, dock_name=None, select_table=True):
+        if tag not in self.ordered_tags:
+            return
+
+        if dock_name not in self.curves.get(tag, {}):
+            active_dock = getattr(self, 'active_dock_name', None)
+            if active_dock in self.curves.get(tag, {}):
+                dock_name = active_dock
+            elif self.curves.get(tag):
+                dock_name = next(iter(self.curves[tag]))
+            else:
+                dock_name = None
+
+        if dock_name in self.docks:
+            self.set_active_dock(dock_name)
+
+        self.selected_curve_tag = tag
+        self.selected_curve_dock = dock_name
+
+        for curve_tag, dock_curves in self.curves.items():
+            style = self.var_styles.get(curve_tag)
+            if not style:
+                continue
+            for current_dock, curve_item in dock_curves.items():
+                selected = curve_tag == tag and current_dock == dock_name
+                curve_item.setPen(self.make_curve_pen(style, selected=selected))
+                curve_item.setZValue(100.0 if selected else 0.0)
+
+        if select_table:
+            row = self.ordered_tags.index(tag)
+            self.table.blockSignals(True)
+            try:
+                self.table.selectRow(row)
+                name_item = self.table.item(row, 1)
+                if name_item is not None:
+                    self.table.setCurrentItem(name_item)
+                    self.table.scrollToItem(name_item)
+            finally:
+                self.table.blockSignals(False)
 
     def export_charts_to_word(self):
         if not self.plot_widgets:
@@ -2332,15 +2781,23 @@ class ProfessionalVisualizer(QMainWindow):
 
             x_min, x_max = plot_widget.getViewBox().viewRange()[0]
             y_min, y_max = plot_widget.getViewBox().viewRange()[1]
+            vb = plot_widget.getViewBox()
+            view_scene_rect = vb.sceneBoundingRect()
+            cursor_scene = vb.mapViewToScene(pg.Point(cursor_x, y_min))
             if label_rows:
-                vb = plot_widget.getViewBox()
                 view_height = max(1.0, vb.sceneBoundingRect().height())
                 data_per_px = (float(y_max) - float(y_min)) / view_height if y_max != y_min else 1.0
+                view_width = max(1.0, view_scene_rect.width())
+                data_per_px_x = (float(x_max) - float(x_min)) / view_width if x_max != x_min else 1.0
                 min_gap = data_per_px * 22.0
                 top_pad = data_per_px * 14.0
                 bottom_pad = data_per_px * 14.0
                 lower_bound = float(y_min) + bottom_pad
                 upper_bound = float(y_max) - top_pad
+                max_label_width = max(value_labels[tag].boundingRect().width() for tag, _ in label_rows)
+                show_labels_on_left = (view_scene_rect.right() - cursor_scene.x()) < (max_label_width + 12.0)
+                label_anchor = (1, 0.5) if show_labels_on_left else (0, 0.5)
+                label_x = cursor_x + (-4.0 if show_labels_on_left else 4.0) * data_per_px_x
 
                 arranged = []
                 for tag, value in sorted(label_rows, key=lambda item: item[1]):
@@ -2361,21 +2818,21 @@ class ProfessionalVisualizer(QMainWindow):
                     arranged = adjusted
 
                 for tag, y_pos in arranged:
-                    value_labels[tag].setPos(cursor_x, y_pos)
+                    value_labels[tag].setAnchor(label_anchor)
+                    value_labels[tag].setPos(label_x, y_pos)
 
-            view_scene_rect = vb.sceneBoundingRect()
-            cursor_scene = vb.mapViewToScene(pg.Point(cursor_x, y_min))
             time_label.setPlainText(time_text)
             text_rect = time_label.boundingRect()
             pad_x, pad_y = 6.0, 2.0
             box_w = text_rect.width() + pad_x * 2.0
             box_h = text_rect.height() + pad_y * 2.0
             box_x = cursor_scene.x() - box_w / 2.0
+            box_x = max(view_scene_rect.left(), min(box_x, view_scene_rect.right() - box_w))
             box_y = view_scene_rect.bottom() + 4.0
             time_bg.setRect(0, 0, box_w, box_h)
             time_bg.setPos(box_x, box_y)
             time_label.setPos(box_x + pad_x, box_y + pad_y - 2.0)
-            is_time_visible = bool(visible_tags) and x_min <= cursor_x <= x_max
+            is_time_visible = x_min <= cursor_x <= x_max
             time_bg.setVisible(is_time_visible)
             time_label.setVisible(is_time_visible)
 
@@ -2393,7 +2850,31 @@ class ProfessionalVisualizer(QMainWindow):
         # 用户手动拖拽或缩放时，自动取消画面跟随
         plot_widget.getViewBox().sigRangeChangedManually.connect(lambda: self.chk_autoscroll.setChecked(False))
 
+        def curve_at_plot_pos(pos):
+            """Return the curve under a plot-widget context-menu position."""
+            scene_pos = plot_widget.mapToScene(pos)
+            # Iterate from the visually topmost curve so overlapping curves pick
+            # the one the user can actually see/click.
+            candidates = []
+            for curve_tag, dock_curves in self.curves.items():
+                curve_item = dock_curves.get(name)
+                if curve_item is not None:
+                    candidates.append((curve_item.zValue(), curve_tag, curve_item))
+            for _z, curve_tag, curve_item in sorted(candidates, reverse=True, key=lambda value: value[0]):
+                try:
+                    curve_path = getattr(curve_item, "curve", curve_item)
+                    local_pos = curve_path.mapFromScene(scene_pos)
+                    if curve_path.mouseShape().contains(local_pos):
+                        return curve_tag
+                except Exception:
+                    continue
+            return None
+
         def show_plot_menu(pos):
+            curve_tag = curve_at_plot_pos(pos)
+            if curve_tag is not None:
+                self.show_curve_style_menu(curve_tag, plot_widget.mapToGlobal(pos))
+                return
             menu = QMenu(plot_widget)
             cursor_enabled = self.cursor_states.get(name, False)
             action_cursor = menu.addAction("关闭游标" if cursor_enabled else "开启游标")
@@ -2462,6 +2943,13 @@ class ProfessionalVisualizer(QMainWindow):
         for tag in list(self.curves.keys()):
             if name in self.curves[tag]:
                 del self.curves[tag][name]
+        for tag in list(self.gap_curves.keys()):
+            if name in self.gap_curves[tag]:
+                del self.gap_curves[tag][name]
+            if not self.gap_curves[tag]:
+                del self.gap_curves[tag]
+        if self.selected_curve_dock == name:
+            self.selected_curve_dock = None
         del self.plot_widgets[name]
         del self.docks[name]
         del self.crosshairs[name]
@@ -2492,9 +2980,13 @@ class ProfessionalVisualizer(QMainWindow):
             
         if state == Qt.Checked or state == 2: # Qt5 is 2, PyQt6 is Qt.CheckState.Checked
             if dock_name not in self.curves[tag]:
+                self.last_curve_update_idx.pop((dock_name, tag), None)
                 style = self.var_styles[tag]
                 curve = pw.plot(
-                    pen=self.make_curve_pen(style),
+                    pen=self.make_curve_pen(
+                        style,
+                        selected=tag == self.selected_curve_tag and dock_name == self.selected_curve_dock,
+                    ),
                     name=self.get_display_name(tag),
                     autoDownsample=False,
                     skipFiniteCheck=True,
@@ -2502,10 +2994,17 @@ class ProfessionalVisualizer(QMainWindow):
                     antialias=True,
                 )
                 self.curves[tag][dock_name] = curve
+                self.configure_curve_selection(curve, tag, dock_name)
+                self.create_gap_curve(tag, dock_name)
+                self.request_curve_refresh()
+                self.render_curve_history(tag, dock_name)
         else:
             if dock_name in self.curves[tag]:
                 pw.removeItem(self.curves[tag][dock_name])
                 del self.curves[tag][dock_name]
+                self.remove_gap_curve(tag, dock_name)
+                if tag == self.selected_curve_tag and dock_name == self.selected_curve_dock:
+                    self.selected_curve_dock = None
         self.remember_last_session()
 
     def setup_network(self):
@@ -2513,6 +3012,13 @@ class ProfessionalVisualizer(QMainWindow):
         try:
             self.sock.bind(('0.0.0.0', self.port))
             print(f"Listening on {self.port}")
+            ready_file = os.environ.get("FMUSOLVER_VIZ_READY_FILE", "").strip()
+            if ready_file:
+                try:
+                    with open(ready_file, 'w', encoding='utf-8') as ready_handle:
+                        ready_handle.write(f"pid={os.getpid()} port={self.port}\n")
+                except Exception as ready_error:
+                    print(f"Visualizer ready file error: {ready_error}")
         except Exception as e:
             print(f"Bind error: {e}")
             
@@ -2570,6 +3076,8 @@ class ProfessionalVisualizer(QMainWindow):
             f"ui_ticks={self.ui_tick_count} curve_updates={self.ui_curve_updates} skipped_docks={self.ui_skipped_docks} "
             f"last_ui_ms={ui_elapsed_ms:.2f} docks={len(self.plot_widgets)} vars={len(self.data_store)} idx={self.current_idx} "
             f"rev={self.data_revision} force_rev={self.force_curve_update_revision} latest_t={(float(self.times[(self.current_idx - 1) % self.max_points]) if self.current_idx > 0 else 0.0):.9f} "
+            f"first_t={(float(self.times[0]) if self.current_idx > 0 else -1.0):.9f} "
+            f"trend_first={(float(self.trend_times[0]) if self.trend_times else -1.0):.9f} "
             f"trend_latest={(float(self.trend_times[-1]) if self.trend_times else -1.0):.9f}\n"
         )
         try:
@@ -2635,6 +3143,13 @@ class ProfessionalVisualizer(QMainWindow):
         self.process_packet_count += 1
         self.process_var_count_total += len(pb_data.sim_vars)
 
+        has_start_marker = any(
+            str(getattr(variable, 'name', '')) == "__FMUSOLVER_SIM_START_TIME__"
+            for variable in pb_data.sim_vars
+        )
+        if has_start_marker:
+            self.reset_simulation_history()
+
         # 同一仿真时刻可能会被分成多个 UDP 包发送；这些包必须合并到同一帧。
         # 否则看板去重时只保留第一包，后续包中的变量曲线会在终点/分包点断线。
         merge_tolerance = 1e-9
@@ -2653,10 +3168,18 @@ class ProfessionalVisualizer(QMainWindow):
             is_new_frame = True
             if self.current_idx > 0:
                 source_idx = (self.current_idx - 1) % self.max_points
-                for values in self.data_store.values():
+                history_values = list(self.data_store.values()) + [
+                    values for name, values in self.background_data_store.items()
+                    if name not in self.data_store
+                ]
+                for values in history_values:
                     values[idx] = values[source_idx]
             else:
-                for values in self.data_store.values():
+                history_values = list(self.data_store.values()) + [
+                    values for name, values in self.background_data_store.items()
+                    if name not in self.data_store
+                ]
+                for values in history_values:
                     values[idx] = np.nan
 
         var_map = {}
@@ -2688,10 +3211,24 @@ class ProfessionalVisualizer(QMainWindow):
                 pass
 
         if self.accumulate_enabled:
-            if has_end_marker and not public_var_map:
+            if has_start_marker and not public_var_map:
+                pass
+            elif has_end_marker and not public_var_map:
                 self.append_trend_boundary(t)
             else:
                 self.append_trend_sample(t, public_var_map)
+
+        if has_start_marker and public_var_map:
+            try:
+                finite_count = sum(1 for value in public_var_map.values() if np.isfinite(float(value)))
+                with open(self.perf_log_file, "a", encoding="utf-8") as f:
+                    f.write(
+                        f"[{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+                        f"[SNAPSHOT][VIZ] exact initial frame accepted: sim_time={float(t):.9f}s "
+                        f"vars={len(public_var_map)} finite={finite_count} accumulate={int(self.accumulate_enabled)}\n"
+                    )
+            except Exception:
+                pass
         
         # 解析绝对时间基准
         if self.base_datetime is None and 'Year' in public_var_map:
@@ -2705,16 +3242,44 @@ class ProfessionalVisualizer(QMainWindow):
 
         for name in public_var_map:
             if name not in self.data_store:
+                self.background_data_store.setdefault(name, np.full(self.max_points, np.nan))
                 self.register_runtime_variable(name)
 
-        for name in self.data_store:
-            if name in public_var_map:
-                val = public_var_map[name]
-                self.data_store[name][idx] = val
-                self.latest_values[name] = val
+        for name, val in public_var_map.items():
+            values = self.data_store.get(name)
+            if values is None:
+                values = self.background_data_store.get(name)
+            if values is not None:
+                values[idx] = val
+                if name in self.data_store:
+                    self.latest_values[name] = val
 
         if is_new_frame:
             self.current_idx += 1
+        self.data_revision += 1
+
+    def reset_simulation_history(self):
+        self.current_idx = 0
+        self.times.fill(0.0)
+        for values in self.data_store.values():
+            values.fill(np.nan)
+        for values in self.background_data_store.values():
+            values.fill(np.nan)
+        self.latest_values.clear()
+        self.trend_times.clear()
+        for values in self.trend_store.values():
+            values.clear()
+        self.trend_bucket_start = None
+        self.trend_bucket_end = None
+        self.trend_bucket_values = {}
+        self.trend_bucket_last_values = {}
+        self.base_datetime = None
+        self.base_sim_time = 0.0
+        self.last_end_marker_time = None
+        self.last_ui_idx = -1
+        self.last_ui_revision = -1
+        self.last_curve_update_idx.clear()
+        self.last_view_update.clear()
         self.data_revision += 1
 
     def update_ui(self):
@@ -2834,6 +3399,10 @@ class ProfessionalVisualizer(QMainWindow):
                     continue
 
                 y_slice = y_full[start_idx:end_idx]
+                gap_item = self.gap_curves.get(tag, {}).get(dock_name) or self.create_gap_curve(tag, dock_name)
+                if gap_item is not None:
+                    gap_x, gap_y = self.build_gap_bridge_data(t_slice, y_slice)
+                    gap_item.setData(x=gap_x, y=gap_y, connect='finite')
                 if self.accumulate_enabled:
                     t_plot_render, y_plot = self.build_trend_plot_data(t_slice, y_slice, self.accumulate_max_render_points)
                     if len(t_plot_render) == 0 or len(y_plot) == 0:

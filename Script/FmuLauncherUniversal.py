@@ -11,7 +11,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0806.1540"
+APP_VERSION = "v26.0818.1544"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -1469,8 +1469,6 @@ class FieldsDialog(QDialog):
         """)
         content_lay.addWidget(self.table)
         vlay.addWidget(content)
-        self.table.itemChanged.connect(self._on_table_item_changed)
-        self.table.itemClicked.connect(self._on_table_item_changed)
         self.load_data()
         
     def add_manual(self):
@@ -3022,24 +3020,50 @@ class FmuSolverGUI(QMainWindow):
     def _launch_viz_manual(self, ready_file=None):
         if isinstance(ready_file, bool):
             ready_file = None
+        viz_dir = os.path.join(APP_DIR, "Visualizer")
+        viz_exe = os.path.join(viz_dir, "DataVisualizer64.exe")
+        if not os.path.exists(viz_exe):
+            viz_exe = os.path.join(viz_dir, "DataVisualizer32.exe")
+        python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
+        # In the source-tree launcher, an older packaged DataVisualizer window
+        # can have the same title and would otherwise be reused forever. Close
+        # only that exact process so the current Script/DataVisualizerPython.py
+        # is loaded for the next simulation.
+        source_visualizer_mode = os.path.exists(python_viz) and not os.path.exists(viz_exe)
         # Always try to bring an existing DataVisualizer window to front,
         # regardless of whether we spawned it (covers cross-session reuse).
         try:
             import ctypes
             hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
             if hwnd:
-                # SW_RESTORE in case it is minimized, then bring to front
-                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
-                # Briefly set TOPMOST then release so it pops above other apps
-                SWP_NOMOVE = 0x0002
-                SWP_NOSIZE = 0x0001
-                HWND_TOPMOST = -1
-                HWND_NOTOPMOST = -2
-                ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
-                ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
-                self.log("[*] 看板已在运行，已置顶", "sys")
-                return True
+                if source_visualizer_mode:
+                    pid = ctypes.c_ulong(0)
+                    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                    if pid.value and pid.value != os.getpid():
+                        subprocess.call(["taskkill", "/PID", str(pid.value), "/T", "/F"], creationflags=0x08000000)
+                        for _ in range(10):
+                            time.sleep(0.1)
+                            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+                            if not hwnd:
+                                break
+                        if hwnd:
+                            self.log("[!] 旧看板进程仍未退出，继续复用现有窗口", "warn")
+                        else:
+                            self.log("[*] 已关闭旧看板，将启动当前 Python 看板", "sys")
+
+                if hwnd:
+                    # SW_RESTORE in case it is minimized, then bring to front
+                    ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    # Briefly set TOPMOST then release so it pops above other apps
+                    SWP_NOMOVE = 0x0002
+                    SWP_NOSIZE = 0x0001
+                    HWND_TOPMOST = -1
+                    HWND_NOTOPMOST = -2
+                    ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                    ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                    self.log("[*] 看板已在运行，已置顶", "sys")
+                    return True
         except Exception:
             pass
 
@@ -3048,12 +3072,6 @@ class FmuSolverGUI(QMainWindow):
             return True
 
         try:
-            viz_dir = os.path.join(APP_DIR, "Visualizer")
-            viz_exe = os.path.join(viz_dir, "DataVisualizer64.exe")
-            if not os.path.exists(viz_exe):
-                viz_exe = os.path.join(viz_dir, "DataVisualizer32.exe")
-            
-            python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
             viz_env = self._child_env()
             viz_env.setdefault("FMUSOLVER_VIZ_MAX_POINTS", "12000")

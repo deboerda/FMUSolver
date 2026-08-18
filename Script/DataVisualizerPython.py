@@ -47,7 +47,7 @@ try:
     from PySide6.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                  QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                  QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
-                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox)
+                                 QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PySide6.QtCore import Qt, QTimer, Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 6
@@ -55,7 +55,7 @@ except ImportError:
     from PyQt5.QtWidgets import (QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, 
                                QWidget, QHeaderView, QTableWidget, QTableWidgetItem, 
                                QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
-                               QSpinBox, QComboBox, QGridLayout, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox)
+                               QSpinBox, QComboBox, QGridLayout, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal as Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
     from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 5
@@ -95,6 +95,53 @@ class PlotDockWidget(QDockWidget):
         self.closed.emit(self.dock_key)
         super().closeEvent(event)
 
+
+class EditableTitleLabel(QLabel):
+    """双击可编辑标题的 QLabel 子类"""
+    titleChanged = Signal(str)
+
+    def __init__(self, text="", parent=None):
+        super().__init__(text, parent)
+        self._edit = None
+        self._saved_text = ""
+        self.setToolTip("双击编辑标题")
+
+    def mouseDoubleClickEvent(self, event):
+        """双击进入编辑模式"""
+        if self._edit is not None:
+            return
+        self._saved_text = self.text()
+        self.setText("")  # 隐藏原文字，避免透过半透明编辑框可见
+        self._edit = QLineEdit(self._saved_text, self)
+        self._edit.setAlignment(self.alignment())
+        self._edit.setFont(self.font())
+        self._edit.setFrame(False)
+        self._edit.setStyleSheet("background: transparent; border: none; padding: 0px; color: inherit;")
+        self._edit.setGeometry(self.rect())
+        self._edit.selectAll()
+        self._edit.setFocus()
+        self._edit.editingFinished.connect(self._finish_edit)
+        self._edit.show()
+        self._edit.raise_()
+
+    def _finish_edit(self):
+        """完成编辑，恢复 QLabel"""
+        if self._edit is None:
+            return
+        new_text = self._edit.text().strip()
+        self._edit.deleteLater()
+        self._edit = None
+        if new_text:
+            self.setText(new_text)
+            self.titleChanged.emit(new_text)
+        else:
+            self.setText(self._saved_text)  # 恢复原标题
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if self._edit is not None:
+            self._edit.setGeometry(self.rect())
+
 class DockTitleBar(QWidget):
     def __init__(self, title, dock, parent=None):
         super().__init__(parent)
@@ -109,10 +156,11 @@ class DockTitleBar(QWidget):
         self.left_spacer.setFixedSize(24, 24)
         self.layout.addWidget(self.left_spacer, 0, Qt.AlignVCenter)
 
-        self.title_label = QLabel(title)
+        self.title_label = EditableTitleLabel(title)
         self.title_label.setObjectName("DockTitleLabel")
         self.title_label.setAlignment(Qt.AlignCenter)
         self.title_label.setWordWrap(False)
+        self.title_label.titleChanged.connect(self._on_title_changed)
         self.layout.addWidget(self.title_label, 1)
 
         self.btn_close = QPushButton("×")
@@ -123,6 +171,27 @@ class DockTitleBar(QWidget):
         self.layout.addWidget(self.btn_close, 0, Qt.AlignRight | Qt.AlignVCenter)
 
         self.setTitleSize(self.current_point_size)
+
+    def _on_title_changed(self, new_title):
+        """标题编辑完成后同步更新 dock 窗口标题并保存"""
+        if hasattr(self.dock, 'setWindowTitle'):
+            self.dock.setWindowTitle(new_title)
+        try:
+            # 沿父链查找主窗口（浮动 dock 时 self.window() 返回的是浮动窗口）
+            main_win = self.dock
+            while main_win is not None:
+                if hasattr(main_win, 'save_preset'):
+                    break
+                main_win = main_win.parent()
+            if main_win is None:
+                main_win = self.window()
+            if main_win is not None and hasattr(main_win, 'save_preset'):
+                preset_name = getattr(main_win, 'current_preset_name', 'LastSession') or 'LastSession'
+                main_win.save_preset(preset_name, refresh_list=False)
+                if preset_name != 'LastSession':
+                    main_win.save_preset('LastSession', refresh_list=False)
+        except:
+            pass
 
     def setTitle(self, title):
         self.title_label.setText(title)
@@ -255,7 +324,15 @@ class TimeAxisItem(pg.AxisItem):
 
     def tickStrings(self, values, scale, spacing):
         strings = []
-        for v in values:
+        axis_width = self.width()
+        # A narrow dock still receives the default number of ticks from
+        # pyqtgraph. Keep only every second/third label so the two-line date
+        # text has enough horizontal room instead of drawing over its neighbor.
+        label_step = 3 if 0 < axis_width < 320 else (2 if 0 < axis_width < 460 else 1)
+        for index, v in enumerate(values):
+            if label_step > 1 and index % label_step:
+                strings.append("")
+                continue
             if self.visualizer.base_datetime is not None:
                 dt = self.visualizer.base_datetime + datetime.timedelta(seconds=(v - self.visualizer.base_sim_time))
                 strings.append(f"{dt.year}-{dt.month:02d}-{dt.day:02d}\n{dt.hour:02d}:{dt.minute:02d}:{dt.second:02d}")
@@ -285,8 +362,18 @@ class PlotViewBox(pg.ViewBox):
         super().mouseDragEvent(ev, axis=axis)
 
 APP_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
-DEFAULT_CURVE_WIDTH = 2
-SELECTED_CURVE_MIN_WIDTH = 5
+DEFAULT_CURVE_WIDTH = 1
+SELECTED_CURVE_MIN_WIDTH = 3
+CURVE_COLOR_PALETTE = (
+    "#0000ff",  # 蓝色
+    "#ff0000",  # 红色
+    "#008000",  # 绿色
+    "#ff00ff",  # 粉色
+    "#00A6C8",  # 青色
+    "#ffc125",  # 金色
+    "#aa00ff",  # 紫色
+    "#802a2a",  # 棕色
+)
 
 def load_app_version():
     candidates = [
@@ -312,7 +399,7 @@ class ProfessionalVisualizer(QMainWindow):
         pen = QPen(QColor(style["color"]))
         width = float(style["width"])
         if selected:
-            width = max(SELECTED_CURVE_MIN_WIDTH, width + 3.0)
+            width = max(SELECTED_CURVE_MIN_WIDTH, width)
         pen.setWidthF(width)
         pen.setCosmetic(True)
         pen.setJoinStyle(Qt.RoundJoin)
@@ -332,8 +419,8 @@ class ProfessionalVisualizer(QMainWindow):
 
     def default_curve_style(self, tag, index=0):
         seed = int(hashlib.md5(str(tag).encode("utf-8")).hexdigest()[:8], 16)
-        hue = (seed + index * 137) % 360
-        return {"color": QColor.fromHsv(hue, 230, 255), "width": DEFAULT_CURVE_WIDTH}
+        color = CURVE_COLOR_PALETTE[(seed + index) % len(CURVE_COLOR_PALETTE)]
+        return {"color": QColor(color), "width": DEFAULT_CURVE_WIDTH}
 
     def __init__(self, port=12345):
         super().__init__()
@@ -349,7 +436,11 @@ class ProfessionalVisualizer(QMainWindow):
         self.max_points = int(os.environ.get("FMUSOLVER_VIZ_MAX_POINTS", "12000"))
         self.current_idx = 0
         self.times = np.zeros(self.max_points)
-        self.data_store = {} 
+        self.data_store = {}
+        # Keep a history for variables that are received but are not currently
+        # part of the dashboard.  This lets a variable added mid-simulation
+        # reuse samples collected since t=0 instead of starting at click time.
+        self.background_data_store = {}
         self.accumulate_enabled = False
         self.accumulate_max_render_points = int(os.environ.get("FMUSOLVER_VIZ_ACC_RENDER_POINTS", "1000"))
         self.accumulate_update_stride = 10
@@ -1022,6 +1113,7 @@ class ProfessionalVisualizer(QMainWindow):
         
         self.table.itemChanged.connect(self.on_table_item_changed)
 
+        self.current_preset_name = "LastSession"
         self.load_presets()
         self.load_ui_settings()
         # 初始加载默认或上一次的布局
@@ -1055,7 +1147,8 @@ class ProfessionalVisualizer(QMainWindow):
 
         self.ordered_tags.append(tag)
         self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
-        self.data_store[tag] = np.full(self.max_points, np.nan)
+        history = self.background_data_store.pop(tag, None)
+        self.data_store[tag] = history if history is not None else np.full(self.max_points, np.nan)
         self.trend_store[tag] = []
         self.var_styles[tag] = self.default_curve_style(tag, len(self.ordered_tags) - 1)
         self.vars_desc[tag] = desc
@@ -1406,9 +1499,17 @@ class ProfessionalVisualizer(QMainWindow):
                     active_vars.append(tag)
             dock_data[d_name] = active_vars
         
+        dock_titles = {}
+        for d_name, d_obj in self.docks.items():
+            if hasattr(d_obj, 'title_bar_widget') and hasattr(d_obj.title_bar_widget, 'title_label'):
+                t = d_obj.title_bar_widget.title_label.text()
+                if t and t != d_name:
+                    dock_titles[d_name] = t
+
         preset = {
             "dock_order": [dock_name for dock_name in self.dock_order if dock_name in self.docks],
             "dock_vars": dock_data,
+            "dock_titles": dock_titles,
             "layout_state": self.serialize_dock_layout(),
             "dock_geometry": self.serialize_dock_geometry(),
             "active_dock": self.active_dock_name if getattr(self, 'active_dock_name', None) in self.docks else (self.dock_order[0] if self.dock_order else None)
@@ -1453,6 +1554,7 @@ class ProfessionalVisualizer(QMainWindow):
 
     def load_preset(self, name):
         if name not in self.presets: return
+        self.current_preset_name = name
         data = self.presets[name]
         self._restoring_preset = True
         self.pause_session_memory()
@@ -1467,6 +1569,11 @@ class ProfessionalVisualizer(QMainWindow):
             self.active_dock_name = None
             self.curves = {}
             self.gap_curves = {}
+            # Newly restored curve items must render immediately, even when the
+            # data revision has not changed since the previous preset.
+            self.last_curve_update_idx.clear()
+            self.last_view_update.clear()
+            self.last_y_range.clear()
             self.selected_curve_tag = None
             self.selected_curve_dock = None
 
@@ -1477,6 +1584,14 @@ class ProfessionalVisualizer(QMainWindow):
 
             for d_name in saved_order:
                 self.create_dock_internal(d_name)
+
+            # 2.5 恢复自定义标题
+            dock_titles = data.get("dock_titles", {})
+            for d_name, custom_title in dock_titles.items():
+                if d_name in self.docks:
+                    dock = self.docks[d_name]
+                    if hasattr(dock, 'title_bar_widget') and hasattr(dock.title_bar_widget, 'title_label'):
+                        dock.title_bar_widget.title_label.setText(custom_title)
 
             # 3. 恢复变量勾选和曲线绘制
             all_active = set()
@@ -1507,6 +1622,12 @@ class ProfessionalVisualizer(QMainWindow):
                 QTimer.singleShot(0, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
                 QTimer.singleShot(60, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
                 QTimer.singleShot(140, lambda geom=dock_geometry: self.restore_dock_geometry(geom))
+            # A single non-floating dock can retain the old saved width and
+            # leave the dock host's central area blank after restore. Refill
+            # the available canvas once the dock layout has settled.
+            if len(self.docks) == 1 and not next(iter(self.docks.values())).isFloating():
+                QTimer.singleShot(220, self.normalize_dock_sizes)
+                QTimer.singleShot(420, self.normalize_dock_sizes)
 
             active_name = data.get("active_dock")
             if active_name in self.docks:
@@ -1524,6 +1645,10 @@ class ProfessionalVisualizer(QMainWindow):
         if state == Qt.Checked or state == 2:
             if tag not in self.curves: self.curves[tag] = {}
             if dock_name not in self.curves[tag]:
+                # The curve may have been removed and re-added at the same
+                # data revision. Invalidate the old marker so its history is
+                # rendered immediately instead of waiting for new samples.
+                self.last_curve_update_idx.pop((dock_name, tag), None)
                 pw = self.plot_widgets[dock_name]
                 selected = tag == self.selected_curve_tag and dock_name == self.selected_curve_dock
                 c = pw.plot(
@@ -1537,6 +1662,8 @@ class ProfessionalVisualizer(QMainWindow):
                 self.curves[tag][dock_name] = c
                 self.configure_curve_selection(c, tag, dock_name)
                 self.create_gap_curve(tag, dock_name)
+                self.request_curve_refresh()
+                self.render_curve_history(tag, dock_name)
         else:
             if tag in self.curves and dock_name in self.curves[tag]:
                 self.plot_widgets[dock_name].removeItem(self.curves[tag][dock_name])
@@ -1604,6 +1731,33 @@ class ProfessionalVisualizer(QMainWindow):
             self.sync_states[tag] = (state == Qt.Checked or state == 2)
             self.save_sync_state()
             self.remember_last_session()
+
+    def request_curve_refresh(self):
+        """Invalidate the UI revision so a newly added curve renders all history immediately."""
+        self.last_ui_revision = -1
+        self.force_curve_update_revision = self.data_revision
+
+    def render_curve_history(self, tag, dock_name):
+        """Paint a newly added curve immediately, without waiting for a new packet."""
+        curve = self.curves.get(tag, {}).get(dock_name)
+        if curve is None or self.current_idx <= 0 or tag not in self.data_store:
+            return
+        try:
+            t_data, y_store = self.get_active_series({tag})
+            y_data = y_store.get(tag)
+            if y_data is None or len(t_data) == 0:
+                return
+            t_plot, y_plot = (
+                self.build_trend_plot_data(t_data, y_data, self.accumulate_max_render_points)
+                if self.accumulate_enabled else
+                self.build_realtime_plot_data(t_data, y_data, self.realtime_max_render_points)
+            )
+            if len(t_plot) == 0:
+                return
+            curve.setData(x=t_plot, y=y_plot, connect='finite')
+            self.update_dock_y_range(dock_name, self.plot_widgets[dock_name].getViewBox(), [y_plot])
+        except Exception:
+            pass
             
     def load_sync_state(self):
         self.sync_states = {}
@@ -1945,6 +2099,9 @@ class ProfessionalVisualizer(QMainWindow):
         else:
             active_tags = [tag for tag in active_tags if tag in self.data_store]
         if self.accumulate_enabled and self.trend_times:
+            for tag in active_tags:
+                if len(self.trend_store.get(tag, [])) < len(self.trend_times):
+                    self.backfill_trend_history(tag)
             self.flush_trend_bucket()
             t_data = np.asarray(self.trend_times, dtype=float)
             return self.sanitize_active_series(t_data, {tag: self.trend_store.get(tag, []) for tag in active_tags})
@@ -1964,6 +2121,31 @@ class ProfessionalVisualizer(QMainWindow):
             else:
                 y_data[tag] = self.data_store[tag][:valid_len]
         return self.sanitize_active_series(t_data, y_data)
+
+    def backfill_trend_history(self, tag):
+        """Rebuild an accumulated curve from raw samples when it is added late."""
+        if tag not in self.data_store or not self.trend_times or self.current_idx <= 0:
+            return
+        valid_len = min(self.current_idx, self.max_points)
+        if self.current_idx > self.max_points:
+            start = self.current_idx % self.max_points
+            raw_t = np.concatenate((self.times[start:], self.times[:start]))
+            raw_y = np.concatenate((self.data_store[tag][start:], self.data_store[tag][:start]))
+        else:
+            raw_t = self.times[:valid_len]
+            raw_y = self.data_store[tag][:valid_len]
+        finite = np.isfinite(raw_t)
+        raw_t = np.asarray(raw_t[finite], dtype=float)
+        raw_y = np.asarray(raw_y[finite], dtype=float)
+        if raw_t.size == 0:
+            self.trend_store[tag] = [np.nan] * len(self.trend_times)
+            return
+        # Use the last raw sample at or before each accumulated timestamp.
+        positions = np.searchsorted(raw_t, np.asarray(self.trend_times, dtype=float), side="right") - 1
+        values = np.full(len(self.trend_times), np.nan, dtype=float)
+        valid = positions >= 0
+        values[valid] = raw_y[np.clip(positions[valid], 0, len(raw_y) - 1)]
+        self.trend_store[tag] = values.tolist()
 
     def build_realtime_plot_data(self, x_data, y_data, max_points):
         x_arr = np.asarray(x_data, dtype=float)
@@ -2062,7 +2244,10 @@ class ProfessionalVisualizer(QMainWindow):
         title_size = self.title_size_spin.value()
         for dock_name, dock in self.docks.items():
             if dock and hasattr(dock, 'title_bar_widget'):
-                dock.title_bar_widget.setTitle(dock_name)
+                if hasattr(dock.title_bar_widget, 'title_label'):
+                    cur = dock.title_bar_widget.title_label.text()
+                    if not cur or cur == dock_name:
+                        dock.title_bar_widget.title_label.setText(dock_name)
                 dock.title_bar_widget.setTitleSize(title_size)
                 dock.title_bar_widget.updateGeometry()
                 dock.title_bar_widget.update()
@@ -2129,11 +2314,16 @@ class ProfessionalVisualizer(QMainWindow):
         if tag not in self.var_styles:
             return
         
+        self.show_curve_style_menu(tag, self.table.viewport().mapToGlobal(pos))
+
+    def show_curve_style_menu(self, tag, global_pos):
+        if tag not in self.var_styles:
+            return
         menu = QMenu(self)
         action_color = menu.addAction("🎨 修改线条颜色")
         action_width = menu.addAction("📏 修改线条粗细")
         
-        action = menu.exec_(self.table.viewport().mapToGlobal(pos)) if QT_VERSION == 5 else menu.exec(self.table.viewport().mapToGlobal(pos))
+        action = menu.exec_(global_pos) if QT_VERSION == 5 else menu.exec(global_pos)
         
         if action == action_color:
             color = QColorDialog.getColor(self.var_styles[tag]["color"], self, "选择颜色")
@@ -2214,10 +2404,37 @@ class ProfessionalVisualizer(QMainWindow):
         try:
             curve_item.setCurveClickable(True, width=max(8, int(self.var_styles[tag]["width"]) + 6))
             curve_item.sigClicked.connect(
-                lambda *_args, selected_tag=tag, selected_dock=dock_name: self.select_curve_variable(selected_tag, selected_dock)
+                lambda _item, event, selected_tag=tag, selected_dock=dock_name: self.on_curve_clicked(
+                    event, selected_tag, selected_dock
+                )
             )
         except Exception:
             pass
+
+    def on_curve_clicked(self, event, tag, dock_name):
+        if event.button() == Qt.RightButton:
+            self.show_curve_style_menu(tag, QCursor.pos())
+            event.accept()
+            return
+        if event.button() != Qt.LeftButton:
+            return
+        if tag == self.selected_curve_tag and dock_name == self.selected_curve_dock:
+            self.clear_curve_selection()
+        else:
+            self.select_curve_variable(tag, dock_name)
+        event.accept()
+
+    def clear_curve_selection(self):
+        self.selected_curve_tag = None
+        self.selected_curve_dock = None
+        for curve_tag, dock_curves in self.curves.items():
+            style = self.var_styles.get(curve_tag)
+            if not style:
+                continue
+            for curve_item in dock_curves.values():
+                curve_item.setPen(self.make_curve_pen(style, selected=False))
+                curve_item.setZValue(0.0)
+        self.table.clearSelection()
 
     def on_variable_item_clicked(self, item):
         row = item.row()
@@ -2633,7 +2850,31 @@ class ProfessionalVisualizer(QMainWindow):
         # 用户手动拖拽或缩放时，自动取消画面跟随
         plot_widget.getViewBox().sigRangeChangedManually.connect(lambda: self.chk_autoscroll.setChecked(False))
 
+        def curve_at_plot_pos(pos):
+            """Return the curve under a plot-widget context-menu position."""
+            scene_pos = plot_widget.mapToScene(pos)
+            # Iterate from the visually topmost curve so overlapping curves pick
+            # the one the user can actually see/click.
+            candidates = []
+            for curve_tag, dock_curves in self.curves.items():
+                curve_item = dock_curves.get(name)
+                if curve_item is not None:
+                    candidates.append((curve_item.zValue(), curve_tag, curve_item))
+            for _z, curve_tag, curve_item in sorted(candidates, reverse=True, key=lambda value: value[0]):
+                try:
+                    curve_path = getattr(curve_item, "curve", curve_item)
+                    local_pos = curve_path.mapFromScene(scene_pos)
+                    if curve_path.mouseShape().contains(local_pos):
+                        return curve_tag
+                except Exception:
+                    continue
+            return None
+
         def show_plot_menu(pos):
+            curve_tag = curve_at_plot_pos(pos)
+            if curve_tag is not None:
+                self.show_curve_style_menu(curve_tag, plot_widget.mapToGlobal(pos))
+                return
             menu = QMenu(plot_widget)
             cursor_enabled = self.cursor_states.get(name, False)
             action_cursor = menu.addAction("关闭游标" if cursor_enabled else "开启游标")
@@ -2739,6 +2980,7 @@ class ProfessionalVisualizer(QMainWindow):
             
         if state == Qt.Checked or state == 2: # Qt5 is 2, PyQt6 is Qt.CheckState.Checked
             if dock_name not in self.curves[tag]:
+                self.last_curve_update_idx.pop((dock_name, tag), None)
                 style = self.var_styles[tag]
                 curve = pw.plot(
                     pen=self.make_curve_pen(
@@ -2754,6 +2996,8 @@ class ProfessionalVisualizer(QMainWindow):
                 self.curves[tag][dock_name] = curve
                 self.configure_curve_selection(curve, tag, dock_name)
                 self.create_gap_curve(tag, dock_name)
+                self.request_curve_refresh()
+                self.render_curve_history(tag, dock_name)
         else:
             if dock_name in self.curves[tag]:
                 pw.removeItem(self.curves[tag][dock_name])
@@ -2924,10 +3168,18 @@ class ProfessionalVisualizer(QMainWindow):
             is_new_frame = True
             if self.current_idx > 0:
                 source_idx = (self.current_idx - 1) % self.max_points
-                for values in self.data_store.values():
+                history_values = list(self.data_store.values()) + [
+                    values for name, values in self.background_data_store.items()
+                    if name not in self.data_store
+                ]
+                for values in history_values:
                     values[idx] = values[source_idx]
             else:
-                for values in self.data_store.values():
+                history_values = list(self.data_store.values()) + [
+                    values for name, values in self.background_data_store.items()
+                    if name not in self.data_store
+                ]
+                for values in history_values:
                     values[idx] = np.nan
 
         var_map = {}
@@ -2990,13 +3242,17 @@ class ProfessionalVisualizer(QMainWindow):
 
         for name in public_var_map:
             if name not in self.data_store:
+                self.background_data_store.setdefault(name, np.full(self.max_points, np.nan))
                 self.register_runtime_variable(name)
 
-        for name in self.data_store:
-            if name in public_var_map:
-                val = public_var_map[name]
-                self.data_store[name][idx] = val
-                self.latest_values[name] = val
+        for name, val in public_var_map.items():
+            values = self.data_store.get(name)
+            if values is None:
+                values = self.background_data_store.get(name)
+            if values is not None:
+                values[idx] = val
+                if name in self.data_store:
+                    self.latest_values[name] = val
 
         if is_new_frame:
             self.current_idx += 1
@@ -3006,6 +3262,8 @@ class ProfessionalVisualizer(QMainWindow):
         self.current_idx = 0
         self.times.fill(0.0)
         for values in self.data_store.values():
+            values.fill(np.nan)
+        for values in self.background_data_store.values():
             values.fill(np.nan)
         self.latest_values.clear()
         self.trend_times.clear()

@@ -16,6 +16,7 @@ import re
 import queue
 import traceback
 import struct
+import math
 
 class AsyncRotatingFileLogger:
     """Small bounded async logger for long-running worker diagnostics."""
@@ -512,7 +513,7 @@ class DDMCommManager:
                     except Exception: pass
         threading.Thread(target=listen_loop, daemon=True).start()
 
-    def send_fmu_data(self, sim_time, variables, chunk_size=200, extra_external_variables=None, force_viz=False):
+    def send_fmu_data(self, sim_time, variables, chunk_size=200, extra_external_variables=None, force_viz=False, viz_start=False):
         if ddm_pb2 is None or not variables: return
         external_variables = dict(variables)
         if extra_external_variables:
@@ -582,6 +583,12 @@ class DDMCommManager:
             packet_viz = ddm_pb2.DDMData()
             packet_viz.machine_time = time.time()
             packet_viz.sim_time = sim_time
+
+            if viz_start and i == 0:
+                marker = packet_viz.sim_vars.add()
+                marker.name = "__FMUSOLVER_SIM_START_TIME__"
+                marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                marker.double_value = float(sim_time)
 
             for name in chunk_names:
                 val = viz_variables[name]
@@ -667,6 +674,26 @@ class DDMCommManager:
         marker.name = "__FMUSOLVER_SIM_END_TIME__"
         marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
         marker.double_value = float(sim_time)
+        try:
+            raw = packet.SerializeToString()
+            payload = base64.b64encode(raw).decode('ascii').encode('ascii')
+            for viz_addr in self.viz_addrs:
+                self.sock.sendto(payload, viz_addr)
+            self.viz_send_count += 1
+        except Exception:
+            self.send_error_count += 1
+
+    def send_viz_start_marker(self):
+        """Tell the dashboard to start a fresh history at the exact FMU start time."""
+        if ddm_pb2 is None:
+            return
+        packet = ddm_pb2.DDMData()
+        packet.machine_time = time.time()
+        packet.sim_time = 0.0
+        marker = packet.sim_vars.add()
+        marker.name = "__FMUSOLVER_SIM_START_TIME__"
+        marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+        marker.double_value = 0.0
         try:
             raw = packet.SerializeToString()
             payload = base64.b64encode(raw).decode('ascii').encode('ascii')
@@ -1011,6 +1038,38 @@ class FMUPlayer:
                 return True
             
             print(f"[*] Simulation Loop Started. Step={step_size}s, Rate={sim_rate}x")
+
+            viz_ready_file = os.environ.get("FMUSOLVER_VIZ_READY_FILE", "").strip()
+            if viz_ready_file:
+                ready_deadline = time.perf_counter() + max(
+                    0.5,
+                    float(os.environ.get("FMUSOLVER_VIZ_READY_TIMEOUT_SEC", "10.0")),
+                )
+                while time.perf_counter() < ready_deadline and not os.path.exists(viz_ready_file):
+                    time.sleep(0.05)
+                if os.path.exists(viz_ready_file):
+                    print("[OK] Dashboard receiver ready; sending exact t=0 initial frame.", flush=True)
+                    try:
+                        os.remove(viz_ready_file)
+                    except Exception:
+                        pass
+                else:
+                    print("[!] Dashboard readiness wait timed out; simulation will continue.", flush=True)
+
+            initial_out = read_output_variables()
+            initial_finite_count = 0
+            for initial_value in initial_out.values():
+                try:
+                    if math.isfinite(float(initial_value)):
+                        initial_finite_count += 1
+                except Exception:
+                    pass
+            self.comm.send_fmu_data(0.0, initial_out, force_viz=True, viz_start=True)
+            print(
+                f"[SNAPSHOT] initial precise dashboard frame sent at sim_time=0.000000000s "
+                f"vars={len(initial_out)} finite={initial_finite_count} deferred={len(initial_out) - initial_finite_count}",
+                flush=True,
+            )
 
             while sim_time == float('inf') or current_time < sim_time - finite_stop_tolerance:
                 while True:
