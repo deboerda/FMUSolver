@@ -11,7 +11,10 @@ import gc
 import numpy as np
 import ctypes
 from ctypes import wintypes
-import ddm_pb2
+try:
+    import ddm_pb2
+except Exception:
+    ddm_pb2 = None
 import datetime
 import traceback
 import hashlib

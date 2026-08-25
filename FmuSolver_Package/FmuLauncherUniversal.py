@@ -1,4 +1,8 @@
-import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, queue, ddm_pb2
+import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, queue
+try:
+    import ddm_pb2
+except Exception:
+    ddm_pb2 = None
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
@@ -9,9 +13,10 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QTableWidget, QTableWidgetItem, QAbstractItemView, QColorDialog, QStackedWidget, QSlider, QComboBox,
                              QSizePolicy)
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
+from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0818.1544"
+APP_VERSION = "v26.0825.1138"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -69,6 +74,241 @@ def disable_blur_behind(hwnd):
     try:
         ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.pointer(data))
     except: pass
+
+
+# ─── Robust single-instance window handoff ───
+_SINGLE_INSTANCE_MUTEX = "Local\\FmuSolver_Global_Mutex"
+_SINGLE_INSTANCE_PROP = "FmuSolver.SingleInstanceWindow"
+_ERROR_ALREADY_EXISTS = 183
+
+
+def _window_api():
+    """Load Win32 APIs with pointer-sized HWND/HANDLE signatures.
+
+    ctypes defaults to a 32-bit integer return value when no restype is set;
+    that silently truncates 64-bit window handles on some machines and makes
+    restore/foreground calls appear to do nothing.
+    """
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32.EnumWindows.argtypes = [ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM), wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    user32.GetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    user32.GetPropW.restype = wintypes.HANDLE
+    user32.SetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.HANDLE]
+    user32.SetPropW.restype = wintypes.BOOL
+    user32.RemovePropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    user32.RemovePropW.restype = wintypes.HANDLE
+    user32.IsWindow.argtypes = [wintypes.HWND]
+    user32.IsWindow.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.IsIconic.argtypes = [wintypes.HWND]
+    user32.IsIconic.restype = wintypes.BOOL
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user32.SetWindowPos.restype = wintypes.BOOL
+    user32.BringWindowToTop.argtypes = [wintypes.HWND]
+    user32.BringWindowToTop.restype = wintypes.BOOL
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.SetForegroundWindow.restype = wintypes.BOOL
+    user32.SetActiveWindow.argtypes = [wintypes.HWND]
+    user32.SetActiveWindow.restype = wintypes.HWND
+    user32.GetForegroundWindow.restype = wintypes.HWND
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+    user32.AttachThreadInput.restype = wintypes.BOOL
+    user32.FlashWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+    user32.FlashWindow.restype = wintypes.BOOL
+    if hasattr(user32, "SwitchToThisWindow"):
+        user32.SwitchToThisWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+        user32.SwitchToThisWindow.restype = None
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+    return user32, kernel32
+
+
+def _find_single_instance_window(user32):
+    """Find the first instance by property, with a title fallback for old builds."""
+    property_windows = []
+    title_windows = []
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def enum_proc(hwnd, _lparam):
+        if not user32.IsWindow(hwnd):
+            return True
+        if user32.GetPropW(hwnd, _SINGLE_INSTANCE_PROP):
+            property_windows.append(hwnd)
+            return True
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length:
+            title = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, title, length + 1)
+            if title.value.strip().lower().startswith("fmusolver"):
+                title_windows.append(hwnd)
+        return True
+
+    user32.EnumWindows(enum_proc, 0)
+    return (property_windows or title_windows or [None])[0]
+
+
+def _restore_and_activate_window(hwnd, user32, kernel32):
+    """Restore a minimized Qt window and reliably hand foreground focus to it."""
+    if not hwnd or not user32.IsWindow(hwnd):
+        return False
+    try:
+        # SW_RESTORE is required for minimized windows; SW_SHOW alone is not.
+        user32.ShowWindow(hwnd, 9 if user32.IsIconic(hwnd) else 5)
+        flags = 0x0001 | 0x0002 | 0x0040  # SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW
+        user32.SetWindowPos(hwnd, wintypes.HWND(0), 0, 0, 0, 0, flags)
+        user32.BringWindowToTop(hwnd)
+
+        current_tid = kernel32.GetCurrentThreadId()
+        target_tid = user32.GetWindowThreadProcessId(hwnd, None)
+        foreground = user32.GetForegroundWindow()
+        foreground_tid = user32.GetWindowThreadProcessId(foreground, None) if foreground else 0
+        attached = []
+        for source_tid in (current_tid, foreground_tid):
+            if source_tid and target_tid and source_tid != target_tid and source_tid not in attached:
+                if user32.AttachThreadInput(source_tid, target_tid, True):
+                    attached.append(source_tid)
+        try:
+            # A short TOPMOST pulse repairs Z-order without leaving the app
+            # permanently always-on-top, then explicitly activates the window.
+            user32.SetWindowPos(hwnd, wintypes.HWND(-1), 0, 0, 0, 0, flags)
+            user32.SetWindowPos(hwnd, wintypes.HWND(-2), 0, 0, 0, 0, flags)
+            user32.BringWindowToTop(hwnd)
+            user32.SetActiveWindow(hwnd)
+            user32.SetForegroundWindow(hwnd)
+            if hasattr(user32, "SwitchToThisWindow"):
+                user32.SwitchToThisWindow(hwnd, True)
+        finally:
+            for source_tid in attached:
+                user32.AttachThreadInput(source_tid, target_tid, False)
+        if user32.GetForegroundWindow() != hwnd:
+            user32.FlashWindow(hwnd, True)
+        return True
+    except Exception:
+        return False
+
+
+def _wake_existing_instance(retries=30, delay=0.1):
+    """Wait briefly for the first instance to create its HWND, then wake it."""
+    try:
+        user32, kernel32 = _window_api()
+        for _ in range(max(1, int(retries))):
+            hwnd = _find_single_instance_window(user32)
+            if hwnd and _restore_and_activate_window(hwnd, user32, kernel32):
+                return True
+            time.sleep(max(0.01, float(delay)))
+    except Exception:
+        pass
+    return False
+
+
+def _register_single_instance_window(window):
+    """Mark the first Qt window so later launches do not depend on its title."""
+    try:
+        user32, _kernel32 = _window_api()
+        hwnd = wintypes.HWND(int(window.winId()))
+        if user32.SetPropW(hwnd, _SINGLE_INSTANCE_PROP, wintypes.HANDLE(1)):
+            return hwnd.value
+    except Exception:
+        pass
+    return 0
+
+
+def _unregister_single_instance_window(hwnd):
+    try:
+        if hwnd:
+            user32, _kernel32 = _window_api()
+            user32.RemovePropW(wintypes.HWND(hwnd), _SINGLE_INSTANCE_PROP)
+    except Exception:
+        pass
+
+
+def _owner_api():
+    """Win32 APIs used to bind FmuSolver as an owned window of PE."""
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
+    user32.GetWindow.restype = wintypes.HWND
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    set_owner = getattr(user32, "SetWindowLongPtrW", None)
+    if set_owner is None:  # 32-bit Windows fallback
+        set_owner = user32.SetWindowLongW
+    set_owner.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.HWND]
+    set_owner.restype = ctypes.c_void_p
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    return user32, kernel32, set_owner, callback_type
+
+
+_OWNER_WINDOW_TITLE = "PE"
+
+
+def _find_window_by_title(window_title=_OWNER_WINDOW_TITLE):
+    """Return a visible top-level HWND whose title exactly matches ``window_title``."""
+    try:
+        user32, _kernel32, _set_owner, callback_type = _owner_api()
+        target_title = str(window_title).strip().casefold()
+        matches = []
+
+        @callback_type
+        def enum_proc(hwnd, _lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            title_len = user32.GetWindowTextLengthW(hwnd)
+            if title_len <= 0:
+                return True
+            title_buf = ctypes.create_unicode_buffer(title_len + 1)
+            user32.GetWindowTextW(hwnd, title_buf, title_len + 1)
+            if title_buf.value.strip().casefold() == target_title:
+                matches.append(hwnd)
+            return True
+
+        user32.EnumWindows(enum_proc, 0)
+        if matches:
+            return matches[0]
+    except Exception:
+        pass
+    return None
+
+
+def _attach_fmusolver_to_owner_window(window, window_title=_OWNER_WINDOW_TITLE):
+    """Make FmuSolver an owned window of the named top-level window."""
+    try:
+        fmu_hwnd = wintypes.HWND(int(window.winId()))
+        user32, _kernel32, set_owner, _callback_type = _owner_api()
+        target_hwnd = _find_window_by_title(window_title)
+        if not target_hwnd or target_hwnd == fmu_hwnd.value:
+            return False
+        current_owner = int(user32.GetWindow(fmu_hwnd, 4) or 0)  # GW_OWNER
+        if current_owner != target_hwnd:
+            set_owner(fmu_hwnd, -8, wintypes.HWND(target_hwnd))  # GWL_HWNDPARENT
+        window._owner_window_hwnd = int(target_hwnd)
+        return True
+    except Exception:
+        return False
 
 # ─── Constants & Sequoia Colors ───
 if getattr(sys, 'frozen', False):
@@ -384,16 +624,24 @@ QPushButton#PrimaryAction:disabled {{
 }}
 
 QPushButton#Danger {{
-    background: rgba(255, 59, 48, 42);
-    color: #FF3B30;
-    border: 1px solid rgba(255, 59, 48, 120);
+    background: rgba(236, 238, 242, 245);
+    color: #374151;
+    border: 1px solid rgba(205, 210, 220, 235);
     font-weight: 800;
 }}
 QPushButton#Danger:hover {{
-    background: rgba(255, 59, 48, 60);
+    background: rgba(228, 231, 236, 250);
+    border: 1px solid rgba(0, 122, 255, 95);
 }}
 QPushButton#Danger:pressed {{
-    background: rgba(255, 59, 48, 78);
+    background: rgba(255, 59, 48, 88);
+    color: #FF3B30;
+    border: 1px solid rgba(255, 59, 48, 220);
+}}
+QPushButton#Danger:checked {{
+    background: rgba(255, 59, 48, 105);
+    color: #FF3B30;
+    border: 1px solid rgba(255, 59, 48, 230);
 }}
 
 QCheckBox {{ spacing: 8px; font-size: 12px; color: {C_TEXT}; font-weight: 600; }}
@@ -1171,6 +1419,9 @@ def danger_btn(text, parent=None):
     b = QPushButton(text, parent)
     b.setAttribute(Qt.WA_StyledBackground, True)
     b.setObjectName("Danger")
+    # Keep the stop action visually neutral until it is clicked; the checked
+    # state is retained while the corresponding process is being stopped.
+    b.setCheckable(True)
     b.setCursor(Qt.PointingHandCursor)
     return b
 def lbl(text, parent=None, obj=None):
@@ -1727,8 +1978,9 @@ class FmuSolverGUI(QMainWindow):
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         
-        # ─── Activate High Fidelity Blur ───
-        set_blur_behind(self.winId())
+        # Acrylic composition is relatively expensive on some GPUs.  Defer it
+        # until the first event-loop turn so the native window can be shown
+        # immediately.
         
         self.worker_process = None
         self.visualizer_process = None
@@ -1762,7 +2014,6 @@ class FmuSolverGUI(QMainWindow):
         self.default_port = int(self.gui_config.get("port", 8889))
         
         self._setup_window()
-        self._cleanup_on_start()
         self._build_ui()
         
         # Connect signals AFTER UI is built
@@ -1779,10 +2030,58 @@ class FmuSolverGUI(QMainWindow):
         # Start the endpoint when the main window is ready; forwarding still
         # requires a live FMU worker.
         self.log("[*] 初始化后准备启动变量注入监听", "sys")
-        self._start_injection_listener()
+        # Socket binding and stale-file cleanup must not delay first paint.
+        QTimer.singleShot(0, self._start_deferred_startup_tasks)
+        # Preload only after the main UI has been idle for a while.  The child
+        # is launched below normal priority, so cold-loading Qt/NumPy/
+        # pyqtgraph cannot compete with the main window's first interaction.
+        # Set FMUSOLVER_VIZ_PRELOAD=0 to disable this optional warm-up.
+        if os.environ.get("FMUSOLVER_VIZ_PRELOAD", "1").strip().lower() in ("1", "true", "yes"):
+            QTimer.singleShot(5000, self._preload_visualizer)
         self.ui_heartbeat_timer = QTimer(self)
         self.ui_heartbeat_timer.timeout.connect(self._write_ui_heartbeat)
         self.ui_heartbeat_timer.start(10000)
+
+    def _start_deferred_startup_tasks(self):
+        """Run non-visual startup work after the main window has painted."""
+        try:
+            set_blur_behind(self.winId())
+        except Exception:
+            pass
+
+    def _preload_visualizer(self):
+        """Start a hidden dashboard process in the background."""
+        if hasattr(self, 'chk_auto_vis') and not self.chk_auto_vis.isChecked():
+            return
+        if getattr(self, 'worker_process', None) and self.worker_process.poll() is None:
+            # Never compete with an active simulation.  A later idle retry is
+            # safe because the dashboard is persistent between runs.
+            QTimer.singleShot(3000, self._preload_visualizer)
+            return
+        if getattr(self, '_sim_starting', False):
+            QTimer.singleShot(3000, self._preload_visualizer)
+            return
+        if getattr(self, 'visualizer_process', None) and self.visualizer_process.poll() is None:
+            return
+        try:
+            self._launch_viz_manual(preload=True)
+        except Exception as exc:
+            self.log(f"[!] 看板预热失败: {exc}", "sys")
+        try:
+            self._start_injection_listener()
+        except Exception as exc:
+            self.log(f"[!] 注入监听启动失败: {exc}", "error")
+        # Deleting old runtime artefacts can involve a large tree on long-lived
+        # installations.  Keep it off the GUI thread and never make first paint
+        # wait for filesystem cleanup.
+        try:
+            threading.Thread(
+                target=self._cleanup_on_start,
+                daemon=True,
+                name="fmusolver-startup-cleanup",
+            ).start()
+        except Exception:
+            pass
 
     def _begin_resize_perf_mode(self):
         if self._resize_perf_mode:
@@ -2000,6 +2299,7 @@ class FmuSolverGUI(QMainWindow):
         if hasattr(self, 'btn_pause_orbit'):
             self.btn_pause_orbit.setEnabled(False)
             self.btn_pause_orbit.setText("⏸ 暂停")
+        self.btn_stop_orbit.setChecked(False)
         self.btn_stop_orbit.setEnabled(False)
         self.orbit_paused = False
 
@@ -2295,10 +2595,10 @@ class FmuSolverGUI(QMainWindow):
         QPushButton#PrimaryAction:hover {{ background: #1E8BFF; border: 1px solid rgba(0, 98, 204, 255); }}
         QPushButton#PrimaryAction:pressed {{ background: #0066D6; border: 1px solid rgba(0, 74, 173, 255); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
         QPushButton#PrimaryAction:checked {{ background: #0057C2; color: white; border: 1px solid rgba(0, 74, 173, 255); }}
-        QPushButton#Danger {{ background: rgba(255, 59, 48, 42); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 120); font-weight: 800; }}
-        QPushButton#Danger:hover {{ background: rgba(255, 59, 48, 58); border: 1px solid rgba(255, 59, 48, 170); }}
-        QPushButton#Danger:pressed {{ background: rgba(255, 59, 48, 88); border: 1px solid rgba(255, 59, 48, 220); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
-        QPushButton#Danger:checked {{ background: rgba(255, 59, 48, 105); border: 1px solid rgba(255, 59, 48, 230); }}
+        QPushButton#Danger {{ background: {btn_bg}; color: {text_c}; border: 1px solid {btn_border}; font-weight: 800; }}
+        QPushButton#Danger:hover {{ background: {btn_hover}; border: 1px solid rgba(0, 122, 255, 95); }}
+        QPushButton#Danger:pressed {{ background: rgba(255, 59, 48, 88); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 220); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton#Danger:checked {{ background: rgba(255, 59, 48, 105); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 230); }}
         
         QCheckBox {{ spacing: 8px; font-size: 12px; color: {text_c}; font-weight: 600; }}
         QCheckBox::indicator {{ width: 15px; height: 15px; border-radius: 4px; background: {card_bg}; border: 1px solid {btn_border}; }}
@@ -2735,6 +3035,7 @@ class FmuSolverGUI(QMainWindow):
         self.btn_yaoce_start.setEnabled(True)
         self.btn_yaoce_start.setChecked(True)
         self.btn_yaoce_start.setText("转发运行中...")
+        self.btn_yaoce_stop.setChecked(False)
         self.btn_yaoce_stop.setEnabled(True)
         self._reset_yaoce_led("遥测等待", "遥测接收状态：转发引擎已启动，等待遥测数据")
         
@@ -2815,6 +3116,7 @@ class FmuSolverGUI(QMainWindow):
                     self.btn_yaoce_start.setEnabled(True)
                     self.btn_yaoce_start.setChecked(False)
                     self.btn_yaoce_start.setText("▶ 启动转发引擎")
+                    self.btn_yaoce_stop.setChecked(False)
                     self.btn_yaoce_stop.setEnabled(False)
                     self._yaoce_starting = False
                     self._reset_yaoce_led("遥测关闭", "遥测接收状态：转发引擎未运行")
@@ -2830,6 +3132,7 @@ class FmuSolverGUI(QMainWindow):
     def stop_yaoce(self):
         if hasattr(self, 'yaoce_proc') and self.yaoce_proc:
             try:
+                self.btn_yaoce_stop.setChecked(True)
                 subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.yaoce_proc.pid)], creationflags=subprocess.CREATE_NO_WINDOW)
                 self.ylog("[*] 发送强制终止指令...", "error")
             except: pass
@@ -2841,6 +3144,7 @@ class FmuSolverGUI(QMainWindow):
         self.btn_yaoce_start.setEnabled(True)
         self.btn_yaoce_start.setChecked(False)
         self.btn_yaoce_start.setText("▶ 启动转发引擎")
+        self.btn_yaoce_stop.setChecked(False)
         self.btn_yaoce_stop.setEnabled(False)
         self._yaoce_starting = False
         self._reset_yaoce_led("遥测关闭", "遥测接收状态：转发引擎未运行")
@@ -2936,7 +3240,7 @@ class FmuSolverGUI(QMainWindow):
 
         self.sim_paused = False
         self.btn_start.setEnabled(True); self.btn_start.setChecked(True); self.btn_start.setText("仿真运行中...")
-        self.btn_pause.setEnabled(True); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(True)
+        self.btn_pause.setEnabled(True); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setChecked(False); self.btn_stop.setEnabled(True)
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("正在启动...")
         self._update_led("running")
         self.txt_log.clear()
@@ -3017,19 +3321,130 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.emit()
 
 
-    def _launch_viz_manual(self, ready_file=None):
+    def _send_visualizer_activation(self):
+        """Ask the dashboard to restore itself through Qt local IPC."""
+        try:
+            socket = QLocalSocket()
+            socket.connectToServer("FmuSolver_DataVisualizer_22345")
+            if not socket.waitForConnected(120):
+                socket.deleteLater()
+                return False
+            socket.write(b"show")
+            socket.waitForBytesWritten(120)
+            socket.disconnectFromServer()
+            socket.deleteLater()
+            return True
+        except Exception:
+            return False
+
+    def _attach_visualizer_to_fmusolver(self, visualizer_hwnd=None):
+        """Make the dashboard an owned window of FmuSolver.
+
+        The owner chain is PE -> FmuSolver -> DataVisualizer.  Keeping this
+        relationship prevents PE activation/capture from leaving the
+        dashboard behind in the Z-order.
+        """
+        try:
+            if not visualizer_hwnd:
+                visualizer_hwnd = ctypes.windll.user32.FindWindowW(
+                    None, "FmuSolver - Data Visualizer"
+                )
+            if not visualizer_hwnd:
+                return False
+            fmu_hwnd = wintypes.HWND(int(self.winId()))
+            user32, _kernel32, set_owner, _callback_type = _owner_api()
+            current_owner = int(user32.GetWindow(wintypes.HWND(visualizer_hwnd), 4) or 0)
+            if current_owner != int(fmu_hwnd.value):
+                set_owner(
+                    wintypes.HWND(visualizer_hwnd),
+                    -8,  # GWL_HWNDPARENT / owner for a top-level window
+                    fmu_hwnd,
+                )
+            self._visualizer_owner_hwnd = int(fmu_hwnd.value)
+            return True
+        except Exception:
+            return False
+
+    def _attach_visualizer_owner_when_ready(self, attempt=0):
+        """Bind a preloaded dashboard after Qt creates its native HWND."""
+        proc = getattr(self, "visualizer_process", None)
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            hwnd = ctypes.windll.user32.FindWindowW(
+                None, "FmuSolver - Data Visualizer"
+            )
+            if hwnd and self._attach_visualizer_to_fmusolver(hwnd):
+                return
+        except Exception:
+            pass
+        if attempt < 100:
+            QTimer.singleShot(
+                100,
+                lambda: self._attach_visualizer_owner_when_ready(attempt + 1),
+            )
+
+    def _restore_visualizer_when_ready(self, attempt=0):
+        """Restore a preloading dashboard once its native window exists."""
+        proc = getattr(self, 'visualizer_process', None)
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+            if hwnd:
+                self._attach_visualizer_to_fmusolver(hwnd)
+                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                ctypes.windll.user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                self.log("[*] 看板启动完成，已恢复窗口", "sys")
+                return
+        except Exception:
+            pass
+        if attempt < 100:
+            QTimer.singleShot(100, lambda: self._restore_visualizer_when_ready(attempt + 1))
+        else:
+            self.log("[!] 看板进程已启动，但窗口句柄未创建，详见 visualizer_perf.log", "error")
+
+    @staticmethod
+    def _host_is_64bit():
+        if os.environ.get("PROCESSOR_ARCHITEW6432"):
+            return True
+        return os.environ.get("PROCESSOR_ARCHITECTURE", "").upper() in ("AMD64", "ARM64")
+
+    @classmethod
+    def _resolve_visualizer_exe(cls, viz_dir, win32_dir):
+        exe64 = os.path.join(viz_dir, "DataVisualizer64.exe")
+        legacy32 = os.path.join(viz_dir, "DataVisualizer32.exe")
+        split32 = os.path.join(win32_dir, "DataVisualizer32.exe")
+        candidates = (exe64, split32, legacy32) if cls._host_is_64bit() else (split32, legacy32)
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
+        return None
+
+    def _launch_viz_manual(self, ready_file=None, preload=False):
         if isinstance(ready_file, bool):
             ready_file = None
         viz_dir = os.path.join(APP_DIR, "Visualizer")
-        viz_exe = os.path.join(viz_dir, "DataVisualizer64.exe")
-        if not os.path.exists(viz_exe):
-            viz_exe = os.path.join(viz_dir, "DataVisualizer32.exe")
+        win32_dir = os.path.join(APP_DIR, "Visualizer_Win32")
+
+        # Prefer an in-process Qt activation command.  It works even when the
+        # dashboard is hidden and avoids Windows foreground-window restrictions.
+        if not preload and self._send_visualizer_activation():
+            self._attach_visualizer_to_fmusolver()
+            self.log("[*] 已通过本地 IPC 唤醒看板", "sys")
+            return True
+        viz_exe = self._resolve_visualizer_exe(viz_dir, win32_dir)
         python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
         # In the source-tree launcher, an older packaged DataVisualizer window
         # can have the same title and would otherwise be reused forever. Close
         # only that exact process so the current Script/DataVisualizerPython.py
         # is loaded for the next simulation.
-        source_visualizer_mode = os.path.exists(python_viz) and not os.path.exists(viz_exe)
+        source_visualizer_mode = os.path.exists(python_viz) and not viz_exe
         # Always try to bring an existing DataVisualizer window to front,
         # regardless of whether we spawned it (covers cross-session reuse).
         try:
@@ -3052,6 +3467,10 @@ class FmuSolverGUI(QMainWindow):
                             self.log("[*] 已关闭旧看板，将启动当前 Python 看板", "sys")
 
                 if hwnd:
+                    self._attach_visualizer_to_fmusolver(hwnd)
+                    if preload:
+                        self.log("[*] 看板已预热，保持隐藏等待唤醒", "sys")
+                        return True
                     # SW_RESTORE in case it is minimized, then bring to front
                     ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
                     ctypes.windll.user32.SetForegroundWindow(hwnd)
@@ -3069,10 +3488,19 @@ class FmuSolverGUI(QMainWindow):
 
         # Fallback: our own tracked process is still alive
         if self.visualizer_process and self.visualizer_process.poll() is None:
+            self._attach_visualizer_owner_when_ready()
+            if not preload:
+                # The hidden preloader may still be importing Qt when the
+                # user clicks the button.  Do not return silently; wait for
+                # its native window and restore it as soon as it exists.
+                self._restore_visualizer_when_ready()
             return True
 
         try:
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
+            if preload and os.name == 'nt':
+                # Keep the optional warm-up below the interactive main UI.
+                cf |= 0x00004000  # BELOW_NORMAL_PRIORITY_CLASS
             viz_env = self._child_env()
             viz_env.setdefault("FMUSOLVER_VIZ_MAX_POINTS", "12000")
             viz_env.setdefault("FMUSOLVER_VIZ_ACC_LIMIT", "8000")
@@ -3084,13 +3512,22 @@ class FmuSolverGUI(QMainWindow):
             if ready_file:
                 viz_env["FMUSOLVER_VIZ_READY_FILE"] = os.path.abspath(ready_file)
             
-            if os.path.exists(viz_exe):
+            if viz_exe:
                 self.log(f"[*] Launching Visualizer EXE: {viz_exe}", "sys")
-                self.visualizer_process = subprocess.Popen([viz_exe, "--port", "22345"], cwd=viz_dir, env=viz_env, creationflags=cf)
+                viz_args = [viz_exe, "--port", "22345"]
+                if preload:
+                    viz_args.append("--start-hidden")
+                viz_cwd = os.path.dirname(viz_exe) or viz_dir
+                self.visualizer_process = subprocess.Popen(viz_args, cwd=viz_cwd, env=viz_env, creationflags=cf)
+                self._attach_visualizer_owner_when_ready()
             elif os.path.exists(python_viz):
                 self.log(f"[*] Launching Visualizer Script: {python_viz}", "sys")
                 cf = 0x08000000 if os.name == 'nt' else 0
-                self.visualizer_process = subprocess.Popen([sys.executable, python_viz, "--port", "22345"], cwd=APP_DIR, env=viz_env, creationflags=cf)
+                viz_args = [sys.executable, python_viz, "--port", "22345"]
+                if preload:
+                    viz_args.append("--start-hidden")
+                self.visualizer_process = subprocess.Popen(viz_args, cwd=APP_DIR, env=viz_env, creationflags=cf)
+                self._attach_visualizer_owner_when_ready()
             else:
                 self.log(f"[!] Visualizer NOT FOUND (EXE or Script)", "error")
                 return False
@@ -3102,7 +3539,7 @@ class FmuSolverGUI(QMainWindow):
 
     def _reset_ui(self):
         self.btn_start.setEnabled(True); self.btn_start.setChecked(False); self.btn_start.setText("▶ 启动仿真")
-        self.btn_pause.setEnabled(False); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(False); self.worker_process = None
+        self.btn_pause.setEnabled(False); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setChecked(False); self.btn_stop.setEnabled(False); self.worker_process = None
         self.sim_paused = False
         self.current_sim_id = None
         self._sim_starting = False
@@ -3119,6 +3556,7 @@ class FmuSolverGUI(QMainWindow):
 
     def stop_sim(self):
         if self.worker_process:
+            self.btn_stop.setChecked(True)
             self.btn_start.setChecked(True)
             self.btn_start.setText("仿真停止中...")
             import socket
@@ -3133,10 +3571,18 @@ class FmuSolverGUI(QMainWindow):
             # 延迟杀掉进程以允许优雅退出
             QTimer.singleShot(500, self._terminate_worker)
         
-        if hasattr(self, 'visualizer_process') and self.visualizer_process:
+        # Keep the dashboard process alive between simulations.  A dashboard
+        # executable is a large one-file process (Qt + NumPy + pyqtgraph), and
+        # repeatedly extracting and starting it made every run feel slow.  The
+        # next run sends the simulation-start marker, so its history is reset
+        # without losing the already-created window.  Set
+        # FMUSOLVER_VIZ_PERSIST=0 to restore the old stop behaviour.
+        if (getattr(self, 'visualizer_process', None)
+                and os.environ.get('FMUSOLVER_VIZ_PERSIST', '1').strip().lower() in ('0', 'false', 'no')):
             try:
                 self.visualizer_process.terminate()
-            except: pass
+            except Exception:
+                pass
             self.visualizer_process = None
         
         self.btn_pause.setEnabled(False)
@@ -3494,6 +3940,7 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_paused = False
         self.btn_run_orbit.setText("预示运行中..."); self.btn_run_orbit.setEnabled(True); self.btn_run_orbit.setChecked(True)
         self.btn_pause_orbit.setText("⏸ 暂停"); self.btn_pause_orbit.setEnabled(True)
+        self.btn_stop_orbit.setChecked(False)
         self.btn_stop_orbit.setEnabled(True)
         self.orbit_progress.setValue(int(0))
         self.orbit_prog_lbl.setText("正在启动...")
@@ -3597,6 +4044,7 @@ class FmuSolverGUI(QMainWindow):
     def stop_orbit(self):
         if hasattr(self, 'orbit_proc') and self.orbit_proc:
             try:
+                self.btn_stop_orbit.setChecked(True)
                 self.btn_run_orbit.setChecked(True)
                 self.btn_run_orbit.setText("预示停止中...")
                 if hasattr(self, 'orbit_pause_file') and os.path.exists(self.orbit_pause_file):
@@ -3768,27 +4216,27 @@ if __name__ == "__main__":
 
     else:
         # 强制单实例运行 (FmuSolver)
-        mutex_name = "Local\\FmuSolver_Global_Mutex"
-        import ctypes
-        kernel32 = ctypes.windll.kernel32
-        mutex = kernel32.CreateMutexW(None, False, mutex_name)
-        if kernel32.GetLastError() == 183: # ERROR_ALREADY_EXISTS
-            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver")
-            if hwnd:
-                # SW_RESTORE in case minimized, then bring to front
-                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
-                # Briefly TOPMOST then release to ensure it pops above other apps
-                SWP_NOMOVE = 0x0002
-                SWP_NOSIZE = 0x0001
-                HWND_TOPMOST = -1
-                HWND_NOTOPMOST = -2
-                ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
-                ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]
+        kernel32.CreateMutexW.restype = wintypes.HANDLE
+        mutex = kernel32.CreateMutexW(None, False, _SINGLE_INSTANCE_MUTEX)
+        if not mutex:
+            sys.exit(1)
+        if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
+            _wake_existing_instance()
             sys.exit(0)
 
         app = QApplication(sys.argv)
         window = FmuSolverGUI()
         window.setWindowTitle("FmuSolver") # 必须设置，以便单实例检测查找
+        instance_hwnd = _register_single_instance_window(window)
+        if instance_hwnd:
+            app.aboutToQuit.connect(lambda: _unregister_single_instance_window(instance_hwnd))
         window.show()
+        _attach_fmusolver_to_owner_window(window)
+        owner_window_timer = QTimer(window)
+        owner_window_timer.setInterval(1000)
+        owner_window_timer.timeout.connect(lambda: _attach_fmusolver_to_owner_window(window))
+        owner_window_timer.start()
+        window._owner_window_timer = owner_window_timer
         sys.exit(app.exec())

@@ -22,33 +22,34 @@ if exist "%DIST_DIR%\sys_argv.log" del /q "%DIST_DIR%\sys_argv.log"
 :: 1. 64-bit Builds (System Python)
 echo [+] Building 64-bit Components...
 python -m PyInstaller --noconfirm FmuSolver.spec
-python -m PyInstaller --noconfirm --onefile --console --name FmuWorker64 --workpath ./build --distpath ./dist fmu_player.py
+python -m PyInstaller --noconfirm --onefile --console --name FmuWorker64 --workpath ./build --distpath ./dist --collect-all google.protobuf fmu_player.py
 python -m PyInstaller --noconfirm --onefile --console --name OrbitPreCalc64 --workpath ./build --distpath ./dist orbit_pre_runner.py
-python -m PyInstaller --noconfirm --onefile --console --name YaoCe_LinkLayer64 --workpath ./build --distpath ./dist yaocetest/main.py
-python -m PyInstaller --noconfirm --onefile --windowed --name DataVisualizer64 --workpath ./build --distpath ./dist DataVisualizerPython.py
+python -m PyInstaller --noconfirm --onefile --console --name YaoCe_LinkLayer64 --workpath ./build --distpath ./dist --collect-all google.protobuf yaocetest/main.py
+python -m PyInstaller --noconfirm DataVisualizer64.spec
 
 :: 2. 32-bit Builds (C:\Py32 Python)
 echo [+] Building 32-bit Components...
-%PY32% -m PyInstaller --noconfirm --onefile --console --name FmuWorker32 --workpath ./build32 --distpath ./dist fmu_player.py
+%PY32% -m PyInstaller --noconfirm --onefile --console --name FmuWorker32 --workpath ./build32 --distpath ./dist --collect-all google.protobuf fmu_player.py
 %PY32% -m PyInstaller --noconfirm --onefile --console --name OrbitPreCalc32 --workpath ./build32 --distpath ./dist orbit_pre_runner.py
-%PY32% -m PyInstaller --noconfirm --onefile --console --name YaoCe_LinkLayer32 --workpath ./build32 --distpath ./dist yaocetest/main.py
-%PY32% -m PyInstaller --noconfirm --onefile --windowed --name DataVisualizer32 --workpath ./build32 --distpath ./dist DataVisualizerPython.py
+%PY32% -m PyInstaller --noconfirm --onefile --console --name YaoCe_LinkLayer32 --workpath ./build32 --distpath ./dist --collect-all google.protobuf yaocetest/main.py
+%PY32% -m PyInstaller --noconfirm DataVisualizer32.spec
 
-:: 3. Packaging
-echo [+] Packaging final distribution...
+:: Copy onedir GUI distributions (EXE plus _internal dependencies)
 if not exist "%DIST_DIR%" mkdir "%DIST_DIR%"
 if not exist "%DIST_DIR%\Visualizer" mkdir "%DIST_DIR%\Visualizer"
-
-:: Copy all from dist to package
-copy /Y ".\dist\FmuSolver.exe" "%DIST_DIR%\"
+xcopy /E /I /Y ".\dist\FmuSolver\*" "%DIST_DIR%\" >nul
 copy /Y ".\dist\FmuWorker64.exe" "%DIST_DIR%\"
 copy /Y ".\dist\FmuWorker32.exe" "%DIST_DIR%\"
 copy /Y ".\dist\OrbitPreCalc64.exe" "%DIST_DIR%\"
 copy /Y ".\dist\OrbitPreCalc32.exe" "%DIST_DIR%\"
 copy /Y ".\dist\YaoCe_LinkLayer64.exe" "%DIST_DIR%\"
 copy /Y ".\dist\YaoCe_LinkLayer32.exe" "%DIST_DIR%\"
-copy /Y ".\dist\DataVisualizer64.exe" "%DIST_DIR%\Visualizer\"
-copy /Y ".\dist\DataVisualizer32.exe" "%DIST_DIR%\Visualizer\"
+:: 64-bit visualizer owns Visualizer\; 32-bit must NOT merge into the same
+:: onedir folder (x86 DLLs would overwrite x64 python3.dll/VCRUNTIME140.dll etc.
+:: and break DataVisualizer64.exe with "Failed to start embedded python interpreter!")
+xcopy /E /I /Y ".\dist\DataVisualizer64\*" "%DIST_DIR%\Visualizer\" >nul
+if not exist "%DIST_DIR%\Visualizer_Win32" mkdir "%DIST_DIR%\Visualizer_Win32"
+xcopy /E /I /Y ".\dist\DataVisualizer32\*" "%DIST_DIR%\Visualizer_Win32\" >nul
 
 :: Sync source snapshots for debugging/reference, avoid stale duplicate scripts in package
 copy /Y ".\FmuLauncherUniversal.py" "%DIST_DIR%\"

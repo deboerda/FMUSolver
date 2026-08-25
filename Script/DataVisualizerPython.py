@@ -14,7 +14,6 @@ from ctypes import wintypes
 import ddm_pb2
 import datetime
 import traceback
-import hashlib
 
 def is_process_alive(pid):
     try:
@@ -49,6 +48,7 @@ try:
                                  QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
                                  QSpinBox, QComboBox, QGridLayout, QSizeGrip, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PySide6.QtCore import Qt, QTimer, Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
+    from PySide6.QtNetwork import QLocalServer, QLocalSocket
     from PySide6.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 6
 except ImportError:
@@ -57,6 +57,7 @@ except ImportError:
                                QLabel, QFrame, QSplitter, QPushButton, QCheckBox, QInputDialog, QMenu, QColorDialog, QGraphicsTextItem, QGraphicsRectItem,
                                QSpinBox, QComboBox, QGridLayout, QListView, QListWidget, QDockWidget, QFileDialog, QMessageBox, QLineEdit)
     from PyQt5.QtCore import Qt, QTimer, pyqtSignal as Signal, QFileSystemWatcher, QPoint, QEvent, QObject, QRect, QSize, QByteArray
+    from PyQt5.QtNetwork import QLocalServer, QLocalSocket
     from PyQt5.QtGui import QColor, QFont, QPalette, QCursor, QIcon, QPainter, QPainterPath, QPen, QBrush
     QT_VERSION = 5
 import pyqtgraph as pg
@@ -301,16 +302,8 @@ class TitleBar(QWidget):
         self.btn_max.setStyleSheet("QPushButton { background: #28C840; border-radius: 7px; border: 1px solid rgba(0,0,0,0.1); min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; } QPushButton:hover { background: #24B338; }")
         self.btn_max.clicked.connect(self.parent.toggle_maximize)
         
-        self.btn_close = QPushButton()
-        self.btn_close.setObjectName("ControlBtn")
-        self.btn_close.setFixedSize(14, 14); self.btn_close.setCursor(Qt.PointingHandCursor)
-        self.btn_close.setToolTip("关闭")
-        self.btn_close.setStyleSheet("QPushButton { background: #FF5F56; border-radius: 7px; border: 1px solid rgba(0,0,0,0.1); min-width: 14px; max-width: 14px; min-height: 14px; max-height: 14px; } QPushButton:hover { background: #FF3B30; }")
-        self.btn_close.clicked.connect(self.parent.close)
-        
-        lay.addWidget(self.btn_min)
         lay.addWidget(self.btn_max)
-        lay.addWidget(self.btn_close)
+        lay.addWidget(self.btn_min)
 
     def mousePressEvent(self, event):
         # Keep for safety or non-windows dragging
@@ -363,7 +356,7 @@ class PlotViewBox(pg.ViewBox):
 
 APP_DIR = os.path.dirname(os.path.abspath(sys.executable if getattr(sys, 'frozen', False) else __file__))
 DEFAULT_CURVE_WIDTH = 1
-SELECTED_CURVE_MIN_WIDTH = 3
+SELECTED_CURVE_MIN_WIDTH = 2
 CURVE_COLOR_PALETTE = (
     "#0000ff",  # 蓝色
     "#ff0000",  # 红色
@@ -418,8 +411,10 @@ class ProfessionalVisualizer(QMainWindow):
         return pen
 
     def default_curve_style(self, tag, index=0):
-        seed = int(hashlib.md5(str(tag).encode("utf-8")).hexdigest()[:8], 16)
-        color = CURVE_COLOR_PALETTE[(seed + index) % len(CURVE_COLOR_PALETTE)]
+        # Assign colors by display/order index so curves are predictable and
+        # follow the configured high-contrast palette.  The palette repeats
+        # when more curves are added than available colors.
+        color = CURVE_COLOR_PALETTE[int(index) % len(CURVE_COLOR_PALETTE)]
         return {"color": QColor(color), "width": DEFAULT_CURVE_WIDTH}
 
     def __init__(self, port=12345):
@@ -510,6 +505,10 @@ class ProfessionalVisualizer(QMainWindow):
         self.var_styles = {}   
         self.vars_desc = {}    
         self.ordered_tags = []
+        # The variable list can contain hundreds of rows.  Build its model
+        # during construction, but defer the expensive QTableWidget item
+        # creation until after the first window paint.
+        self._variable_table_ready = False
         self.base_datetime = None
         self.base_sim_time = 0
         
@@ -533,10 +532,14 @@ class ProfessionalVisualizer(QMainWindow):
         
         self.setup_ui()
         self.setup_network()
+        self.setup_activation_server()
         self.watcher = QFileSystemWatcher() # 必须在 apply_theme 前初始化
         
-        self.apply_theme_from_config()
-        set_blur_behind(self.winId())
+        # Applying the large stylesheet and enabling Windows composition are
+        # both noticeably expensive on cold start.  Defer them together until
+        # the first event-loop turn; the native window can paint immediately.
+        QTimer.singleShot(0, self.apply_theme_from_config)
+        QTimer.singleShot(0, lambda: set_blur_behind(self.winId()))
         
         # Follow launcher theme (Watcher + Polling Fallback)
         self.poll_timer = QTimer(self)
@@ -560,6 +563,58 @@ class ProfessionalVisualizer(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_ui)
         self.timer.start(50) 
+
+    def setup_activation_server(self):
+        """Listen for a local ``show`` command from the launcher.
+
+        A Qt-local socket is more reliable than searching by window title:
+        the launcher can wake a hidden/minimized dashboard even while the
+        native HWND is being created, and the dashboard performs activation
+        on its own GUI thread.
+        """
+        self.activation_server_name = f"FmuSolver_DataVisualizer_{int(self.port)}"
+        self.activation_server = QLocalServer(self)
+        try:
+            QLocalServer.removeServer(self.activation_server_name)
+        except Exception:
+            pass
+        if not self.activation_server.listen(self.activation_server_name):
+            # A stale endpoint can survive an unclean exit; remove and retry
+            # once before falling back to the existing Win32 path.
+            try:
+                QLocalServer.removeServer(self.activation_server_name)
+                self.activation_server.listen(self.activation_server_name)
+            except Exception:
+                pass
+        self.activation_server.newConnection.connect(self._accept_activation_connection)
+
+    def _accept_activation_connection(self):
+        while self.activation_server.hasPendingConnections():
+            socket = self.activation_server.nextPendingConnection()
+            socket.readyRead.connect(lambda s=socket: self._read_activation_command(s))
+            socket.disconnected.connect(socket.deleteLater)
+            if socket.bytesAvailable():
+                self._read_activation_command(socket)
+
+    def _read_activation_command(self, socket):
+        try:
+            command = bytes(socket.readAll()).decode("utf-8", errors="ignore").strip().lower()
+        except Exception:
+            command = ""
+        if command in ("show", "activate", "restore"):
+            try:
+                self.showNormal()
+                self.setWindowState((self.windowState() & ~Qt.WindowMinimized) | Qt.WindowActive)
+                self.show()
+                self.raise_()
+                self.activateWindow()
+                self.update()
+            except Exception:
+                pass
+        try:
+            socket.disconnectFromServer()
+        except Exception:
+            pass
 
     def check_parent_process(self):
         if self.parent_pid and not is_process_alive(self.parent_pid):
@@ -1021,7 +1076,9 @@ class ProfessionalVisualizer(QMainWindow):
         self.left_splitter.splitterMoved.connect(lambda *_: self.save_ui_settings())
         
         # 上半部分：变量表格容器
-        self.table = QTableWidget(len(self.vars_config), 3)
+        # Keep the table empty for the initial paint.  Populating 700+ rows
+        # synchronously here makes the dashboard appear frozen on startup.
+        self.table = QTableWidget(0, 3)
         self.table.setHorizontalHeaderLabels(["S", "Name", "Value"])
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
@@ -1097,27 +1154,55 @@ class ProfessionalVisualizer(QMainWindow):
         main_layout.addWidget(self.main_splitter)
         
         self.load_sync_state()
-        for i, tag in enumerate(self.ordered_tags):
-            chk = QTableWidgetItem()
-            chk.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
-            
-            # 仅设置初始状态，由 LastSession 统一负责恢复具体 Dock 关联
-            saved_state = self.sync_states.get(tag, False)
-            chk.setCheckState(Qt.Checked if saved_state else Qt.Unchecked)
-            
-            self.table.setItem(i, 0, chk)
-            name_item = QTableWidgetItem(self.get_display_name(tag))
-            name_item.setData(Qt.UserRole, tag)
-            self.table.setItem(i, 1, name_item)
-            self.table.setItem(i, 2, QTableWidgetItem("0.0000"))
-        
-        self.table.itemChanged.connect(self.on_table_item_changed)
+        # Run after the event loop starts, so the dashboard can paint its
+        # frame before creating all variable-row widgets.
+        # A short delay gives Qt one paint cycle before allocating the row
+        # widgets; on a cold start this makes the dashboard responsive much
+        # earlier while the table fills almost immediately afterwards.
+        QTimer.singleShot(50, self._populate_variable_table)
 
         self.current_preset_name = "LastSession"
         self.load_presets()
         self.load_ui_settings()
         # 初始加载默认或上一次的布局
         QTimer.singleShot(500, self.auto_load_last_layout)
+
+    def _populate_variable_table(self):
+        """Create the variable rows after the first dashboard paint."""
+        if self._variable_table_ready:
+            return
+        self.table.setUpdatesEnabled(False)
+        self.table.blockSignals(True)
+        try:
+            self.table.setRowCount(len(self.ordered_tags))
+            for i, tag in enumerate(self.ordered_tags):
+                chk = QTableWidgetItem()
+                chk.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled)
+
+                # 仅设置初始状态，由 LastSession 统一负责恢复具体 Dock 关联
+                saved_state = self.sync_states.get(tag, False)
+                chk.setCheckState(Qt.Checked if saved_state else Qt.Unchecked)
+
+                self.table.setItem(i, 0, chk)
+                name_item = QTableWidgetItem(self.get_display_name(tag))
+                name_item.setData(Qt.UserRole, tag)
+                self.table.setItem(i, 1, name_item)
+                self.table.setItem(i, 2, QTableWidgetItem("0.0000"))
+        finally:
+            self.table.blockSignals(False)
+            self.table.setUpdatesEnabled(True)
+        self._variable_table_ready = True
+        self.table.itemChanged.connect(self.on_table_item_changed)
+
+    def _append_runtime_variable_model(self, tag, desc=""):
+        """Register a runtime variable without requiring table widgets."""
+        self.ordered_tags.append(tag)
+        self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
+        history = self.background_data_store.pop(tag, None)
+        self.data_store[tag] = history if history is not None else np.full(self.max_points, np.nan)
+        self.trend_store[tag] = []
+        self.var_styles[tag] = self.default_curve_style(tag, len(self.ordered_tags) - 1)
+        self.vars_desc[tag] = desc
 
     def register_runtime_variable(self, tag, desc=""):
         """Add variables received at runtime to the dashboard only, without touching sync_fields.json."""
@@ -1132,6 +1217,12 @@ class ProfessionalVisualizer(QMainWindow):
                 except Exception:
                     pass
             return
+        # Packets may arrive while the deferred table is still being built.
+        # Keep the data model complete and let _populate_variable_table add
+        # the corresponding row in one batch.
+        if not self._variable_table_ready:
+            self._append_runtime_variable_model(tag, desc)
+            return
         row = self.table.rowCount()
         self.table.blockSignals(True)
         self.table.insertRow(row)
@@ -1145,13 +1236,7 @@ class ProfessionalVisualizer(QMainWindow):
         self.table.setItem(row, 2, QTableWidgetItem("0.0000"))
         self.table.blockSignals(False)
 
-        self.ordered_tags.append(tag)
-        self.vars_config.append({"name": tag, "desc": desc, "runtime": True})
-        history = self.background_data_store.pop(tag, None)
-        self.data_store[tag] = history if history is not None else np.full(self.max_points, np.nan)
-        self.trend_store[tag] = []
-        self.var_styles[tag] = self.default_curve_style(tag, len(self.ordered_tags) - 1)
-        self.vars_desc[tag] = desc
+        self._append_runtime_variable_model(tag, desc)
 
     def auto_load_last_layout(self):
         if "LastSession" in self.presets:
@@ -1780,6 +1865,11 @@ class ProfessionalVisualizer(QMainWindow):
         except: pass
         self.running = False
         self.sock.close()
+        try:
+            if hasattr(self, "activation_server"):
+                self.activation_server.close()
+        except Exception:
+            pass
         event.accept()
 
     def save_ui_settings(self):
@@ -3285,6 +3375,12 @@ class ProfessionalVisualizer(QMainWindow):
     def update_ui(self):
         ui_start = time.perf_counter()
         self.drain_packet_queue()
+        # The first packet can arrive before the deferred table population.
+        # Defer only the presentation update; process_data has already kept
+        # the data buffers current and the next tick will render them.
+        if not self._variable_table_ready:
+            self.write_perf_log(0.0)
+            return
         if self.current_idx == 0:
             self.write_perf_log(0.0)
             return
@@ -3451,12 +3547,18 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=22345)
+    parser.add_argument("--start-hidden", action="store_true", help="预热启动时先隐藏窗口，等待主程序唤醒")
     args = parser.parse_args()
     
     try:
         app = QApplication(sys.argv)
         window = ProfessionalVisualizer(port=args.port)
         window.show()
+        if args.start_hidden:
+            # Create the native window handle so the launcher can find and
+            # restore it immediately, but keep the preloaded dashboard out of
+            # the user's way until the 看板 button is clicked.
+            window.hide()
         sys.exit(app.exec_() if QT_VERSION == 5 else app.exec())
     except Exception:
         try:
