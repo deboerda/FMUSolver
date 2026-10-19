@@ -1,31 +1,63 @@
-# FMUSolver
+# FMUSolver — FMU Co-Simulation Runner for Industrial Digital Twins
 
-FMU（Functional Mock-up Unit / FMI）协同仿真运行与可视化控制工具，面向工业数字孪生与能源 / 轨道类模型的通用演示与联调。
+> Python platform that **loads FMI 2.0 FMUs**, runs real-time co-simulation, bridges telemetry into model inputs, and streams variables to 3D viewers / dashboards. Built for industrial energy & orbit-class models (generic capability — not a single customer build).
 
+[![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python)](#)
+[![FMI](https://img.shields.io/badge/FMI-2.0%20FMU-orange)](#)
+[![Protobuf](https://img.shields.io/badge/UDP-Protobuf-blue)](#)
 
-## 功能概览
+## Why it exists
 
-- 加载并运行标准 FMI 2.0 FMU
-- 实时仿真控制（开始 / 暂停 / 继续 / 停止、参数热更新）
-- 轨道 / 能源类离线预计算（通用演示）
-- UDP + Protobuf 将仿真变量转发到三维视景或本地看板
-- 可选：外部遥测类 UDP 数据桥接与变量名映射（配置驱动，无硬编码业务）
+Industrial FMUs often ship as **32-bit or 64-bit DLLs** with tens of thousands of variables. A single Python process cannot load both bitnesses. FMUSolver solves that with a **sidecar architecture**: a 64-bit GUI orchestrator + auto-selected 32/64-bit worker processes.
 
-## 仓库结构（示意）
+As core developer I shipped ~**30K lines** of Python (GUI, workers, telemetry bridge, orbit pre-calc, packaging) across multiple releases in ~2 months.
+
+## Capabilities
+
+- Load & step standard **FMI 2.0** FMUs (`fmpy`-style race)
+- Real-time controls: start / pause / resume / stop, hot parameter inject
+- **Orbit / energy-class offline pre-calc** worker (seed file → propagate → export)
+- **UDP + Protobuf** fan-out of selected variables to 3D viz or local dashboards
+- Telemetry bridge: binary packet parse → fuzzy ID map → FMU inputs (config-driven)
+- Live multi-plot dashboard with down-sampling for long runs; Word export path
+- PyInstaller one-file packaging (`FmuSolver.exe`, `FmuWorker32/64`, orbit & telemetry tools)
+
+## Architecture
 
 ```
-├── Script/              # Python 源码
-├── FmuSolver_Package/   # 打包产物（如有）
-├── config/              # 配置示例
-├── ddm.proto            # 通信数据结构
-└── README.md
+FmuSolver.exe (64-bit GUI / orchestrator)
+   │  detects FMU bitness
+   ├─► FmuWorker32.exe  ─┐
+   └─► FmuWorker64.exe  ─┴─ FMI doStep + DLL load
+                              │
+                              ▼  UDP / Protobuf
+                     3D viewer · DataVisualizer · peers
+
+Optional: OrbitPreCalc*  ·  YaoCe telemetry link layer
 ```
 
-## 快速开始
+## Tech stack
 
-```bash
-# 使用已打包可执行文件（Windows 示例）
-./FmuSolver_Package/FmuSolver.exe
+| Piece | Tech |
+|-------|------|
+| Language | Python 3.x (dual 32/64 toolchains) |
+| Sim standard | FMI 2.0 / FMU |
+| IPC / net | STDOUT logs, UDP, Protobuf (`ddm.proto`) |
+| GUI | Tkinter-themed launcher + .NET visualizer package |
+| Ship | PyInstaller one-file |
+
+## Repo layout
+
+```
+FmuSolver_Package/   # Packaged runners, workers, visualizer, configs
+Script/              # (when present) Python sources
+FMUcontent.md        # Deploy / architecture notes
 ```
 
-开发依赖：Python 3.x、protobuf 等（见源码与 requirements，若有）。
+## Role
+
+**Core developer** — architecture (sidecar), simulation control, telemetry mapping, packaging & field diagnostics.
+
+---
+
+*Industrial / aerospace-adjacent energy & orbit co-simulation capability. FMU 协同仿真运行器 — 工业能源 / 轨道类模型通用联调。*
