@@ -16,6 +16,7 @@ import re
 import queue
 import traceback
 import struct
+import math
 
 class AsyncRotatingFileLogger:
     """Small bounded async logger for long-running worker diagnostics."""
@@ -288,12 +289,25 @@ def strip_source_prefix(name):
             return text[len(prefix):]
     return text
 
+EXTERNAL_INPUT_ALIASES = {
+    "SolarAngle_CJinput[1]": "Environment_A.SolarAngleInput",
+    "SolarAngle_CJinput[2]": "EnvironmentB1.SolarAngleInput",
+    "solar_CJinput[1]": "Environment_A.SolarAngleInput",
+    "solar_CJinput[2]": "EnvironmentB1.SolarAngleInput",
+}
+
 RAW_TIME_TELEMETRY_NAMES = {
     'S0067', 'DCSM34', 'DCSH34', 'DCSW34',
     'A024', 'A025', 'A026', 'A027', 'A028',
     'A029', 'A02A', 'A02B', 'A02C', 'A02D', 'A02E',
     'DCSH34.d', 'DCSH34.h', 'DCSH34.m', 'DCSH34.s', 'DCSH34.ms',
     'DCSW34.d', 'DCSW34.h', 'DCSW34.m', 'DCSW34.s', 'DCSW34.ms',
+}
+
+TELEMETRY_STATUS_NAMES = {
+    'FMUSOLVER_YC_CONNECTED',
+    'FMUSOLVER_YC_LAST_AGE_SEC',
+    'FMUSOLVER_YC_RX_COUNT',
 }
 
 def should_forward_telemetry_to_pe(name):
@@ -324,20 +338,27 @@ DEFAULT_INJECTION_BLACKLIST = set()
 def load_injection_blacklist(root_dir):
     path = os.path.join(root_dir, "fmu_injection_blacklist.json")
     blacklist = set(DEFAULT_INJECTION_BLACKLIST)
+    allowlist = set()
     try:
         with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
         if isinstance(data, dict):
             items = data.get("variables", data)
             if isinstance(items, dict):
-                blacklist.update(str(k) for k in items.keys())
-                return path, blacklist
+                for k, meta in items.items():
+                    name = str(k)
+                    if isinstance(meta, dict) and meta.get("blocked", True) is False:
+                        allowlist.add(name)
+                        blacklist.discard(name)
+                    else:
+                        blacklist.add(name)
+                return path, blacklist, allowlist
             if isinstance(items, list):
                 blacklist.update(str(k) for k in items)
-                return path, blacklist
+                return path, blacklist, allowlist
     except Exception:
         pass
-    return path, blacklist
+    return path, blacklist, allowlist
 
 def append_injection_blacklist(path, variable, reason):
     variable = str(variable or '').strip()
@@ -355,7 +376,11 @@ def append_injection_blacklist(path, variable, reason):
                     data["variables"] = {str(k): v for k, v in old.items()}
     except Exception:
         pass
+    existing = data.get("variables", {}).get(variable)
+    if isinstance(existing, dict) and existing.get("blocked", True) is False:
+        return
     data.setdefault("variables", {})[variable] = {
+        "blocked": True,
         "reason": reason,
         "time": time.strftime('%Y-%m-%d %H:%M:%S'),
     }
@@ -409,10 +434,13 @@ class FMUProcessor:
 
                 src_file = os.path.join(search_root, fname)
                 target_file = os.path.join(target_bin, fname)
+                if fname.lower() == "orbit_pre.txt":
+                    copied.add(fname.lower())
+                    continue
+                if os.path.exists(target_file):
+                    copied.add(fname.lower())
+                    continue
                 if ext == 'dll':
-                    if os.path.exists(target_file):
-                        copied.add(fname.lower())
-                        continue
                     arch = check_dll_arch(src_file)
                     if arch and arch != host_arch:
                         continue
@@ -485,7 +513,7 @@ class DDMCommManager:
                     except Exception: pass
         threading.Thread(target=listen_loop, daemon=True).start()
 
-    def send_fmu_data(self, sim_time, variables, chunk_size=200, extra_external_variables=None):
+    def send_fmu_data(self, sim_time, variables, chunk_size=200, extra_external_variables=None, force_viz=False, viz_start=False):
         if ddm_pb2 is None or not variables: return
         external_variables = dict(variables)
         if extra_external_variables:
@@ -543,7 +571,7 @@ class DDMCommManager:
                 self.send_error_count += 1
 
         now_wall = time.perf_counter()
-        if now_wall - self.last_viz_send_wall < self.viz_send_interval:
+        if not force_viz and now_wall - self.last_viz_send_wall < self.viz_send_interval:
             self.viz_skip_count += 1
             return
         self.last_viz_send_wall = now_wall
@@ -555,6 +583,12 @@ class DDMCommManager:
             packet_viz = ddm_pb2.DDMData()
             packet_viz.machine_time = time.time()
             packet_viz.sim_time = sim_time
+
+            if viz_start and i == 0:
+                marker = packet_viz.sim_vars.add()
+                marker.name = "__FMUSOLVER_SIM_START_TIME__"
+                marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+                marker.double_value = float(sim_time)
 
             for name in chunk_names:
                 val = viz_variables[name]
@@ -629,6 +663,46 @@ class DDMCommManager:
         except Exception:
             pass
 
+    def send_viz_time_marker(self, sim_time):
+        """Send a tiny dashboard-only packet so finite runs expose the exact final timestamp."""
+        if ddm_pb2 is None:
+            return
+        packet = ddm_pb2.DDMData()
+        packet.machine_time = time.time()
+        packet.sim_time = sim_time
+        marker = packet.sim_vars.add()
+        marker.name = "__FMUSOLVER_SIM_END_TIME__"
+        marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+        marker.double_value = float(sim_time)
+        try:
+            raw = packet.SerializeToString()
+            payload = base64.b64encode(raw).decode('ascii').encode('ascii')
+            for viz_addr in self.viz_addrs:
+                self.sock.sendto(payload, viz_addr)
+            self.viz_send_count += 1
+        except Exception:
+            self.send_error_count += 1
+
+    def send_viz_start_marker(self):
+        """Tell the dashboard to start a fresh history at the exact FMU start time."""
+        if ddm_pb2 is None:
+            return
+        packet = ddm_pb2.DDMData()
+        packet.machine_time = time.time()
+        packet.sim_time = 0.0
+        marker = packet.sim_vars.add()
+        marker.name = "__FMUSOLVER_SIM_START_TIME__"
+        marker.type = ddm_pb2.DDMData.SimVar.Type.Value("Double")
+        marker.double_value = 0.0
+        try:
+            raw = packet.SerializeToString()
+            payload = base64.b64encode(raw).decode('ascii').encode('ascii')
+            for viz_addr in self.viz_addrs:
+                self.sock.sendto(payload, viz_addr)
+            self.viz_send_count += 1
+        except Exception:
+            self.send_error_count += 1
+
     def normalize_injection_echo_vars(self, variables, prefix="PE"):
         normalized = {}
         if not variables:
@@ -656,9 +730,9 @@ class FMUPlayer:
         host_arch = "win64" if sys.maxsize > 2**32 else "win32"
         dll_path = os.path.abspath(os.path.join(self.processor.temp_dir, "binaries", host_arch))
         root_dir = os.path.abspath(os.path.dirname(sys.argv[0]) if sys.argv[1:] else os.getcwd())
-        blacklist_path, injection_blacklist = load_injection_blacklist(root_dir)
-        if injection_blacklist:
-            print(f"[*] Injection blacklist loaded: {len(injection_blacklist)} vars from {blacklist_path}", flush=True)
+        canonical_orbit_txt = os.path.join(root_dir, "Orbit_Pre.txt")
+        blacklist_path, injection_blacklist, injection_allowlist = load_injection_blacklist(root_dir)
+        print(f"[*] Injection blacklist loaded: blocked={len(injection_blacklist)} allowed={len(injection_allowlist)} from {blacklist_path}", flush=True)
         perf_log_path = os.path.join(root_dir, "fmu_worker_perf.log")
         perf_logger = AsyncRotatingFileLogger(
             perf_log_path,
@@ -685,6 +759,7 @@ class FMUPlayer:
         fmu_instance = None
         run_ok = False
         stop_requested = False
+        last_applied_injection = None
         try:
             if os.path.exists(dll_path):
                 os.chdir(dll_path)
@@ -715,9 +790,14 @@ class FMUPlayer:
             for v in vars_list:
                 t = getattr(v, 'type', 'Real')
                 if t == 'String' and getattr(v, 'start', ''):
-                    if '.txt' in v.start.lower() and (':' in v.start):
-                        fname = os.path.basename(v.start.replace('\\', '/'))
-                        abs_p = os.path.abspath(fname).replace('\\', '/')
+                    start_text = str(v.start)
+                    if '.txt' in start_text.lower() and (':' in start_text or 'orbit_pre' in start_text.lower() or v.name == 'filepath'):
+                        fname = os.path.basename(start_text.replace('\\', '/'))
+                        if fname.lower() == "orbit_pre.txt" and os.path.exists(canonical_orbit_txt):
+                            abs_p = os.path.abspath(canonical_orbit_txt).replace('\\', '/')
+                            print(f"[*] Using package Orbit_Pre.txt: {abs_p}", flush=True)
+                        else:
+                            abs_p = os.path.abspath(fname).replace('\\', '/')
                         if os.path.exists(abs_p):
                             fsize = os.path.getsize(abs_p)
                             print(f"[*] Verified path exists: {abs_p} (Size: {fsize} bytes)")
@@ -726,26 +806,20 @@ class FMUPlayer:
                         fmu_instance.setString([v.valueReference], [abs_p])
                         print(f"[*] Overriding filepath: {v.name} -> {abs_p}")
 
-            # 旧版FMU允许在 enterInitializationMode 之前 setReal；
-            # 新版MWORKS(26.1.2+)导出的FMU会报 "invalid execution timing"，
-            # 需要在 InitializationMode 内设置。两阶段尝试以兼容新旧FMU。
-            deferred_sets = []
+            pending_init_sets = []
 
-            def _try_set(v_obj, t, val, label, defer=True):
+            def _try_set(v_obj, t, val, label):
                 try:
                     if t == 'Real': fmu_instance.setReal([v_obj.valueReference], [float(val)])
                     elif t == 'Integer': fmu_instance.setInteger([v_obj.valueReference], [int(val)])
                     elif t == 'Boolean': fmu_instance.setBoolean([v_obj.valueReference], [bool(val)])
                     return True
                 except Exception as e:
-                    if defer:
-                        deferred_sets.append((v_obj, t, val, label))
-                    else:
-                        print(f"[!] Cannot set {label} = {val} in either phase: {e}")
+                    print(f"[!] Cannot set {label} = {val} in InitializationMode: {e}")
                     return False
 
             if init_params:
-                print("[*] Injecting initialization parameters...")
+                print("[*] Preparing initialization parameters...")
                 for k, v in init_params.items():
                     if k.startswith("Table_"):
                         try:
@@ -756,24 +830,22 @@ class FMUPlayer:
                                         cands = [f"{k}[{i+1},{j+1}]", f"{k}[{i+1}, {j+1}]"]
                                         v_obj = next((mv for mv in vars_list if mv.name in cands), None)
                                         if v_obj:
-                                            _try_set(v_obj, 'Real', val.strip(), f"{k}[{i+1},{j+1}]")
-                                print(f"[OK] Parsed and injected table {k} ({len(rows)}x{len(rows[0])})")
+                                            pending_init_sets.append((v_obj, 'Real', val.strip(), f"{k}[{i+1},{j+1}]"))
+                                print(f"[OK] Parsed table {k} ({len(rows)}x{len(rows[0])})")
                         except Exception as e:
                             print(f"[!] Error parsing table {k}: {e}")
                     else:
                         v_obj = next((mv for mv in vars_list if mv.name == k), None)
                         if v_obj:
                             t = getattr(v_obj, 'type', 'Real')
-                            if _try_set(v_obj, t, v, k):
-                                print(f"[OK] Set param {k} = {v}")
+                            pending_init_sets.append((v_obj, t, v, k))
 
             fmu_instance.enterInitializationMode()
-            if deferred_sets:
-                print(f"[*] Retrying {len(deferred_sets)} params inside InitializationMode (new MWORKS FMU)...")
-                retry_list, deferred_sets = deferred_sets, []
-                for v_obj, t, val, label in retry_list:
-                    if _try_set(v_obj, t, val, label, defer=False):
-                        print(f"[OK] Set param {label} = {val} (init mode)")
+            if pending_init_sets:
+                print(f"[*] Injecting {len(pending_init_sets)} initialization parameters inside InitializationMode...")
+                for v_obj, t, val, label in pending_init_sets:
+                    if _try_set(v_obj, t, val, label):
+                        print(f"[OK] Set param {label} = {val}")
             fmu_instance.exitInitializationMode()
 
             # 建立 FMU 变量名查找索引 (支持模糊匹配)
@@ -844,6 +916,19 @@ class FMUPlayer:
             int_vr_map = {v.name: v.valueReference for v in v_int}
             bool_vr_map = {v.name: v.valueReference for v in v_bool}
 
+            def read_output_variables():
+                out = {}
+                if v_real:
+                    vals = fmu_instance.getReal([v.valueReference for v in v_real])
+                    for v, val in zip(v_real, vals): out[get_out_name(v.name)] = float(val)
+                if v_int:
+                    vals = fmu_instance.getInteger([v.valueReference for v in v_int])
+                    for v, val in zip(v_int, vals): out[get_out_name(v.name)] = int(val)
+                if v_bool:
+                    vals = fmu_instance.getBoolean([v.valueReference for v in v_bool])
+                    for v, val in zip(v_bool, vals): out[get_out_name(v.name)] = bool(val)
+                return out
+
             def is_runtime_settable(v):
                 causality = str(getattr(v, 'causality', '') or '').lower()
                 variability = str(getattr(v, 'variability', '') or '').lower()
@@ -862,6 +947,9 @@ class FMUPlayer:
 
             def resolve_input_name(name):
                 key = strip_source_prefix(name)
+                alias = EXTERNAL_INPUT_ALIASES.get(key)
+                if alias and (alias in input_real_vr_map or alias in input_int_vr_map or alias in input_bool_vr_map):
+                    return alias
                 if key in input_real_vr_map or key in input_int_vr_map or key in input_bool_vr_map:
                     return key
                 norm = normalize_var_key(key)
@@ -874,6 +962,7 @@ class FMUPlayer:
 
             current_time = 0.0
             next_sample_time = 0.0
+            finite_stop_tolerance = max(1e-9, min(1e-6, abs(step_size) * 1e-6))
             sim_wall_anchor = time.perf_counter()
             sim_time_anchor = current_time
             last_log_wall = time.perf_counter()
@@ -889,7 +978,6 @@ class FMUPlayer:
             recent_injections = []
             last_perf_snapshot = ""
             missing_input_cache = set()
-            last_applied_injection = None
             viz_echo_cache = {}
             viz_echo_last_send = 0.0
             viz_echo_interval = max(0.05, float(os.environ.get("FMUSOLVER_VIZ_INJECTION_ECHO_INTERVAL", "0.2")))
@@ -951,7 +1039,39 @@ class FMUPlayer:
             
             print(f"[*] Simulation Loop Started. Step={step_size}s, Rate={sim_rate}x")
 
-            while current_time <= sim_time:
+            viz_ready_file = os.environ.get("FMUSOLVER_VIZ_READY_FILE", "").strip()
+            if viz_ready_file:
+                ready_deadline = time.perf_counter() + max(
+                    0.5,
+                    float(os.environ.get("FMUSOLVER_VIZ_READY_TIMEOUT_SEC", "10.0")),
+                )
+                while time.perf_counter() < ready_deadline and not os.path.exists(viz_ready_file):
+                    time.sleep(0.05)
+                if os.path.exists(viz_ready_file):
+                    print("[OK] Dashboard receiver ready; sending exact t=0 initial frame.", flush=True)
+                    try:
+                        os.remove(viz_ready_file)
+                    except Exception:
+                        pass
+                else:
+                    print("[!] Dashboard readiness wait timed out; simulation will continue.", flush=True)
+
+            initial_out = read_output_variables()
+            initial_finite_count = 0
+            for initial_value in initial_out.values():
+                try:
+                    if math.isfinite(float(initial_value)):
+                        initial_finite_count += 1
+                except Exception:
+                    pass
+            self.comm.send_fmu_data(0.0, initial_out, force_viz=True, viz_start=True)
+            print(
+                f"[SNAPSHOT] initial precise dashboard frame sent at sim_time=0.000000000s "
+                f"vars={len(initial_out)} finite={initial_finite_count} deferred={len(initial_out) - initial_finite_count}",
+                flush=True,
+            )
+
+            while sim_time == float('inf') or current_time < sim_time - finite_stop_tolerance:
                 while True:
                     try:
                         raw_cmd = self.comm.received_queue.get_nowait()
@@ -989,11 +1109,14 @@ class FMUPlayer:
                         if "yc_inject_freq" in cmd:
                             limited_inject_freq = max(0.1, float(cmd["yc_inject_freq"]))
                             limited_inject_interval = 1.0 / limited_inject_freq
+                        if cmd.get("__reload_injection_blacklist"):
+                            blacklist_path, injection_blacklist, injection_allowlist = load_injection_blacklist(root_dir)
+                            print(f"[*] Injection blacklist reloaded: blocked={len(injection_blacklist)} allowed={len(injection_allowlist)} from {blacklist_path}", flush=True)
                         injected_count = 0
                         missing_injection = []
                         injected_echo = {}
                         for k, v in cmd.items():
-                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now"):
+                            if k in ("sim_id", "exit", "pause", "resume", "sim_rate", "step_size", "sim_time", "sample_freq", "yc_inject_freq", "__apply_yc_now", "__reload_injection_blacklist"):
                                 continue
                             is_rate_limited_external = str(k).startswith(("PE.", "YC."))
                             if str(k).startswith("YC."):
@@ -1011,6 +1134,10 @@ class FMUPlayer:
                                 pending_limited_injection[str(k)] = v
                                 continue
                             if is_rate_limited_external:
+                                if strip_source_prefix(k) in TELEMETRY_STATUS_NAMES:
+                                    display_value = normalize_external_real_value(k, v) if isinstance(v, (int, float)) and not isinstance(v, bool) else v
+                                    injected_echo[str(k)] = display_value
+                                    continue
                                 display_value = v
                                 if isinstance(v, (int, float)) and not isinstance(v, bool):
                                     display_value = normalize_external_real_value(k, v)
@@ -1101,6 +1228,8 @@ class FMUPlayer:
                         except Exception: pass
                 if stop_requested:
                     run_ok = True
+                    if sim_time != float('inf') and sim_time - current_time < 0.5:
+                        current_time = sim_time
                     print("[*] Simulation exit requested.", flush=True)
                     break
                 self.comm.last_received_data = None
@@ -1123,8 +1252,18 @@ class FMUPlayer:
                     viz_echo_cache.clear()
                     viz_echo_last_send = now_echo
 
+                remaining_time = float('inf') if sim_time == float('inf') else max(0.0, sim_time - current_time)
+                if sim_time != float('inf') and remaining_time <= finite_stop_tolerance:
+                    current_time = sim_time
+                    run_ok = True
+                    break
+                actual_step = step_size if sim_time == float('inf') else min(step_size, remaining_time)
+                if actual_step <= 1e-12:
+                    break
+
                 # doStep in FMPy may return None on success. Error handling is managed internally via exceptions.
-                fmu_instance.doStep(currentCommunicationPoint=current_time, communicationStepSize=step_size)
+                fmu_instance.doStep(currentCommunicationPoint=current_time, communicationStepSize=actual_step)
+                current_time += actual_step
                 
                 do_sample = True
                 if sample_freq > 0:
@@ -1134,16 +1273,7 @@ class FMUPlayer:
                     else: do_sample = False
 
                 if do_sample:
-                    out = {}
-                    if v_real:
-                        vals = fmu_instance.getReal([v.valueReference for v in v_real])
-                        for v, val in zip(v_real, vals): out[get_out_name(v.name)] = float(val)
-                    if v_int:
-                        vals = fmu_instance.getInteger([v.valueReference for v in v_int])
-                        for v, val in zip(v_int, vals): out[get_out_name(v.name)] = int(val)
-                    if v_bool:
-                        vals = fmu_instance.getBoolean([v.valueReference for v in v_bool])
-                        for v, val in zip(v_bool, vals): out[get_out_name(v.name)] = bool(val)
+                    out = read_output_variables()
                     now_for_yc = time.perf_counter()
                     stale_yc = [name for name, (_, ts) in latest_telemetry_for_pe.items() if now_for_yc - ts > telemetry_ttl_sec]
                     for name in stale_yc:
@@ -1175,13 +1305,26 @@ class FMUPlayer:
                     append_perf_log(last_perf_snapshot)
                     last_perf_log_wall = now_wall
 
-                current_time += step_size
                 if sim_rate > 0:
                     target_wall = sim_wall_anchor + (current_time - sim_time_anchor) / sim_rate
                     diff = target_wall - time.perf_counter()
                     if diff > 0.002: time.sleep(diff)
             else:
                 run_ok = True
+
+            if run_ok and sim_time != float('inf'):
+                final_out = read_output_variables()
+                now_for_yc = time.perf_counter()
+                stale_yc = [name for name, (_, ts) in latest_telemetry_for_pe.items() if now_for_yc - ts > telemetry_ttl_sec]
+                for name in stale_yc:
+                    latest_telemetry_for_pe.pop(name, None)
+                final_external = {name: value for name, (value, _) in latest_telemetry_for_pe.items()}
+                for _ in range(3):
+                    self.comm.send_fmu_data(sim_time, final_out, extra_external_variables=final_external, force_viz=True)
+                    time.sleep(0.02)
+                self.comm.send_viz_time_marker(sim_time)
+                time.sleep(0.02)
+                print(f"[SNAPSHOT] final precise dashboard frame sent at sim_time={sim_time:.9f}s vars={len(final_out)}", flush=True)
 
         except Exception as e:
             print(f"[!] Simulation Error: {e}")

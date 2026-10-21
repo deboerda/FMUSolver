@@ -190,6 +190,11 @@ class YaoCeLinkLayerApp:
         self.last_perf_time = self.last_perf_log
         self.parent_pid = os.environ.get("FMUSOLVER_PARENT_PID", "")
         self.worker_json_send_count = 0
+        self.last_recv_time = 0.0
+        self.last_status_emit_wall = 0.0
+        self.last_status_connected = None
+        self.status_timeout_sec = max(1.0, float(os.environ.get("FMUSOLVER_YC_STATUS_TIMEOUT_SEC", "10.0")))
+        self.status_heartbeat_sec = max(0.5, float(os.environ.get("FMUSOLVER_YC_STATUS_HEARTBEAT_SEC", "1.0")))
 
     def enqueue_latest(self, q, item, drop_attr):
         try:
@@ -278,6 +283,56 @@ class YaoCeLinkLayerApp:
                     break
         threading.Thread(target=watch_parent, daemon=True).start()
 
+    def telemetry_connected(self, now=None):
+        now = time.time() if now is None else now
+        return self.rx_count > 0 and (now - self.last_recv_time) <= self.status_timeout_sec
+
+    def telemetry_status_payload(self):
+        now = time.time()
+        age = now - self.last_recv_time if self.last_recv_time else -1.0
+        connected = self.telemetry_connected(now)
+        return {
+            "YC.FMUSOLVER_YC_CONNECTED": 1.0 if connected else 0.0,
+            "YC.FMUSOLVER_YC_LAST_AGE_SEC": float(age),
+            "YC.FMUSOLVER_YC_RX_COUNT": float(self.rx_count),
+        }
+
+    def emit_status_log(self, force=False):
+        now = time.time()
+        connected = self.telemetry_connected(now)
+        if not force and self.last_status_connected == connected and now - self.last_status_emit_wall < self.status_heartbeat_sec:
+            return
+        age = now - self.last_recv_time if self.last_recv_time else -1.0
+        print(
+            f"[YAOCE_STATUS] connected={1 if connected else 0} age={age:.3f}s "
+            f"rx={self.rx_count} timeout={self.status_timeout_sec:.1f}s",
+            flush=True,
+        )
+        self.last_status_connected = connected
+        self.last_status_emit_wall = now
+
+    def status_heartbeat_loop(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        local_targets = [
+            (host, port) for host, port in self.config_mgr.targets
+            if self.config_mgr.is_local_injection_target(host, port)
+        ]
+        try:
+            while self.running:
+                payload = self.telemetry_status_payload()
+                if local_targets:
+                    raw = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+                    for target in local_targets:
+                        try:
+                            sock.sendto(raw, target)
+                            self.worker_json_send_count += 1
+                        except Exception:
+                            self.send_error_count += 1
+                self.emit_status_log()
+                time.sleep(self.status_heartbeat_sec)
+        finally:
+            sock.close()
+
     def receive_loop(self):
         recv_port = self.config_mgr.config['RecvPort']
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -288,12 +343,15 @@ class YaoCeLinkLayerApp:
         self.last_recv_time = time.time()
         record_file = os.path.join(self.log_dir, "originaldata.log")
         print(f"[*] Raw hex records will be saved asynchronously to: {record_file}")
+        self.emit_status_log(force=True)
+        threading.Thread(target=self.status_heartbeat_loop, daemon=True, name="YaoCeStatusHeartbeat").start()
         
         def monitor_heartbeat():
             while self.running:
                 time.sleep(5)
                 if time.time() - self.last_recv_time > 10.0:
                     print(f"[-] Still listening on UDP {recv_port}, but no data received for over 10s.")
+                    self.emit_status_log(force=True)
         
         threading.Thread(target=monitor_heartbeat, daemon=True).start()
         
@@ -315,6 +373,7 @@ class YaoCeLinkLayerApp:
                     continue
                 self.last_recv_time = time.time()
                 self.rx_count += 1
+                self.emit_status_log()
                 ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')[:-3]
                 self.enqueue_latest(self.data_queue, data, 'rx_drop_count')
                 if self.rx_count <= 5 or self.rx_count % self.raw_log_sample == 0:

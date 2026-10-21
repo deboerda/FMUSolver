@@ -1,4 +1,8 @@
-import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, queue, ddm_pb2
+import sys, os, json, time, threading, subprocess, re, socket, zipfile, base64, queue
+try:
+    import ddm_pb2
+except Exception:
+    ddm_pb2 = None
 import ctypes
 from ctypes import wintypes
 from datetime import datetime
@@ -9,9 +13,10 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QTableWidget, QTableWidgetItem, QAbstractItemView, QColorDialog, QStackedWidget, QSlider, QComboBox,
                              QSizePolicy)
 from PySide6.QtCore import Qt, QTimer, Signal, QSize, QRect, QPoint
+from PySide6.QtNetwork import QLocalSocket
 from PySide6.QtGui import QFont, QColor, QIcon, QPainter, QBrush, QPen, QCursor, QTextCursor
 
-APP_VERSION = "v26.0719.1055"
+APP_VERSION = "v26.0825.1138"
 
 # ─── Resource Helpers ───
 def get_resource_path(relative_path):
@@ -69,6 +74,241 @@ def disable_blur_behind(hwnd):
     try:
         ctypes.windll.user32.SetWindowCompositionAttribute(hwnd, ctypes.pointer(data))
     except: pass
+
+
+# ─── Robust single-instance window handoff ───
+_SINGLE_INSTANCE_MUTEX = "Local\\FmuSolver_Global_Mutex"
+_SINGLE_INSTANCE_PROP = "FmuSolver.SingleInstanceWindow"
+_ERROR_ALREADY_EXISTS = 183
+
+
+def _window_api():
+    """Load Win32 APIs with pointer-sized HWND/HANDLE signatures.
+
+    ctypes defaults to a 32-bit integer return value when no restype is set;
+    that silently truncates 64-bit window handles on some machines and makes
+    restore/foreground calls appear to do nothing.
+    """
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    user32.EnumWindows.argtypes = [ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM), wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    user32.GetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    user32.GetPropW.restype = wintypes.HANDLE
+    user32.SetPropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR, wintypes.HANDLE]
+    user32.SetPropW.restype = wintypes.BOOL
+    user32.RemovePropW.argtypes = [wintypes.HWND, wintypes.LPCWSTR]
+    user32.RemovePropW.restype = wintypes.HANDLE
+    user32.IsWindow.argtypes = [wintypes.HWND]
+    user32.IsWindow.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.IsIconic.argtypes = [wintypes.HWND]
+    user32.IsIconic.restype = wintypes.BOOL
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user32.SetWindowPos.restype = wintypes.BOOL
+    user32.BringWindowToTop.argtypes = [wintypes.HWND]
+    user32.BringWindowToTop.restype = wintypes.BOOL
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.SetForegroundWindow.restype = wintypes.BOOL
+    user32.SetActiveWindow.argtypes = [wintypes.HWND]
+    user32.SetActiveWindow.restype = wintypes.HWND
+    user32.GetForegroundWindow.restype = wintypes.HWND
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+    user32.AttachThreadInput.restype = wintypes.BOOL
+    user32.FlashWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+    user32.FlashWindow.restype = wintypes.BOOL
+    if hasattr(user32, "SwitchToThisWindow"):
+        user32.SwitchToThisWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+        user32.SwitchToThisWindow.restype = None
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+    return user32, kernel32
+
+
+def _find_single_instance_window(user32):
+    """Find the first instance by property, with a title fallback for old builds."""
+    property_windows = []
+    title_windows = []
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    def enum_proc(hwnd, _lparam):
+        if not user32.IsWindow(hwnd):
+            return True
+        if user32.GetPropW(hwnd, _SINGLE_INSTANCE_PROP):
+            property_windows.append(hwnd)
+            return True
+        length = user32.GetWindowTextLengthW(hwnd)
+        if length:
+            title = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, title, length + 1)
+            if title.value.strip().lower().startswith("fmusolver"):
+                title_windows.append(hwnd)
+        return True
+
+    user32.EnumWindows(enum_proc, 0)
+    return (property_windows or title_windows or [None])[0]
+
+
+def _restore_and_activate_window(hwnd, user32, kernel32):
+    """Restore a minimized Qt window and reliably hand foreground focus to it."""
+    if not hwnd or not user32.IsWindow(hwnd):
+        return False
+    try:
+        # SW_RESTORE is required for minimized windows; SW_SHOW alone is not.
+        user32.ShowWindow(hwnd, 9 if user32.IsIconic(hwnd) else 5)
+        flags = 0x0001 | 0x0002 | 0x0040  # SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW
+        user32.SetWindowPos(hwnd, wintypes.HWND(0), 0, 0, 0, 0, flags)
+        user32.BringWindowToTop(hwnd)
+
+        current_tid = kernel32.GetCurrentThreadId()
+        target_tid = user32.GetWindowThreadProcessId(hwnd, None)
+        foreground = user32.GetForegroundWindow()
+        foreground_tid = user32.GetWindowThreadProcessId(foreground, None) if foreground else 0
+        attached = []
+        for source_tid in (current_tid, foreground_tid):
+            if source_tid and target_tid and source_tid != target_tid and source_tid not in attached:
+                if user32.AttachThreadInput(source_tid, target_tid, True):
+                    attached.append(source_tid)
+        try:
+            # A short TOPMOST pulse repairs Z-order without leaving the app
+            # permanently always-on-top, then explicitly activates the window.
+            user32.SetWindowPos(hwnd, wintypes.HWND(-1), 0, 0, 0, 0, flags)
+            user32.SetWindowPos(hwnd, wintypes.HWND(-2), 0, 0, 0, 0, flags)
+            user32.BringWindowToTop(hwnd)
+            user32.SetActiveWindow(hwnd)
+            user32.SetForegroundWindow(hwnd)
+            if hasattr(user32, "SwitchToThisWindow"):
+                user32.SwitchToThisWindow(hwnd, True)
+        finally:
+            for source_tid in attached:
+                user32.AttachThreadInput(source_tid, target_tid, False)
+        if user32.GetForegroundWindow() != hwnd:
+            user32.FlashWindow(hwnd, True)
+        return True
+    except Exception:
+        return False
+
+
+def _wake_existing_instance(retries=30, delay=0.1):
+    """Wait briefly for the first instance to create its HWND, then wake it."""
+    try:
+        user32, kernel32 = _window_api()
+        for _ in range(max(1, int(retries))):
+            hwnd = _find_single_instance_window(user32)
+            if hwnd and _restore_and_activate_window(hwnd, user32, kernel32):
+                return True
+            time.sleep(max(0.01, float(delay)))
+    except Exception:
+        pass
+    return False
+
+
+def _register_single_instance_window(window):
+    """Mark the first Qt window so later launches do not depend on its title."""
+    try:
+        user32, _kernel32 = _window_api()
+        hwnd = wintypes.HWND(int(window.winId()))
+        if user32.SetPropW(hwnd, _SINGLE_INSTANCE_PROP, wintypes.HANDLE(1)):
+            return hwnd.value
+    except Exception:
+        pass
+    return 0
+
+
+def _unregister_single_instance_window(hwnd):
+    try:
+        if hwnd:
+            user32, _kernel32 = _window_api()
+            user32.RemovePropW(wintypes.HWND(hwnd), _SINGLE_INSTANCE_PROP)
+    except Exception:
+        pass
+
+
+def _owner_api():
+    """Win32 APIs used to bind FmuSolver as an owned window of PE."""
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    callback_type = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [callback_type, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.GetWindow.argtypes = [wintypes.HWND, wintypes.UINT]
+    user32.GetWindow.restype = wintypes.HWND
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    set_owner = getattr(user32, "SetWindowLongPtrW", None)
+    if set_owner is None:  # 32-bit Windows fallback
+        set_owner = user32.SetWindowLongW
+    set_owner.argtypes = [wintypes.HWND, ctypes.c_int, wintypes.HWND]
+    set_owner.restype = ctypes.c_void_p
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    return user32, kernel32, set_owner, callback_type
+
+
+_OWNER_WINDOW_TITLE = "PE"
+
+
+def _find_window_by_title(window_title=_OWNER_WINDOW_TITLE):
+    """Return a visible top-level HWND whose title exactly matches ``window_title``."""
+    try:
+        user32, _kernel32, _set_owner, callback_type = _owner_api()
+        target_title = str(window_title).strip().casefold()
+        matches = []
+
+        @callback_type
+        def enum_proc(hwnd, _lparam):
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            title_len = user32.GetWindowTextLengthW(hwnd)
+            if title_len <= 0:
+                return True
+            title_buf = ctypes.create_unicode_buffer(title_len + 1)
+            user32.GetWindowTextW(hwnd, title_buf, title_len + 1)
+            if title_buf.value.strip().casefold() == target_title:
+                matches.append(hwnd)
+            return True
+
+        user32.EnumWindows(enum_proc, 0)
+        if matches:
+            return matches[0]
+    except Exception:
+        pass
+    return None
+
+
+def _attach_fmusolver_to_owner_window(window, window_title=_OWNER_WINDOW_TITLE):
+    """Make FmuSolver an owned window of the named top-level window."""
+    try:
+        fmu_hwnd = wintypes.HWND(int(window.winId()))
+        user32, _kernel32, set_owner, _callback_type = _owner_api()
+        target_hwnd = _find_window_by_title(window_title)
+        if not target_hwnd or target_hwnd == fmu_hwnd.value:
+            return False
+        current_owner = int(user32.GetWindow(fmu_hwnd, 4) or 0)  # GW_OWNER
+        if current_owner != target_hwnd:
+            set_owner(fmu_hwnd, -8, wintypes.HWND(target_hwnd))  # GWL_HWNDPARENT
+        window._owner_window_hwnd = int(target_hwnd)
+        return True
+    except Exception:
+        return False
 
 # ─── Constants & Sequoia Colors ───
 if getattr(sys, 'frozen', False):
@@ -222,13 +462,12 @@ QLabel#BrandLabel {{
 }}
 
 QLabel#VersionBadge {{
-    color: #4B5563;
-    background: rgba(255,255,255,150);
-    border: 1px solid rgba(0,0,0,18);
-    border-radius: 8px;
-    padding: 2px 7px;
+    color: rgba(17,17,17,120);
+    background: transparent;
+    border: none;
+    padding: 1px 0 0 2px;
     font-size: 10px;
-    font-weight: 800;
+    font-weight: 700;
 }}
 
 QLabel#HeaderLabel {{
@@ -385,16 +624,24 @@ QPushButton#PrimaryAction:disabled {{
 }}
 
 QPushButton#Danger {{
-    background: rgba(255, 59, 48, 42);
-    color: #FF3B30;
-    border: 1px solid rgba(255, 59, 48, 120);
+    background: rgba(236, 238, 242, 245);
+    color: #374151;
+    border: 1px solid rgba(205, 210, 220, 235);
     font-weight: 800;
 }}
 QPushButton#Danger:hover {{
-    background: rgba(255, 59, 48, 60);
+    background: rgba(228, 231, 236, 250);
+    border: 1px solid rgba(0, 122, 255, 95);
 }}
 QPushButton#Danger:pressed {{
-    background: rgba(255, 59, 48, 78);
+    background: rgba(255, 59, 48, 88);
+    color: #FF3B30;
+    border: 1px solid rgba(255, 59, 48, 220);
+}}
+QPushButton#Danger:checked {{
+    background: rgba(255, 59, 48, 105);
+    color: #FF3B30;
+    border: 1px solid rgba(255, 59, 48, 230);
 }}
 
 QCheckBox {{ spacing: 8px; font-size: 12px; color: {C_TEXT}; font-weight: 600; }}
@@ -1172,6 +1419,9 @@ def danger_btn(text, parent=None):
     b = QPushButton(text, parent)
     b.setAttribute(Qt.WA_StyledBackground, True)
     b.setObjectName("Danger")
+    # Keep the stop action visually neutral until it is clicked; the checked
+    # state is retained while the corresponding process is being stopped.
+    b.setCheckable(True)
     b.setCursor(Qt.PointingHandCursor)
     return b
 def lbl(text, parent=None, obj=None):
@@ -1203,6 +1453,7 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
     toggle_btn.setObjectName("ConsoleToggle")
     toggle_btn.setToolTip("折叠后停止向界面写入日志，完整日志仍写入文件")
     toggle_btn.setFixedHeight(24)
+    toggle_btn.setCheckable(True)
     header.addWidget(toggle_btn)
     lay.addLayout(header)
     editor.setObjectName("Console")
@@ -1225,6 +1476,7 @@ def console_panel(title, editor, parent=None, min_height=None, fixed_height=None
         collapsed = not getattr(shell, "_log_collapsed", False)
         shell._log_collapsed = collapsed
         editor.setProperty("log_collapsed", collapsed)
+        toggle_btn.setChecked(collapsed)
         editor.setVisible(not collapsed)
         star.setVisible(not collapsed)
         if collapsed:
@@ -1556,6 +1808,159 @@ class FieldsDialog(QDialog):
         except Exception as e:
             QMessageBox.critical(self, "错误", f"保存失败: {e}")
 
+DEFAULT_INJECTION_BLACKLIST = {
+    "ShelterRatio_CJinput[1]": "Field protection: PE injection can make FMU doStep return status 3; keep visible but do not write into FMU.",
+    "ShelterRatio_CJinput[2]": "Field protection: PE injection can make FMU doStep return status 3; keep visible but do not write into FMU.",
+}
+
+class InjectionBlacklistDialog(QDialog):
+    def __init__(self, blacklist_path, parent=None):
+        super().__init__(parent)
+        self.blacklist_path = blacklist_path
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Dialog)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.resize(900, 560)
+        set_blur_behind(self.winId())
+        if parent and hasattr(parent, 'styleSheet'):
+            self.setStyleSheet(parent.styleSheet())
+        self.root = QWidget(self); self.root.setObjectName("MainContainer")
+        root_lay = QVBoxLayout(self); root_lay.setContentsMargins(0, 0, 0, 0); root_lay.addWidget(self.root)
+        vlay = QVBoxLayout(self.root); vlay.setContentsMargins(0, 0, 0, 0); vlay.setSpacing(0)
+        self.title_bar = TitleBar(self, is_dialog=True)
+        self.title_bar.brand_lbl.setText("PE/FMU 注入黑名单管理")
+        self.title_bar.btn_min.hide()
+        vlay.addWidget(self.title_bar)
+
+        content = QWidget(); content_lay = QVBoxLayout(content)
+        content_lay.setContentsMargins(20, 15, 20, 20); content_lay.setSpacing(12)
+        tip = lbl("默认拦截曾导致 FMU doStep 失败的高风险注入变量；取消勾选后将允许写入 FMU，请谨慎操作。", obj="Muted")
+        content_lay.addWidget(tip)
+
+        toolbar = QHBoxLayout()
+        b_add = btn("+ 添加变量", False); b_add.clicked.connect(self.add_manual)
+        b_del = btn("➖ 删除选中", False); b_del.clicked.connect(self.delete_selected)
+        b_defaults = btn("恢复默认保护项", False); b_defaults.clicked.connect(self.restore_defaults)
+        toolbar.addWidget(b_add); toolbar.addWidget(b_del); toolbar.addWidget(b_defaults)
+        toolbar.addStretch()
+        b_save = btn("💾 保存并应用", True); b_save.clicked.connect(self.save_and_close)
+        toolbar.addWidget(b_save)
+        content_lay.addLayout(toolbar)
+
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(["变量名", "拦截", "原因/备注"])
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Interactive)
+        self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
+        self.table.setColumnWidth(0, 260)
+        self.table.setColumnWidth(1, 80)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.table.setStyleSheet("""
+            QTableWidget { background: rgba(0,0,0,15); border: 1px solid rgba(128,128,128,40); border-radius: 8px; color: inherit; }
+            QHeaderView::section { background: rgba(0,0,0,30); padding: 4px; border: none; font-weight: bold; }
+        """)
+        content_lay.addWidget(self.table)
+        vlay.addWidget(content)
+        self.load_data()
+
+    def _create_center_cb(self, checked):
+        w = QWidget(); lay = QHBoxLayout(w)
+        cb = QCheckBox(); cb.setChecked(checked)
+        lay.addWidget(cb); lay.setAlignment(Qt.AlignCenter); lay.setContentsMargins(0, 0, 0, 0)
+        w.cb = cb
+        return w
+
+    def _add_row(self, name, blocked=True, reason=""):
+        row = self.table.rowCount()
+        self.table.blockSignals(True)
+        self.table.insertRow(row)
+        self.table.setItem(row, 0, QTableWidgetItem(name))
+        block_item = QTableWidgetItem("拦截" if blocked else "允许")
+        block_item.setFlags(Qt.ItemIsUserCheckable | Qt.ItemIsEnabled | Qt.ItemIsSelectable)
+        block_item.setCheckState(Qt.Checked if blocked else Qt.Unchecked)
+        block_item.setTextAlignment(Qt.AlignCenter)
+        self.table.setItem(row, 1, block_item)
+        self.table.setItem(row, 2, QTableWidgetItem(reason))
+        self.table.blockSignals(False)
+
+    def _on_table_item_changed(self, item):
+        if item is None or item.column() != 1:
+            return
+        self.table.blockSignals(True)
+        try:
+            blocked = item.checkState() == Qt.Checked
+            item.setText("拦截" if blocked else "允许")
+            item.setTextAlignment(Qt.AlignCenter)
+        finally:
+            self.table.blockSignals(False)
+
+    def add_manual(self):
+        self._add_row("NewVariable", True, "手动添加")
+
+    def delete_selected(self):
+        row = self.table.currentRow()
+        if row >= 0:
+            self.table.removeRow(row)
+
+    def restore_defaults(self):
+        existing = set()
+        for r in range(self.table.rowCount()):
+            it = self.table.item(r, 0)
+            if it and it.text().strip():
+                existing.add(it.text().strip())
+        for name, reason in DEFAULT_INJECTION_BLACKLIST.items():
+            if name not in existing:
+                self._add_row(name, True, reason)
+
+    def load_data(self):
+        loaded = False
+        if os.path.exists(self.blacklist_path):
+            try:
+                with open(self.blacklist_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                variables = data.get("variables", {}) if isinstance(data, dict) else {}
+                for name, meta in variables.items():
+                    if isinstance(meta, dict):
+                        reason = meta.get("reason", "")
+                        blocked = bool(meta.get("blocked", True))
+                    else:
+                        reason = str(meta or "")
+                        blocked = True
+                    self._add_row(name, blocked, reason)
+                loaded = True
+            except Exception:
+                loaded = False
+        if not loaded:
+            for name, reason in DEFAULT_INJECTION_BLACKLIST.items():
+                self._add_row(name, True, reason)
+
+    def save_and_close(self):
+        try:
+            variables = {}
+            now_text = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            for r in range(self.table.rowCount()):
+                name_it = self.table.item(r, 0)
+                if not name_it or not name_it.text().strip():
+                    continue
+                name = name_it.text().strip()
+                block_item = self.table.item(r, 1)
+                if block_item is not None:
+                    blocked = block_item.checkState() == Qt.Checked
+                else:
+                    cb_w = self.table.cellWidget(r, 1)
+                    blocked = cb_w.cb.isChecked() if cb_w and hasattr(cb_w, 'cb') else True
+                reason_it = self.table.item(r, 2)
+                reason = reason_it.text().strip() if reason_it else ""
+                variables[name] = {
+                    "blocked": bool(blocked),
+                    "reason": reason or ("Manually blocked in UI." if blocked else "Manually allowed in UI."),
+                    "time": now_text,
+                }
+            with open(self.blacklist_path, 'w', encoding='utf-8') as f:
+                json.dump({"variables": variables}, f, indent=2, ensure_ascii=False)
+            self.accept()
+        except Exception as e:
+            QMessageBox.critical(self, "错误", f"保存失败: {e}")
+
 class FmuSolverGUI(QMainWindow):
     sig_log          = Signal(str, str)
     sig_olog         = Signal(str, str)
@@ -1565,19 +1970,23 @@ class FmuSolverGUI(QMainWindow):
     sig_reset_ui     = Signal()
     sig_orbit_done   = Signal()
     sig_export_ready = Signal()
+    sig_orbit_txt_ready = Signal(str)
+    sig_yaoce_status = Signal(bool, str)
 
     def __init__(self):
         super().__init__()
         self.setAttribute(Qt.WA_TranslucentBackground)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Window)
         
-        # ─── Activate High Fidelity Blur ───
-        set_blur_behind(self.winId())
+        # Acrylic composition is relatively expensive on some GPUs.  Defer it
+        # until the first event-loop turn so the native window can be shown
+        # immediately.
         
         self.worker_process = None
         self.visualizer_process = None
         self.orbit_data = []
         self.orbit_proc = None
+        self.orbit_txt_path = ""
         self.current_sim_id = None
         self._yaoce_log_pos = 0
         self.runtime_log_path = os.path.join(APP_DIR, "fmusolver_runtime.log")
@@ -1605,7 +2014,6 @@ class FmuSolverGUI(QMainWindow):
         self.default_port = int(self.gui_config.get("port", 8889))
         
         self._setup_window()
-        self._cleanup_on_start()
         self._build_ui()
         
         # Connect signals AFTER UI is built
@@ -1617,13 +2025,63 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.connect(self._reset_ui)
         self.sig_orbit_done.connect(self._orbit_done_ui)
         self.sig_export_ready.connect(lambda: self.btn_export.setEnabled(True))
+        self.sig_orbit_txt_ready.connect(self._set_orbit_txt_ready)
+        self.sig_yaoce_status.connect(self._update_yaoce_led)
         # Start the endpoint when the main window is ready; forwarding still
         # requires a live FMU worker.
         self.log("[*] 初始化后准备启动变量注入监听", "sys")
-        self._start_injection_listener()
+        # Socket binding and stale-file cleanup must not delay first paint.
+        QTimer.singleShot(0, self._start_deferred_startup_tasks)
+        # Preload only after the main UI has been idle for a while.  The child
+        # is launched below normal priority, so cold-loading Qt/NumPy/
+        # pyqtgraph cannot compete with the main window's first interaction.
+        # Set FMUSOLVER_VIZ_PRELOAD=0 to disable this optional warm-up.
+        if os.environ.get("FMUSOLVER_VIZ_PRELOAD", "1").strip().lower() in ("1", "true", "yes"):
+            QTimer.singleShot(5000, self._preload_visualizer)
         self.ui_heartbeat_timer = QTimer(self)
         self.ui_heartbeat_timer.timeout.connect(self._write_ui_heartbeat)
         self.ui_heartbeat_timer.start(10000)
+
+    def _start_deferred_startup_tasks(self):
+        """Run non-visual startup work after the main window has painted."""
+        try:
+            set_blur_behind(self.winId())
+        except Exception:
+            pass
+
+    def _preload_visualizer(self):
+        """Start a hidden dashboard process in the background."""
+        if hasattr(self, 'chk_auto_vis') and not self.chk_auto_vis.isChecked():
+            return
+        if getattr(self, 'worker_process', None) and self.worker_process.poll() is None:
+            # Never compete with an active simulation.  A later idle retry is
+            # safe because the dashboard is persistent between runs.
+            QTimer.singleShot(3000, self._preload_visualizer)
+            return
+        if getattr(self, '_sim_starting', False):
+            QTimer.singleShot(3000, self._preload_visualizer)
+            return
+        if getattr(self, 'visualizer_process', None) and self.visualizer_process.poll() is None:
+            return
+        try:
+            self._launch_viz_manual(preload=True)
+        except Exception as exc:
+            self.log(f"[!] 看板预热失败: {exc}", "sys")
+        try:
+            self._start_injection_listener()
+        except Exception as exc:
+            self.log(f"[!] 注入监听启动失败: {exc}", "error")
+        # Deleting old runtime artefacts can involve a large tree on long-lived
+        # installations.  Keep it off the GUI thread and never make first paint
+        # wait for filesystem cleanup.
+        try:
+            threading.Thread(
+                target=self._cleanup_on_start,
+                daemon=True,
+                name="fmusolver-startup-cleanup",
+            ).start()
+        except Exception:
+            pass
 
     def _begin_resize_perf_mode(self):
         if self._resize_perf_mode:
@@ -1767,6 +2225,28 @@ class FmuSolverGUI(QMainWindow):
         self.title_bar.led_dot.setStyleSheet(f"color: {dot_c}; font-size: 14px; margin-right: 4px;")
         self.title_bar.led_txt.setText(label)
 
+    def _update_yaoce_led(self, connected, detail=""):
+        if not hasattr(self, "yc_led_dot") or not hasattr(self, "yc_led_txt"):
+            return
+        dot_c = "#28C840" if connected else "#FF3B30"
+        text_c = "#28C840" if connected else "#FF453A"
+        label = "遥测正常" if connected else "遥测无数据"
+        tooltip = f"遥测接收状态：{'已接收到数据' if connected else '超过阈值未收到数据'}"
+        if detail:
+            tooltip += f"\n{detail}"
+        self.yc_led_dot.setStyleSheet(f"color: {dot_c}; font-size: 13px; margin-right: 4px;")
+        self.yc_led_txt.setText(label)
+        self.yc_led_txt.setStyleSheet(f"font-size: 12px; color: {text_c};")
+        self.yc_led_txt.setToolTip(tooltip)
+
+    def _reset_yaoce_led(self, label="遥测等待", detail="遥测接收状态：等待遥测数据"):
+        if not hasattr(self, "yc_led_dot") or not hasattr(self, "yc_led_txt"):
+            return
+        self.yc_led_dot.setStyleSheet("color: #8E8E93; font-size: 13px; margin-right: 4px;")
+        self.yc_led_txt.setText(label)
+        self.yc_led_txt.setStyleSheet("font-size: 12px; color: #8E8E93;")
+        self.yc_led_txt.setToolTip(detail)
+
     def _kill_process_tree(self, proc):
         if not proc or proc.poll() is not None:
             return
@@ -1813,13 +2293,20 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_prog_lbl.setText(f"轨道预示进度: {pct}% | {text}")
 
     def _orbit_done_ui(self):
-        self.btn_run_orbit.setText("▶ 开始预示解算")
+        self.btn_run_orbit.setText("▶ 开始预示解答")
         self.btn_run_orbit.setEnabled(True)
+        self.btn_run_orbit.setChecked(False)
         if hasattr(self, 'btn_pause_orbit'):
             self.btn_pause_orbit.setEnabled(False)
             self.btn_pause_orbit.setText("⏸ 暂停")
+        self.btn_stop_orbit.setChecked(False)
         self.btn_stop_orbit.setEnabled(False)
         self.orbit_paused = False
+
+    def _set_orbit_txt_ready(self, path):
+        self.orbit_txt_path = path
+        if hasattr(self, 'btn_open_orbit_folder'):
+            self.btn_open_orbit_folder.setEnabled(os.path.exists(path))
 
     def _load_gui_config(self):
         if os.path.exists(self.gui_config_path):
@@ -1857,6 +2344,7 @@ class FmuSolverGUI(QMainWindow):
             "orbit_step": self.o_step_e.edit.text().strip(),
             "orbit_rate": self.o_rate_e.edit.text().strip(),
             "orbit_freq": self.o_freq_e.edit.text().strip(),
+            "orbit_sampletime": self.o_sampletime_e.edit.text().strip(),
             "orbit_dur":  self.o_dur_e.edit.text().strip(),
             "cj_year":    self.cj_year_e.edit.text().strip(),
             "cj_mon":     self.cj_mon_e.edit.text().strip(),
@@ -1896,10 +2384,11 @@ class FmuSolverGUI(QMainWindow):
             self.om_e.edit: ("orbit_om", "137.492"),
             self.w_e.edit: ("orbit_w", "77.010"),
             self.f_e.edit: ("orbit_f", "57.552"),
-            self.o_step_e.edit: ("orbit_step", "10.0"),
+            self.o_step_e.edit: ("orbit_step", "1.0"),
             self.o_rate_e.edit: ("orbit_rate", "0.0"),
-            self.o_freq_e.edit: ("orbit_freq", "0.1"),
-            self.o_dur_e.edit: ("orbit_dur", "86400.0"),
+            self.o_freq_e.edit: ("orbit_freq", "1.0"),
+            self.o_sampletime_e.edit: ("orbit_sampletime", "5.0"),
+            self.o_dur_e.edit: ("orbit_dur", "43200.0"),
         }
         for widget, (key, fallback) in orbit_defaults.items():
             widget.setText(str(cfg.get(key, fallback)))
@@ -2046,6 +2535,7 @@ class FmuSolverGUI(QMainWindow):
         btn_bg = f"rgba({cr}, {cg}, {cb}, 245)"
         btn_hover = f"rgba({min(cr+15, 255)}, {min(cg+15, 255)}, {min(cb+15, 255)}, 250)"
         input_bg = "rgba(0, 0, 0, 50)" if is_dark else "rgba(0, 0, 0, 13)"
+        version_text = "rgba(255, 255, 255, 145)" if is_dark else "rgba(17, 17, 17, 120)"
         
         seg_bg = "rgba(255, 255, 255, 30)" if is_dark else "rgba(0, 0, 0, 15)"
         seg_btn_hover = "rgba(255, 255, 255, 50)" if is_dark else "rgba(255, 255, 255, 80)"
@@ -2069,7 +2559,7 @@ class FmuSolverGUI(QMainWindow):
         QWidget#TabContainer {{ background: transparent; border: none; }}
         QWidget#ContentStack {{ background: transparent; }}
         QLabel#BrandLabel, QLabel#HeaderLabel {{ color: {text_c}; font-size: 14px; font-weight: 800; }}
-        QLabel#VersionBadge {{ color: {text_c}; background: rgba(255,255,255,90); border: 1px solid rgba(255,255,255,70); border-radius: 8px; padding: 2px 7px; font-size: 10px; font-weight: 800; }}
+        QLabel#VersionBadge {{ color: {version_text}; background: transparent; border: none; padding: 1px 0 0 2px; font-size: 10px; font-weight: 700; }}
         QLabel#SubHeaderLabel, QLabel#StatusText, QLabel#Muted, QLabel#ParamLabel {{ color: {text_c}; font-weight: 600; font-size: 12px; }}
         QLabel#StatusText {{ font-size: 11px; font-weight: 700; }}
         QLabel#SubHeaderLabel {{ font-size: 11px; opacity: 0.8; }}
@@ -2083,7 +2573,10 @@ class FmuSolverGUI(QMainWindow):
         QFrame#SegTrack {{ background: {seg_bg}; border: 1px solid rgba(0, 0, 0, 8); border-radius: 17px; }}
         QPushButton#SegBtn {{ background: transparent; color: {text_c}; border: none; border-radius: 15px; padding: 0 14px; min-height: 32px; max-height: 32px; font-weight: 600; font-size: 13px; }}
         QPushButton#SegBtn:hover {{ background: {seg_btn_hover}; color: {text_c}; }}
+        QPushButton#SegBtn:pressed {{ background: {seg_btn_active}; color: {seg_btn_active_text}; padding-top: 2px; padding-left: 16px; padding-right: 12px; }}
+        QPushButton#SegBtn:checked {{ background: {seg_btn_active}; color: {seg_btn_active_text}; font-weight: 800; }}
         QPushButton#SegBtnActive {{ background: {seg_btn_active}; color: {seg_btn_active_text}; border: none; border-radius: 15px; padding: 0 14px; min-height: 32px; max-height: 32px; font-weight: 800; font-size: 13px; }}
+        QPushButton#SegBtnActive:pressed {{ padding-top: 2px; padding-left: 16px; padding-right: 12px; }}
         QLabel#Title {{ color: {text_c}; font-size: 12pt; font-weight: 800; }}
         
         QLineEdit#PathEdit, QLineEdit#ParamEdit, QLineEdit#SeriesEdit {{ background: {input_bg}; border: none; border-radius: 6px; color: {text_c}; font-family: 'SF Mono', 'Cascadia Mono', 'Consolas', monospace; font-weight: 600; padding: 0 10px; }}
@@ -2093,10 +2586,19 @@ class FmuSolverGUI(QMainWindow):
         QLineEdit#ParamEdit:focus, QLineEdit#PathEdit:focus {{ background: {card_bg}; border: 1px solid rgba(0, 122, 255, 90); }}
         
         QPushButton {{ background: {btn_bg}; color: {text_c}; border: 1px solid {btn_border}; border-radius: 16px; padding: 0 14px; font-weight: 700; font-size: 13px; min-height: 34px; max-height: 34px; }}
-        QPushButton:hover {{ background: {btn_hover}; }}
+        QPushButton:hover {{ background: {btn_hover}; border: 1px solid rgba(0, 122, 255, 95); }}
+        QPushButton:pressed {{ background: rgba(0, 122, 255, 36); border: 1px solid rgba(0, 122, 255, 135); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton:checked {{ background: rgba(0, 122, 255, 68); border: 1px solid rgba(0, 122, 255, 165); color: {text_c}; }}
+        QPushButton:checked:hover {{ background: rgba(0, 122, 255, 86); }}
         QPushButton:disabled {{ color: {text_c}; opacity: 0.5; background: rgba(128, 128, 128, 30); border: 1px solid rgba(128, 128, 128, 20); }}
         QPushButton#PrimaryAction {{ background: #007AFF; color: white; border: 1px solid rgba(0, 98, 204, 235); font-weight: 800; }}
-        QPushButton#Danger {{ background: rgba(255, 59, 48, 42); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 120); font-weight: 800; }}
+        QPushButton#PrimaryAction:hover {{ background: #1E8BFF; border: 1px solid rgba(0, 98, 204, 255); }}
+        QPushButton#PrimaryAction:pressed {{ background: #0066D6; border: 1px solid rgba(0, 74, 173, 255); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton#PrimaryAction:checked {{ background: #0057C2; color: white; border: 1px solid rgba(0, 74, 173, 255); }}
+        QPushButton#Danger {{ background: {btn_bg}; color: {text_c}; border: 1px solid {btn_border}; font-weight: 800; }}
+        QPushButton#Danger:hover {{ background: {btn_hover}; border: 1px solid rgba(0, 122, 255, 95); }}
+        QPushButton#Danger:pressed {{ background: rgba(255, 59, 48, 88); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 220); padding-top: 2px; padding-left: 15px; padding-right: 13px; }}
+        QPushButton#Danger:checked {{ background: rgba(255, 59, 48, 105); color: #FF3B30; border: 1px solid rgba(255, 59, 48, 230); }}
         
         QCheckBox {{ spacing: 8px; font-size: 12px; color: {text_c}; font-weight: 600; }}
         QCheckBox::indicator {{ width: 15px; height: 15px; border-radius: 4px; background: {card_bg}; border: 1px solid {btn_border}; }}
@@ -2109,6 +2611,8 @@ class FmuSolverGUI(QMainWindow):
         QTextEdit#Console {{ background: transparent; color: #FFFFFF; border: none; font-family: 'SF Mono', 'Consolas', monospace; font-size: 11px; line-height: 1.4; }}
         QPushButton#ConsoleToggle {{ background: rgba(255,255,255,26); color: #FFFFFF; border: 1px solid rgba(255,255,255,42); border-radius: 7px; padding: 0 10px; font-size: 11px; font-weight: 700; }}
         QPushButton#ConsoleToggle:hover {{ background: rgba(255,255,255,42); }}
+        QPushButton#ConsoleToggle:pressed {{ background: rgba(255,255,255,70); padding-top: 1px; padding-left: 11px; padding-right: 9px; }}
+        QPushButton#ConsoleToggle:checked {{ background: rgba(0,122,255,135); border: 1px solid rgba(255,255,255,115); }}
         
         QScrollBar:vertical {{ border: none; background: transparent; width: 8px; margin: 0px 0px 0px 0px; }}
         QScrollBar::handle:vertical {{ background: rgba(128, 128, 128, 100); min-height: 30px; border-radius: 4px; }}
@@ -2156,10 +2660,11 @@ class FmuSolverGUI(QMainWindow):
         config_l.addLayout(g2e)
 
         strategy = QGridLayout(); strategy.setHorizontalSpacing(10); strategy.setVerticalSpacing(4)
-        self.o_step_e = pill_field("步长 (S):", "10.0"); self.o_rate_e = pill_field("速率 (1X):", "0.0")
-        self.o_freq_e = pill_field("采样 (HZ):", "0.1"); self.o_dur_e = pill_field("时长 (S):", "86400.0")
-        strategy.addWidget(self.o_step_e, 0, 0); strategy.addWidget(self.o_rate_e, 0, 1)
-        strategy.addWidget(self.o_freq_e, 1, 0); strategy.addWidget(self.o_dur_e, 1, 1)
+        self.o_step_e = pill_field("输出步长 (S):", "1.0"); self.o_rate_e = pill_field("速率 (1X):", "0.0")
+        self.o_freq_e = pill_field("采样频率 (HZ):", "1.0"); self.o_dur_e = pill_field("endtime 外推轨道时间 (S):", "43200.0")
+        self.o_sampletime_e = pill_field("sampletime 外推轨道间隔 (S):", "5.0")
+        strategy.addWidget(self.o_step_e, 0, 0); strategy.addWidget(self.o_rate_e, 0, 1); strategy.addWidget(self.o_freq_e, 0, 2)
+        strategy.addWidget(self.o_dur_e, 1, 0); strategy.addWidget(self.o_sampletime_e, 1, 1)
         config_l.addLayout(strategy)
         lay.addWidget(config_panel)
 
@@ -2170,10 +2675,13 @@ class FmuSolverGUI(QMainWindow):
         self.orbit_prog_lbl = lbl("等待启动...", obj="Muted"); self.orbit_prog_lbl.setAlignment(Qt.AlignCenter); exec_l.addWidget(self.orbit_prog_lbl)
 
         act = QHBoxLayout(); act.setContentsMargins(0, 0, 0, 0); act.setSpacing(8)
-        self.btn_run_orbit = btn("▶ 开始预示解答", True); self.btn_pause_orbit = btn("⏸ 暂停", False); self.btn_pause_orbit.setEnabled(False); self.orbit_paused = False; self.btn_stop_orbit = danger_btn("■ 停止运行"); self.btn_stop_orbit.setEnabled(False)
+        self.btn_run_orbit = btn("▶ 开始预示解答", True); self.btn_run_orbit.setCheckable(True); self.btn_pause_orbit = btn("⏸ 暂停", False); self.btn_pause_orbit.setEnabled(False); self.orbit_paused = False; self.btn_stop_orbit = danger_btn("■ 停止运行"); self.btn_stop_orbit.setEnabled(False)
         self.btn_export = btn("↓ 导出结果", False); self.btn_export.setEnabled(False)
-        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_pause_orbit.clicked.connect(self.toggle_orbit_pause); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt)
-        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_pause_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addStretch()
+        self.btn_open_orbit_folder = btn("📂 打开当前文件", False)
+        self.btn_open_orbit_folder.setToolTip("打开并选中程序目录的 Orbit_Pre.txt；外部替换这个文件后，下一次实时仿真会直接使用。")
+        self.btn_open_orbit_folder.setEnabled(False)
+        self.btn_run_orbit.clicked.connect(self.run_orbit_precalc); self.btn_pause_orbit.clicked.connect(self.toggle_orbit_pause); self.btn_stop_orbit.clicked.connect(self.stop_orbit); self.btn_export.clicked.connect(self.export_orbit_txt); self.btn_open_orbit_folder.clicked.connect(self.open_orbit_txt_folder)
+        act.addStretch(); act.addWidget(self.btn_run_orbit); act.addWidget(self.btn_pause_orbit); act.addWidget(self.btn_stop_orbit); act.addWidget(self.btn_export); act.addWidget(self.btn_open_orbit_folder); act.addStretch()
         exec_l.addLayout(act)
         lay.addWidget(execution_panel)
 
@@ -2187,7 +2695,7 @@ class FmuSolverGUI(QMainWindow):
         self.hour_edit_o = self.hour_e.edit; self.min_edit_o = self.min_e.edit; self.sec_edit_o = self.sec_e.edit
         self.a_edit = self.a_e.edit; self.ecc_edit = self.ecc_e.edit; self.inc_edit = self.inc_e.edit
         self.om_edit = self.om_e.edit; self.w_edit = self.w_e.edit; self.f_edit = self.f_e.edit
-        self.o_step_edit = self.o_step_e.edit; self.o_rate_edit = self.o_rate_e.edit; self.o_freq_edit = self.o_freq_e.edit; self.o_dur_edit = self.o_dur_e.edit
+        self.o_step_edit = self.o_step_e.edit; self.o_rate_edit = self.o_rate_e.edit; self.o_freq_edit = self.o_freq_e.edit; self.o_sampletime_edit = self.o_sampletime_e.edit; self.o_dur_edit = self.o_dur_e.edit
 
     def _build_sim_tab(self):
         w = QWidget(); w.setObjectName("TabContainer"); lay = QVBoxLayout(w)
@@ -2268,13 +2776,13 @@ class FmuSolverGUI(QMainWindow):
         self.sim_prog_lbl = lbl("等待启动...", obj="Muted"); self.sim_prog_lbl.setAlignment(Qt.AlignCenter); lay.addWidget(self.sim_prog_lbl)
 
         bar = QHBoxLayout(); bar.setSpacing(8)
-        self.btn_start = btn("▶ 启动仿真", True); self.chk_auto_vis = QCheckBox("自动开启看板"); self.chk_auto_vis.setObjectName("SwitchCheck"); self.chk_auto_vis.setChecked(True)
+        self.btn_start = btn("▶ 启动仿真", True); self.btn_start.setCheckable(True); self.chk_auto_vis = QCheckBox("自动开启看板"); self.chk_auto_vis.setObjectName("SwitchCheck"); self.chk_auto_vis.setChecked(True)
         self.btn_pause = btn("⏸ 暂停", False); self.btn_pause.setEnabled(False); self.sim_paused = False
-        self.btn_fields = btn("变量配置", False); self.btn_initial = btn("⚡ 同步 (0)", False); self.btn_stop = danger_btn("■ 停止"); self.btn_stop.setEnabled(False)
+        self.btn_fields = btn("变量配置", False); self.btn_blacklist = btn("黑名单管理", False); self.btn_initial = btn("⚡ 同步 (0)", False); self.btn_stop = danger_btn("■ 停止"); self.btn_stop.setEnabled(False)
         self.btn_viz = btn("📊 看板", False); self.btn_out = btn("📁 输出包", False); self.status_lbl = lbl("就绪", obj="Muted")
-        self.btn_start.clicked.connect(self.start_sim); self.btn_pause.clicked.connect(self.toggle_sim_pause); self.btn_stop.clicked.connect(self.stop_sim); self.btn_fields.clicked.connect(self._open_fields); self.btn_initial.clicked.connect(self.toggle_is_initial)
+        self.btn_start.clicked.connect(self.start_sim); self.btn_pause.clicked.connect(self.toggle_sim_pause); self.btn_stop.clicked.connect(self.stop_sim); self.btn_fields.clicked.connect(self._open_fields); self.btn_blacklist.clicked.connect(self._open_injection_blacklist); self.btn_initial.clicked.connect(self.toggle_is_initial)
         self.btn_viz.clicked.connect(self._launch_viz_manual); self.btn_out.clicked.connect(lambda: os.startfile(os.path.join(APP_DIR, "txt")))
-        for b in [self.btn_start, self.chk_auto_vis, self.btn_pause, self.btn_fields, self.btn_initial, self.btn_stop, self.btn_viz, self.btn_out]: bar.addWidget(b)
+        for b in [self.btn_start, self.chk_auto_vis, self.btn_pause, self.btn_fields, self.btn_blacklist, self.btn_initial, self.btn_stop, self.btn_viz, self.btn_out]: bar.addWidget(b)
         bar.addStretch(); bar.addWidget(lbl("📡", obj="Muted")); bar.addWidget(self.status_lbl)
         lay.addLayout(bar)
 
@@ -2291,7 +2799,18 @@ class FmuSolverGUI(QMainWindow):
     def _build_yaoce_tab(self):
         w = QWidget(); w.setObjectName("TabContainer"); lay = QVBoxLayout(w); lay.setContentsMargins(10, 6, 10, 6); lay.setSpacing(6)
         c1 = card(); cl1 = QVBoxLayout(c1); cl1.setContentsMargins(12, 10, 12, 10); cl1.setSpacing(8)
-        cl1.addWidget(lbl("转发配置与过滤规则", obj="Title"))
+        title_row = QHBoxLayout(); title_row.setSpacing(8)
+        title_row.addWidget(lbl("转发配置与过滤规则", obj="Title"))
+        title_row.addStretch()
+        self.yc_led_dot = QLabel("●")
+        self.yc_led_dot.setStyleSheet("color: #8E8E93; font-size: 13px; margin-right: 4px;")
+        self.yc_led_txt = QLabel("遥测等待")
+        self.yc_led_txt.setObjectName("StatusText")
+        self.yc_led_txt.setStyleSheet("font-size: 12px; color: #8E8E93;")
+        self.yc_led_txt.setToolTip("遥测接收状态：等待遥测数据")
+        title_row.addWidget(self.yc_led_dot)
+        title_row.addWidget(self.yc_led_txt)
+        cl1.addLayout(title_row)
         self.yaoce_dir_lbl = lbl(f"配置目录: {self.yaoce_dir}", obj="Muted"); cl1.addWidget(self.yaoce_dir_lbl)
         row = QHBoxLayout(); row.setSpacing(8)
         b_dir = btn("更改目录", False); b_cfg = btn("打开 config.ini", False); b_xml = btn("打开 ParamFilter.xml", False); b_rel = btn("DTS关系配置", False); b_logs = btn("打开日志文件夹", False)
@@ -2301,7 +2820,7 @@ class FmuSolverGUI(QMainWindow):
         lay.addWidget(c1)
 
         ctrl = QHBoxLayout(); ctrl.setSpacing(10)
-        self.btn_yaoce_start = btn("▶ 启动转发引擎", True); self.btn_yaoce_stop = danger_btn("■ 停止服务"); self.btn_yaoce_stop.setEnabled(False)
+        self.btn_yaoce_start = btn("▶ 启动转发引擎", True); self.btn_yaoce_start.setCheckable(True); self.btn_yaoce_stop = danger_btn("■ 停止服务"); self.btn_yaoce_stop.setEnabled(False)
         self.btn_yaoce_start.clicked.connect(self.start_yaoce); self.btn_yaoce_stop.clicked.connect(self.stop_yaoce)
         ctrl.addWidget(self.btn_yaoce_start, 1); ctrl.addWidget(self.btn_yaoce_stop, 1); ctrl.addStretch()
         lay.addLayout(ctrl)
@@ -2370,6 +2889,36 @@ class FmuSolverGUI(QMainWindow):
         dlg = FieldsDialog(sync_path, self)
         dlg.exec()
 
+    def _open_injection_blacklist(self):
+        blacklist_path = os.path.join(APP_DIR, "fmu_injection_blacklist.json")
+        dlg = InjectionBlacklistDialog(blacklist_path, self)
+        if dlg.exec():
+            self.log(f"[*] 注入黑名单已保存: {blacklist_path}", "info")
+            self._reload_worker_injection_blacklist()
+
+    def _send_worker_control(self, payload):
+        if not payload:
+            return False
+        try:
+            msg = {"sim_id": getattr(self, 'current_sim_id', "")}
+            msg.update(payload)
+            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            try:
+                s.sendto(json.dumps(msg).encode('utf-8'), ("127.0.0.1", CONTROL_PORT))
+            finally:
+                s.close()
+            return True
+        except Exception as e:
+            self.log(f"[!] Worker控制命令发送失败: {e}", "error")
+            return False
+
+    def _reload_worker_injection_blacklist(self):
+        if self.worker_process and self.worker_process.poll() is None:
+            if self._send_worker_control({"__reload_injection_blacklist": True}):
+                self.log("[*] 已通知运行中的 Worker 重新加载注入黑名单。", "info")
+        else:
+            self.log("[*] 当前未运行仿真；黑名单将在下次启动仿真时生效。", "sys")
+
     # ─── Business Logic ───
     def _browse_orbit_fmu(self):
         initial_dir = os.path.dirname(self.orbit_fmu_edit.text().strip()) or os.path.join(APP_DIR, "FMU")
@@ -2384,6 +2933,7 @@ class FmuSolverGUI(QMainWindow):
         if widget.property("log_collapsed"):
             return
         msg_text = str(msg)
+        tag = self._normalize_log_tag(msg_text, tag)
         if ("[Live]" in msg_text or "[PERF]" in msg_text) and tag != "error":
             key = (id(widget), msg_text.split(']', 1)[0] if ']' in msg_text else msg_text[:24])
             now = time.time()
@@ -2410,6 +2960,26 @@ class FmuSolverGUI(QMainWindow):
         widget.insertHtml(html_msg + "<br>")
         widget.moveCursor(QTextCursor.End)
         widget.verticalScrollBar().setValue(widget.verticalScrollBar().maximum())
+
+    def _normalize_log_tag(self, msg_text, tag="sys"):
+        text = str(msg_text)
+        lower = text.lower()
+        if tag == "error":
+            warning_markers = (
+                "warning", "[warn]", "optional", "skipped", "snapped",
+                "not exported", "跳过", "警告"
+            )
+            fatal_markers = ("fatal", "[error]", "traceback", "exception", "error:", "错误", "失败")
+            if any(marker in lower for marker in warning_markers) and not any(marker in lower for marker in fatal_markers):
+                return "warn"
+            return "error"
+        if tag in ("warn", "warning"):
+            return "warn"
+        if "[!]" in text or "[WARN]" in text or "Warning" in text or "warning" in lower:
+            return "warn"
+        if "[OK]" in text or "[SUCCESS]" in text or "SUCCESS" in text:
+            return "success"
+        return tag
 
     def log(self, msg, tag="sys"):
         self._append_runtime_log(f"[SIM_UI][{tag}] {msg}")
@@ -2439,12 +3009,17 @@ class FmuSolverGUI(QMainWindow):
         """Structured runner logs are useful; raw FMU console chatter is throttled separately."""
         if not line:
             return False
-        prefixes = ("[*]", "[OK]", "[!]", "[ERROR]", "[SUCCESS]", "[EXPORT_READY]", "[Live]")
+        prefixes = ("[*]", "[OK]", "[!]", "[ERROR]", "[SUCCESS]", "[EXPORT_READY]", "[ORBIT_TXT_ACTIVE]", "[Live]")
         return line.startswith(prefixes) or line.startswith("Traceback") or "Fatal" in line
         
         
 
     def start_yaoce(self):
+        if getattr(self, '_yaoce_starting', False) or (hasattr(self, 'yaoce_proc') and self.yaoce_proc and self.yaoce_proc.poll() is None):
+            self.btn_yaoce_start.setChecked(True)
+            self.btn_yaoce_start.setText("转发运行中...")
+            return
+        self._yaoce_starting = True
         log_file = os.path.join(APP_DIR, "yaoce_run.log")
         if getattr(sys, 'frozen', False):
             yaoce_exe = os.path.join(APP_DIR, "YaoCe_LinkLayer64.exe")
@@ -2457,14 +3032,20 @@ class FmuSolverGUI(QMainWindow):
             yaoce_main = os.path.join(APP_DIR, "yaocetest", "main.py")
             worker_cmd = [sys.executable, "-u", yaoce_main, self.yaoce_dir]
         
-        self.btn_yaoce_start.setEnabled(False)
+        self.btn_yaoce_start.setEnabled(True)
+        self.btn_yaoce_start.setChecked(True)
+        self.btn_yaoce_start.setText("转发运行中...")
+        self.btn_yaoce_stop.setChecked(False)
         self.btn_yaoce_stop.setEnabled(True)
+        self._reset_yaoce_led("遥测等待", "遥测接收状态：转发引擎已启动，等待遥测数据")
         
         self.ylog("===========================================", "sys")
         self.ylog(f"[*] 启动底层遥测子进程... CMD={worker_cmd}", "sys")
         self.ylog(f"[*] 遥测运行日志: {log_file}", "sys")
         if getattr(sys, 'frozen', False) and not os.path.exists(worker_cmd[0]):
             self.ylog(f"[!] 遥测转发 EXE 不存在: {worker_cmd[0]}", "error")
+            self.btn_yaoce_start.setChecked(False)
+            self.btn_yaoce_start.setText("▶ 启动转发引擎")
             self.stop_yaoce()
             return
         
@@ -2491,6 +3072,7 @@ class FmuSolverGUI(QMainWindow):
             self.ylog(f"[*] 遥测同步注入到本机 FMU 监听端口: 127.0.0.1:{child_env['FMUSOLVER_LOCAL_INJECT_PORT']}", "sys")
             self._yaoce_log_handle = open(log_file, "a", encoding="utf-8", buffering=1)
             self.yaoce_proc = subprocess.Popen(worker_cmd, stdout=self._yaoce_log_handle, stderr=subprocess.STDOUT, cwd=APP_DIR, env=child_env, creationflags=cf)
+            self._yaoce_starting = False
             self.ylog(f"[OK] 遥测子进程已启动: pid={self.yaoce_proc.pid} cwd={APP_DIR}", "info")
             self.ylog(f"[*] 遥测诊断参数: merge_via_worker={child_env.get('FMUSOLVER_MERGE_TELEMETRY_VIA_WORKER')} data_q={child_env.get('FMUSOLVER_YC_DATA_QUEUE_MAX', '3000')} log_q={child_env.get('FMUSOLVER_YC_LOG_QUEUE_MAX', '2000')}", "sys")
             
@@ -2512,15 +3094,18 @@ class FmuSolverGUI(QMainWindow):
                                     self.ylog(f"[PERF][YAOCE_UI] 日志显示限流: 本轮省略 {dropped_lines} 行，完整内容仍在 yaoce_run.log", "info")
                                 for l in lines:
                                     tag = "sys"
+                                    if "[YAOCE_STATUS]" in l:
+                                        connected = "connected=1" in l or "connected=true" in l.lower()
+                                        self.sig_yaoce_status.emit(connected, l)
                                     if "[SEND]" in l or "[TCP/UDP]" in l or "[RECV]" in l or "[OK]" in l or "[*]" in l: tag = "info"
                                     elif "[-]" in l: tag = "error"
-                                    elif "[WARN]" in l: tag = "error"
+                                    elif "[WARN]" in l: tag = "warn"
                                     elif "[!]" in l or "Error" in l or "Exception" in l: tag = "error"
                                     self.ylog(l, tag)
                     except: pass
                 
                 if self.yaoce_proc.poll() is None:
-                    QTimer.singleShot(5000, poll_log)
+                    QTimer.singleShot(1000, poll_log)
                 else:
                     rc = self.yaoce_proc.poll()
                     self.ylog(f"[SYS] 转发引擎退出，退出码: {rc}，完整日志: {log_file}", "sys" if rc == 0 else "error")
@@ -2529,10 +3114,16 @@ class FmuSolverGUI(QMainWindow):
                         except: pass
                         self._yaoce_log_handle = None
                     self.btn_yaoce_start.setEnabled(True)
+                    self.btn_yaoce_start.setChecked(False)
+                    self.btn_yaoce_start.setText("▶ 启动转发引擎")
+                    self.btn_yaoce_stop.setChecked(False)
                     self.btn_yaoce_stop.setEnabled(False)
+                    self._yaoce_starting = False
+                    self._reset_yaoce_led("遥测关闭", "遥测接收状态：转发引擎未运行")
 
             QTimer.singleShot(5000, poll_log)
         except Exception as e:
+            self._yaoce_starting = False
             self.ylog(f"[!] 独立子进程启动致命失败: {e}", "error")
             self.stop_yaoce()
 
@@ -2541,6 +3132,7 @@ class FmuSolverGUI(QMainWindow):
     def stop_yaoce(self):
         if hasattr(self, 'yaoce_proc') and self.yaoce_proc:
             try:
+                self.btn_yaoce_stop.setChecked(True)
                 subprocess.call(['taskkill', '/F', '/T', '/PID', str(self.yaoce_proc.pid)], creationflags=subprocess.CREATE_NO_WINDOW)
                 self.ylog("[*] 发送强制终止指令...", "error")
             except: pass
@@ -2550,7 +3142,12 @@ class FmuSolverGUI(QMainWindow):
             except: pass
             self._yaoce_log_handle = None
         self.btn_yaoce_start.setEnabled(True)
+        self.btn_yaoce_start.setChecked(False)
+        self.btn_yaoce_start.setText("▶ 启动转发引擎")
+        self.btn_yaoce_stop.setChecked(False)
         self.btn_yaoce_stop.setEnabled(False)
+        self._yaoce_starting = False
+        self._reset_yaoce_led("遥测关闭", "遥测接收状态：转发引擎未运行")
 
 
     def browse_file(self):
@@ -2572,11 +3169,24 @@ class FmuSolverGUI(QMainWindow):
 
 
     def start_sim(self):
+        if getattr(self, '_sim_starting', False) or (self.worker_process and self.worker_process.poll() is None):
+            self.btn_start.setChecked(True)
+            self.btn_start.setText("仿真运行中...")
+            return
+        self._sim_starting = True
         self._save_gui_config()
         fmu_path = self.fmu_path_edit.text().strip()
-        if not os.path.exists(fmu_path): self.olog(f"[!] 找不到文件 {fmu_path}", "error"); return
+        if not os.path.exists(fmu_path):
+            self.olog(f"[!] 找不到文件 {fmu_path}", "error")
+            self.btn_start.setChecked(False)
+            self.btn_start.setText("▶ 启动仿真")
+            self._sim_starting = False
+            return
         if not fmu_path or not os.path.exists(fmu_path):
             QMessageBox.critical(self, "错误", "请先选择有效的 FMU 模型文件")
+            self.btn_start.setChecked(False)
+            self.btn_start.setText("▶ 启动仿真")
+            self._sim_starting = False
             return
         
         # 生成唯一会话 ID，防止陈旧 UDP 指令干扰
@@ -2624,10 +3234,13 @@ class FmuSolverGUI(QMainWindow):
             # 源码模式下使用对应的 Python 环境
             player_script = os.path.join(APP_DIR, "fmu_player.py")
             py_exe = sys.executable if fmu_bit == "64" else r"C:\Py32\python.exe"
+            if not os.path.exists(py_exe):
+                py_exe = sys.executable  # fallback: no 32-bit Python
             cmd = [py_exe, player_script, fmu_path] + sim_args
 
         self.sim_paused = False
-        self.btn_start.setEnabled(False); self.btn_pause.setEnabled(True); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(True)
+        self.btn_start.setEnabled(True); self.btn_start.setChecked(True); self.btn_start.setText("仿真运行中...")
+        self.btn_pause.setEnabled(True); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setChecked(False); self.btn_stop.setEnabled(True)
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("正在启动...")
         self._update_led("running")
         self.txt_log.clear()
@@ -2636,11 +3249,21 @@ class FmuSolverGUI(QMainWindow):
         
         try:
             # --- 可视化终端同步启动 ---
+            worker_env = self._child_env()
             if self.chk_auto_vis.isChecked():
-                self._launch_viz_manual()
+                viz_ready_file = os.path.join(APP_DIR, f"viz_ready_{self.current_sim_id}.flag")
+                try:
+                    if os.path.exists(viz_ready_file):
+                        os.remove(viz_ready_file)
+                except Exception:
+                    pass
+                visualizer_already_ready = self._launch_viz_manual(viz_ready_file)
+                if not visualizer_already_ready:
+                    worker_env["FMUSOLVER_VIZ_READY_FILE"] = viz_ready_file
 
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
-            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+            self.worker_process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=worker_env, creationflags=cf)
+            self._sim_starting = False
             self.log(f"[OK] FMU Worker 已启动: pid={self.worker_process.pid} cwd={APP_DIR}", "info")
             QTimer.singleShot(2000, self.update_params) # 延迟2秒同步参数
             threading.Thread(target=self._read_worker_logs, daemon=True).start()
@@ -2649,6 +3272,7 @@ class FmuSolverGUI(QMainWindow):
             self.log(f"[*] Worker 启动后准备重试变量注入监听 (inj_ip={self.inj_ip_edit.edit.text().strip() or '0.0.0.0'}, inj_port={self.inj_port_edit.edit.text() or '9988'})", "sys")
             self._start_injection_listener()
         except Exception as e:
+            self._sim_starting = False
             self.olog(f"[!] 启动失败: {e}", "error")
             self._reset_ui()
 
@@ -2683,7 +3307,7 @@ class FmuSolverGUI(QMainWindow):
                     last_perf_log_at = now
             elif "Injected " in line_str or "Injection summary" in line_str or "variables mirrored" in line_str:
                 if "[!]" in line_str or now - last_injection_ui_log_at >= 5.0:
-                    tag = "error" if "[!]" in line_str else "info"
+                    tag = self._normalize_log_tag(line_str, "error" if "[!]" in line_str else "info")
                     self.sig_log.emit(line_str, tag)
                     last_injection_ui_log_at = now
             else:
@@ -2697,28 +3321,186 @@ class FmuSolverGUI(QMainWindow):
         self.sig_reset_ui.emit()
 
 
-    def _launch_viz_manual(self):
-        # 如果已经有看板在运行，则尝试置顶
-        if self.visualizer_process and self.visualizer_process.poll() is None:
-            try:
-                import ctypes
-                hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
-                if hwnd:
-                    ctypes.windll.user32.ShowWindow(hwnd, 5) # SW_SHOW
-                    ctypes.windll.user32.SetForegroundWindow(hwnd)
-                    return
-            except: pass
-            # 如果置顶失败，且进程还活着，直接返回不重复开
+    def _send_visualizer_activation(self):
+        """Ask the dashboard to restore itself through Qt local IPC."""
+        try:
+            socket = QLocalSocket()
+            socket.connectToServer("FmuSolver_DataVisualizer_22345")
+            if not socket.waitForConnected(120):
+                socket.deleteLater()
+                return False
+            socket.write(b"show")
+            socket.waitForBytesWritten(120)
+            socket.disconnectFromServer()
+            socket.deleteLater()
+            return True
+        except Exception:
+            return False
+
+    def _attach_visualizer_to_fmusolver(self, visualizer_hwnd=None):
+        """Make the dashboard an owned window of FmuSolver.
+
+        The owner chain is PE -> FmuSolver -> DataVisualizer.  Keeping this
+        relationship prevents PE activation/capture from leaving the
+        dashboard behind in the Z-order.
+        """
+        try:
+            if not visualizer_hwnd:
+                visualizer_hwnd = ctypes.windll.user32.FindWindowW(
+                    None, "FmuSolver - Data Visualizer"
+                )
+            if not visualizer_hwnd:
+                return False
+            fmu_hwnd = wintypes.HWND(int(self.winId()))
+            user32, _kernel32, set_owner, _callback_type = _owner_api()
+            current_owner = int(user32.GetWindow(wintypes.HWND(visualizer_hwnd), 4) or 0)
+            if current_owner != int(fmu_hwnd.value):
+                set_owner(
+                    wintypes.HWND(visualizer_hwnd),
+                    -8,  # GWL_HWNDPARENT / owner for a top-level window
+                    fmu_hwnd,
+                )
+            self._visualizer_owner_hwnd = int(fmu_hwnd.value)
+            return True
+        except Exception:
+            return False
+
+    def _attach_visualizer_owner_when_ready(self, attempt=0):
+        """Bind a preloaded dashboard after Qt creates its native HWND."""
+        proc = getattr(self, "visualizer_process", None)
+        if not proc or proc.poll() is not None:
             return
+        try:
+            hwnd = ctypes.windll.user32.FindWindowW(
+                None, "FmuSolver - Data Visualizer"
+            )
+            if hwnd and self._attach_visualizer_to_fmusolver(hwnd):
+                return
+        except Exception:
+            pass
+        if attempt < 100:
+            QTimer.singleShot(
+                100,
+                lambda: self._attach_visualizer_owner_when_ready(attempt + 1),
+            )
+
+    def _restore_visualizer_when_ready(self, attempt=0):
+        """Restore a preloading dashboard once its native window exists."""
+        proc = getattr(self, 'visualizer_process', None)
+        if not proc or proc.poll() is not None:
+            return
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+            if hwnd:
+                self._attach_visualizer_to_fmusolver(hwnd)
+                ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                ctypes.windll.user32.SetForegroundWindow(hwnd)
+                SWP_NOMOVE = 0x0002
+                SWP_NOSIZE = 0x0001
+                ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                ctypes.windll.user32.SetWindowPos(hwnd, -2, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                self.log("[*] 看板启动完成，已恢复窗口", "sys")
+                return
+        except Exception:
+            pass
+        if attempt < 100:
+            QTimer.singleShot(100, lambda: self._restore_visualizer_when_ready(attempt + 1))
+        else:
+            self.log("[!] 看板进程已启动，但窗口句柄未创建，详见 visualizer_perf.log", "error")
+
+    @staticmethod
+    def _host_is_64bit():
+        if os.environ.get("PROCESSOR_ARCHITEW6432"):
+            return True
+        return os.environ.get("PROCESSOR_ARCHITECTURE", "").upper() in ("AMD64", "ARM64")
+
+    @classmethod
+    def _resolve_visualizer_exe(cls, viz_dir, win32_dir):
+        exe64 = os.path.join(viz_dir, "DataVisualizer64.exe")
+        legacy32 = os.path.join(viz_dir, "DataVisualizer32.exe")
+        split32 = os.path.join(win32_dir, "DataVisualizer32.exe")
+        candidates = (exe64, split32, legacy32) if cls._host_is_64bit() else (split32, legacy32)
+        for candidate in candidates:
+            if os.path.exists(candidate):
+                return candidate
+        return None
+
+    def _launch_viz_manual(self, ready_file=None, preload=False):
+        if isinstance(ready_file, bool):
+            ready_file = None
+        viz_dir = os.path.join(APP_DIR, "Visualizer")
+        win32_dir = os.path.join(APP_DIR, "Visualizer_Win32")
+
+        # Prefer an in-process Qt activation command.  It works even when the
+        # dashboard is hidden and avoids Windows foreground-window restrictions.
+        if not preload and self._send_visualizer_activation():
+            self._attach_visualizer_to_fmusolver()
+            self.log("[*] 已通过本地 IPC 唤醒看板", "sys")
+            return True
+        viz_exe = self._resolve_visualizer_exe(viz_dir, win32_dir)
+        python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
+        # In the source-tree launcher, an older packaged DataVisualizer window
+        # can have the same title and would otherwise be reused forever. Close
+        # only that exact process so the current Script/DataVisualizerPython.py
+        # is loaded for the next simulation.
+        source_visualizer_mode = os.path.exists(python_viz) and not viz_exe
+        # Always try to bring an existing DataVisualizer window to front,
+        # regardless of whether we spawned it (covers cross-session reuse).
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+            if hwnd:
+                if source_visualizer_mode:
+                    pid = ctypes.c_ulong(0)
+                    ctypes.windll.user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+                    if pid.value and pid.value != os.getpid():
+                        subprocess.call(["taskkill", "/PID", str(pid.value), "/T", "/F"], creationflags=0x08000000)
+                        for _ in range(10):
+                            time.sleep(0.1)
+                            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver - Data Visualizer")
+                            if not hwnd:
+                                break
+                        if hwnd:
+                            self.log("[!] 旧看板进程仍未退出，继续复用现有窗口", "warn")
+                        else:
+                            self.log("[*] 已关闭旧看板，将启动当前 Python 看板", "sys")
+
+                if hwnd:
+                    self._attach_visualizer_to_fmusolver(hwnd)
+                    if preload:
+                        self.log("[*] 看板已预热，保持隐藏等待唤醒", "sys")
+                        return True
+                    # SW_RESTORE in case it is minimized, then bring to front
+                    ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                    ctypes.windll.user32.SetForegroundWindow(hwnd)
+                    # Briefly set TOPMOST then release so it pops above other apps
+                    SWP_NOMOVE = 0x0002
+                    SWP_NOSIZE = 0x0001
+                    HWND_TOPMOST = -1
+                    HWND_NOTOPMOST = -2
+                    ctypes.windll.user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                    ctypes.windll.user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE)
+                    self.log("[*] 看板已在运行，已置顶", "sys")
+                    return True
+        except Exception:
+            pass
+
+        # Fallback: our own tracked process is still alive
+        if self.visualizer_process and self.visualizer_process.poll() is None:
+            self._attach_visualizer_owner_when_ready()
+            if not preload:
+                # The hidden preloader may still be importing Qt when the
+                # user clicks the button.  Do not return silently; wait for
+                # its native window and restore it as soon as it exists.
+                self._restore_visualizer_when_ready()
+            return True
 
         try:
-            viz_dir = os.path.join(APP_DIR, "Visualizer")
-            viz_exe = os.path.join(viz_dir, "DataVisualizer64.exe")
-            if not os.path.exists(viz_exe):
-                viz_exe = os.path.join(viz_dir, "DataVisualizer32.exe")
-            
-            python_viz = os.path.join(APP_DIR, "DataVisualizerPython.py")
             cf = 0x08000000 if os.name == 'nt' else 0 # CREATE_NO_WINDOW
+            if preload and os.name == 'nt':
+                # Keep the optional warm-up below the interactive main UI.
+                cf |= 0x00004000  # BELOW_NORMAL_PRIORITY_CLASS
             viz_env = self._child_env()
             viz_env.setdefault("FMUSOLVER_VIZ_MAX_POINTS", "12000")
             viz_env.setdefault("FMUSOLVER_VIZ_ACC_LIMIT", "8000")
@@ -2727,24 +3509,40 @@ class FmuSolverGUI(QMainWindow):
             viz_env.setdefault("FMUSOLVER_VIZ_MEMORY_SOFT_LIMIT_MB", "900")
             viz_env.setdefault("OPENBLAS_NUM_THREADS", "1")
             viz_env.setdefault("OMP_NUM_THREADS", "1")
+            if ready_file:
+                viz_env["FMUSOLVER_VIZ_READY_FILE"] = os.path.abspath(ready_file)
             
-            if os.path.exists(viz_exe):
+            if viz_exe:
                 self.log(f"[*] Launching Visualizer EXE: {viz_exe}", "sys")
-                self.visualizer_process = subprocess.Popen([viz_exe, "--port", "22345"], cwd=viz_dir, env=viz_env, creationflags=cf)
+                viz_args = [viz_exe, "--port", "22345"]
+                if preload:
+                    viz_args.append("--start-hidden")
+                viz_cwd = os.path.dirname(viz_exe) or viz_dir
+                self.visualizer_process = subprocess.Popen(viz_args, cwd=viz_cwd, env=viz_env, creationflags=cf)
+                self._attach_visualizer_owner_when_ready()
             elif os.path.exists(python_viz):
                 self.log(f"[*] Launching Visualizer Script: {python_viz}", "sys")
                 cf = 0x08000000 if os.name == 'nt' else 0
-                self.visualizer_process = subprocess.Popen([sys.executable, python_viz, "--port", "22345"], cwd=APP_DIR, env=viz_env, creationflags=cf)
+                viz_args = [sys.executable, python_viz, "--port", "22345"]
+                if preload:
+                    viz_args.append("--start-hidden")
+                self.visualizer_process = subprocess.Popen(viz_args, cwd=APP_DIR, env=viz_env, creationflags=cf)
+                self._attach_visualizer_owner_when_ready()
             else:
                 self.log(f"[!] Visualizer NOT FOUND (EXE or Script)", "error")
+                return False
+            return False
         except Exception as e:
             self.log(f"[!] Manual viz launch failed: {str(e)}", "error")
+            return False
 
 
     def _reset_ui(self):
-        self.btn_start.setEnabled(True); self.btn_pause.setEnabled(False); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setEnabled(False); self.worker_process = None
+        self.btn_start.setEnabled(True); self.btn_start.setChecked(False); self.btn_start.setText("▶ 启动仿真")
+        self.btn_pause.setEnabled(False); self.btn_pause.setText("⏸ 暂停"); self.btn_stop.setChecked(False); self.btn_stop.setEnabled(False); self.worker_process = None
         self.sim_paused = False
         self.current_sim_id = None
+        self._sim_starting = False
         self._update_led("ready")
         self.sim_progress.setValue(int(0)); self.sim_prog_lbl.setText("仿真停止")
         self.orbit_progress.setValue(int(0)); self.orbit_prog_lbl.setText("计算停止")
@@ -2758,6 +3556,9 @@ class FmuSolverGUI(QMainWindow):
 
     def stop_sim(self):
         if self.worker_process:
+            self.btn_stop.setChecked(True)
+            self.btn_start.setChecked(True)
+            self.btn_start.setText("仿真停止中...")
             import socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             try:
@@ -2770,10 +3571,18 @@ class FmuSolverGUI(QMainWindow):
             # 延迟杀掉进程以允许优雅退出
             QTimer.singleShot(500, self._terminate_worker)
         
-        if hasattr(self, 'visualizer_process') and self.visualizer_process:
+        # Keep the dashboard process alive between simulations.  A dashboard
+        # executable is a large one-file process (Qt + NumPy + pyqtgraph), and
+        # repeatedly extracting and starting it made every run feel slow.  The
+        # next run sends the simulation-start marker, so its history is reset
+        # without losing the already-created window.  Set
+        # FMUSOLVER_VIZ_PERSIST=0 to restore the old stop behaviour.
+        if (getattr(self, 'visualizer_process', None)
+                and os.environ.get('FMUSOLVER_VIZ_PERSIST', '1').strip().lower() in ('0', 'false', 'no')):
             try:
                 self.visualizer_process.terminate()
-            except: pass
+            except Exception:
+                pass
             self.visualizer_process = None
         
         self.btn_pause.setEnabled(False)
@@ -3018,7 +3827,7 @@ class FmuSolverGUI(QMainWindow):
                                 control_keys = {
                                     "sim_id", "exit", "pause", "resume", "sim_rate",
                                     "step_size", "sim_time", "sample_freq", "yc_inject_freq",
-                                    "__apply_yc_now",
+                                    "__apply_yc_now", "__reload_injection_blacklist",
                                 }
                                 normalized_cmd = {}
                                 for key, value in cmd.items():
@@ -3075,6 +3884,11 @@ class FmuSolverGUI(QMainWindow):
             create_listener(p)
 
     def run_orbit_precalc(self):
+        if getattr(self, '_orbit_starting', False) or (getattr(self, 'orbit_proc', None) and self.orbit_proc.poll() is None):
+            self.btn_run_orbit.setChecked(True)
+            self.btn_run_orbit.setText("预示运行中...")
+            return
+        self._orbit_starting = True
         self._save_gui_config()
         fmu_path = self.orbit_fmu_edit.text().strip()
         fmu_bit = str(get_fmu_arch(fmu_path) or "32")
@@ -3083,14 +3897,24 @@ class FmuSolverGUI(QMainWindow):
             worker_path = os.path.join(APP_DIR, exe_name)
         else:
             worker_path = sys.executable if fmu_bit == "64" else r"C:\Py32\python.exe"
+            if not os.path.exists(worker_path):
+                worker_path = sys.executable  # fallback: no 32-bit Python
             
         if not os.path.exists(fmu_path):
-            self.olog(f"[!] 找不到FMU文件: {fmu_path}", "error"); return
+            self.olog(f"[!] 找不到FMU文件: {fmu_path}", "error")
+            self.btn_run_orbit.setChecked(False)
+            self.btn_run_orbit.setText("▶ 开始预示解答")
+            self._orbit_starting = False
+            return
 
         fmu_path = ensure_ascii_fmu_path(fmu_path, self.olog)
 
+        orbit_endtime = float(self.o_dur_e.edit.text() or '43200.0')
+        orbit_sampletime = max(1e-6, float(self.o_sampletime_e.edit.text() or '5.0'))
+        orbit_sample_freq = max(0.0, float(self.o_freq_e.edit.text() or '1.0'))
         params = {"Year": int(self.year_e.edit.text() or '2026'), "Mon": int(self.mon_e.edit.text() or '1'), "Day": int(self.day_e.edit.text() or '1'), "Hour": int(self.hour_e.edit.text() or '0'), "Min": int(self.min_e.edit.text() or '0'), "Sec": float(self.sec_e.edit.text() or '0.0'),
-            "a_MT": float(self.a_e.edit.text() or '6766.71777'), "e_MT": float(self.ecc_e.edit.text() or '0.0011'), "i_MT": float(self.inc_e.edit.text() or '41.627'), "OMEGA_MT": float(self.om_e.edit.text() or '137.492'), "omega_MT": float(self.w_e.edit.text() or '77.010'), "f_MT": float(self.f_e.edit.text() or '57.552')}
+            "a_MT": float(self.a_e.edit.text() or '6766.71777'), "e_MT": float(self.ecc_e.edit.text() or '0.0011'), "i_MT": float(self.inc_e.edit.text() or '41.627'), "OMEGA_MT": float(self.om_e.edit.text() or '137.492'), "omega_MT": float(self.w_e.edit.text() or '77.010'), "f_MT": float(self.f_e.edit.text() or '57.552'),
+            "endtime": orbit_endtime, "sampletime": orbit_sampletime}
         
         if getattr(sys, 'frozen', False):
             cmd = [worker_path, fmu_path]
@@ -3104,29 +3928,35 @@ class FmuSolverGUI(QMainWindow):
         except: pass
             
         cmd.extend(["--params",      json.dumps(params),
-                    "--stop_time",   str(float(self.o_dur_e.edit.text() or '86400.0')),
-                    "--step_size",   str(float(self.o_step_e.edit.text() or '10.0')),
-                    "--sample_freq", str(float(self.o_freq_e.edit.text() or '0.1')),
+                    "--stop_time",   str(orbit_endtime),
+                    "--step_size",   str(float(self.o_step_e.edit.text() or '1.0')),
+                    "--sample_freq", str(orbit_sample_freq),
                     "--sim_rate",    str(float(self.o_rate_e.edit.text() or '0.0')),
                     "--pause_file",  self.orbit_pause_file])
 
         self.olog(f"[*] 启动轨道计算引擎...", "sys")
         self.olog("[*] 时间输入按北京时间解释；界面六根数角度项按度显示，并按界面数值原样传入 FMU。", "sys")
-        self.olog(f"[*] 步长={float(self.o_step_e.edit.text() or '10.0')}s | 频率={float(self.o_freq_e.edit.text() or '0.1')}Hz | 时长={float(self.o_dur_e.edit.text() or '86400.0')}s | 速率={float(self.o_rate_e.edit.text() or '0.0')}x", "sys")
+        self.olog(f"[*] 输出步长={float(self.o_step_e.edit.text() or '1.0')}s | endtime={orbit_endtime}s | sampletime={orbit_sampletime}s | 采样频率={orbit_sample_freq:.6g}Hz | 速率={float(self.o_rate_e.edit.text() or '0.0')}x", "sys")
         self.orbit_paused = False
-        self.btn_run_orbit.setText("运行中..."); self.btn_run_orbit.setEnabled(False)
+        self.btn_run_orbit.setText("预示运行中..."); self.btn_run_orbit.setEnabled(True); self.btn_run_orbit.setChecked(True)
         self.btn_pause_orbit.setText("⏸ 暂停"); self.btn_pause_orbit.setEnabled(True)
+        self.btn_stop_orbit.setChecked(False)
         self.btn_stop_orbit.setEnabled(True)
         self.orbit_progress.setValue(int(0))
         self.orbit_prog_lbl.setText("正在启动...")
         self.orbit_proc = None
+        self.orbit_txt_path = ""
+        if hasattr(self, 'btn_open_orbit_folder'):
+            self.btn_open_orbit_folder.setEnabled(False)
 
         def run_thread():
-            total_t = float(self.o_dur_e.edit.text() or '86400.0')
+            total_t = float(self.o_dur_e.edit.text() or '43200.0')
             try:
                 cf = 0x08000000 if os.name == 'nt' else 0
                 self.orbit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, bufsize=0, cwd=APP_DIR, env=self._child_env(), creationflags=cf)
+                self._orbit_starting = False
                 ready_file = None
+                success_rows = None
                 last_ui_update = 0
                 last_log_update = 0
                 last_native_log_update = 0
@@ -3150,6 +3980,16 @@ class FmuSolverGUI(QMainWindow):
 
                     if "[EXPORT_READY]" in line_str:
                         ready_file = line_str.replace("[EXPORT_READY]", "").strip()
+                    if "[ORBIT_TXT_ACTIVE]" in line_str:
+                        active_txt = line_str.replace("[ORBIT_TXT_ACTIVE]", "").strip()
+                        if os.path.exists(active_txt):
+                            self.sig_orbit_txt_ready.emit(active_txt)
+                            self.sig_olog.emit(f"[*] 轨道预示临时 Orbit_Pre.txt: {active_txt}", "sys")
+                    if "[SUCCESS]" in line_str:
+                        m_rows = re.search(r'\[SUCCESS\]\s+(\d+)\s+rows', line_str)
+                        if m_rows:
+                            try: success_rows = int(m_rows.group(1))
+                            except Exception: pass
                     
                     # 只有关键信息才实时显示，普通 Live 信息 1s 更新一次
                     is_live = "[Live]" in line_str
@@ -3168,7 +4008,7 @@ class FmuSolverGUI(QMainWindow):
                         last_native_log_update = now
 
                     if not is_live or (now - last_log_update > 1.0):
-                        tag = "info" if "[OK]" in line_str or "SUCCESS" in line_str else ("error" if "[!]" in line_str or "Error" in line_str or "Fatal" in line_str else "sys")
+                        tag = self._normalize_log_tag(line_str, "error" if ("[!]" in line_str or "Error" in line_str or "Fatal" in line_str) else "sys")
                         self.sig_olog.emit(line_str, tag)
                         if is_live: last_log_update = now
                 self.orbit_proc.stdout.close()
@@ -3176,26 +4016,26 @@ class FmuSolverGUI(QMainWindow):
                 self.sig_orbit_prog.emit(100, f"计算完成: 100% (总时长 {total_t:.0f}s)")
 
                 if ready_file and os.path.exists(ready_file):
-                    with open(ready_file, 'r') as f:
-                        self.orbit_data = json.load(f)
-                    n = len(self.orbit_data)
+                    self.orbit_data = []
+                    n = int(success_rows or 0)
                     self.sig_export_ready.emit()
                     self.sig_olog.emit(f"[OK] 计算完成，共 {n} 行数据。", "info")
-                    try:
-                        txt_dir = os.path.join(APP_DIR, "txt")
-                        os.makedirs(txt_dir, exist_ok=True)
-                        auto_save_p = os.path.join(txt_dir, "Orbit_Pre.txt")
-                        # Disabled: this creates a lossy 7-column duplicate of the FMU's 22-column file.
-                        # self._save_to_orbit_txt(auto_save_p)
-                        self.sig_olog.emit("[*] 已禁用 7 列 Orbit_Pre.txt 自动保存，使用程序根目录的 FMU 原生结果。", "sys")
-                    except Exception as e:
-                        self.sig_olog.emit(f"[!] 自动保存失败: {e}", "error")
+                    self.sig_olog.emit("[*] 已跳过巨型 JSON 载入，直接使用 FMU 原生 Orbit_Pre.txt，避免 UI 卡顿。", "sys")
+                    active_txt_path = getattr(self, 'orbit_txt_path', '')
+                    ready_ext = os.path.splitext(ready_file)[1].lower()
+                    if ready_ext == ".txt" and os.path.exists(ready_file):
+                        self.sig_orbit_txt_ready.emit(ready_file)
+                        active_txt_path = ready_file
+                    if active_txt_path and os.path.exists(active_txt_path):
+                        self.sig_olog.emit(f"[*] 按钮当前指向 FMU 正在使用的文件: {active_txt_path}", "sys")
                 else:
                     self.sig_olog.emit(f"[!] 计算结束但未找到结果文件 (rc={rc})。", "error")
             except Exception as e:
+                self._orbit_starting = False
                 self.sig_olog.emit(f"[!] 线程异常: {e}", "error")
             finally:
                 self.orbit_proc = None
+                self._orbit_starting = False
                 self.sig_orbit_done.emit()
 
         threading.Thread(target=run_thread, daemon=True).start()
@@ -3204,6 +4044,9 @@ class FmuSolverGUI(QMainWindow):
     def stop_orbit(self):
         if hasattr(self, 'orbit_proc') and self.orbit_proc:
             try:
+                self.btn_stop_orbit.setChecked(True)
+                self.btn_run_orbit.setChecked(True)
+                self.btn_run_orbit.setText("预示停止中...")
                 if hasattr(self, 'orbit_pause_file') and os.path.exists(self.orbit_pause_file):
                     try: os.remove(self.orbit_pause_file)
                     except: pass
@@ -3248,10 +4091,31 @@ class FmuSolverGUI(QMainWindow):
         f = QFileDialog.getSaveFileName(self, 'Save', 'Orbit_Pre.txt', 'Text Files (*.txt)')[0]
         if not f: return
         try:
-            self._save_to_orbit_txt(f)
+            src = getattr(self, 'orbit_txt_path', "")
+            if not os.path.exists(src):
+                raise FileNotFoundError(src)
+            import shutil
+            shutil.copy2(src, f)
             self.log(f"[OK] 导出成功: {f}", "info")
         except Exception as e:
             self.log(f"[!] 导出失败: {e}", "error")
+
+    def open_orbit_txt_folder(self):
+        path = getattr(self, 'orbit_txt_path', "")
+        if not os.path.exists(path):
+            QMessageBox.warning(self, "未找到文件", f"未找到程序目录 Orbit_Pre.txt：\n{path or '尚未生成文件路径'}")
+            return
+        folder = os.path.dirname(path)
+        try:
+            if os.name == 'nt':
+                subprocess.Popen(['explorer', f'/select,{os.path.normpath(path)}'])
+            elif sys.platform == 'darwin':
+                subprocess.Popen(['open', folder])
+            else:
+                subprocess.Popen(['xdg-open', folder])
+            self.olog(f"[*] 已打开并选中 Orbit_Pre.txt: {path}", "sys")
+        except Exception as e:
+            QMessageBox.warning(self, "打开失败", f"无法打开文件夹：\n{folder}\n\n{e}")
 
 if __name__ == "__main__":
     try:
@@ -3352,19 +4216,27 @@ if __name__ == "__main__":
 
     else:
         # 强制单实例运行 (FmuSolver)
-        mutex_name = "Local\\FmuSolver_Global_Mutex"
-        import ctypes
-        kernel32 = ctypes.windll.kernel32
-        mutex = kernel32.CreateMutexW(None, False, mutex_name)
-        if kernel32.GetLastError() == 183: # ERROR_ALREADY_EXISTS
-            hwnd = ctypes.windll.user32.FindWindowW(None, "FmuSolver")
-            if hwnd:
-                ctypes.windll.user32.ShowWindow(hwnd, 5) # SW_SHOW
-                ctypes.windll.user32.SetForegroundWindow(hwnd)
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateMutexW.argtypes = [wintypes.LPVOID, wintypes.BOOL, wintypes.LPCWSTR]
+        kernel32.CreateMutexW.restype = wintypes.HANDLE
+        mutex = kernel32.CreateMutexW(None, False, _SINGLE_INSTANCE_MUTEX)
+        if not mutex:
+            sys.exit(1)
+        if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
+            _wake_existing_instance()
             sys.exit(0)
 
         app = QApplication(sys.argv)
         window = FmuSolverGUI()
         window.setWindowTitle("FmuSolver") # 必须设置，以便单实例检测查找
+        instance_hwnd = _register_single_instance_window(window)
+        if instance_hwnd:
+            app.aboutToQuit.connect(lambda: _unregister_single_instance_window(instance_hwnd))
         window.show()
+        _attach_fmusolver_to_owner_window(window)
+        owner_window_timer = QTimer(window)
+        owner_window_timer.setInterval(1000)
+        owner_window_timer.timeout.connect(lambda: _attach_fmusolver_to_owner_window(window))
+        owner_window_timer.start()
+        window._owner_window_timer = owner_window_timer
         sys.exit(app.exec())

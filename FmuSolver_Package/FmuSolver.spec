@@ -1,11 +1,16 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+import os
+import runpy
+
+runpy.run_path(os.path.join(SPECPATH, 'update_build_version.py'), run_name='__main__')
+
 
 a = Analysis(
     ['FmuLauncherUniversal.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('fmusolver_full.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -19,9 +24,8 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.datas,
     [],
+    exclude_binaries=True,
     name='FmuSolver',
     debug=False,
     bootloader_ignore_signals=False,
@@ -35,4 +39,15 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon='fmusolver_full.ico',
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='FmuSolver',
 )

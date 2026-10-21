@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument("fmu_path")
     parser.add_argument("--params",      default="{}")
     parser.add_argument("--stop_time",   type=float, default=86400.0)
-    parser.add_argument("--step_size",   type=float, default=10.0)
+    parser.add_argument("--step_size",   type=float, default=1.0)
     parser.add_argument("--sample_freq", type=float, default=0.1)
     parser.add_argument("--sim_rate",    type=float, default=0.0)
     parser.add_argument("--seed_path",   default=None, help="Optional external Orbit_Pre.txt to use as seed")
@@ -160,11 +160,8 @@ if __name__ == "__main__":
     user_params     = json.loads(args.params)
     output_interval = (1.0 / args.sample_freq) if args.sample_freq > 0 else args.step_size
 
-    # FMU requires step size = multiple of 10s (matches internal integration interval)
-    fmu_step = args.step_size
-    if fmu_step < 10.0 or abs(round(fmu_step / 10.0) * 10.0 - fmu_step) > 1e-6:
-        fmu_step = max(10.0, round(fmu_step / 10.0) * 10.0)
-        log(f"[!] Step snapped to {fmu_step}s (FMU requires multiples of 10s)")
+    # Match MWorks/Sysplorer simulation settings: use the configured fixed output step directly.
+    fmu_step = max(1e-9, float(args.step_size))
 
     stop_time = max(fmu_step, round(args.stop_time / fmu_step) * fmu_step)
 
@@ -244,6 +241,7 @@ if __name__ == "__main__":
     else:
         log("[*] Generating seed file from parameters...")
         generate_seed_orbit_txt(seed_path, jd_seed, a_mt, e_mt, i_mt, omega_mt, omega_s_mt, f_mt)
+    log(f"[ORBIT_TXT_ACTIVE] {seed_path}")
 
     # ─── 4. DLL paths & CWD ───
     safe_bin_dir = get_safe_windows_path(bin_dir)
@@ -284,9 +282,9 @@ if __name__ == "__main__":
                         raise Exception(f"WinError {ctypes.get_last_error()}")
                 except Exception as e:
                     load_fail.append(f"{fname}: {e}")
-    log(f"[*] Pre-loaded {len(loaded_ok)} DLLs. Failures: {len(load_fail)}")
+    log(f"[*] Pre-loaded {len(loaded_ok)} DLLs. Optional preload misses: {len(load_fail)}")
     for err in load_fail:
-        log(f"[!] Pre-load FAIL: {err}")
+        log(f"[*] Optional DLL preload skipped: {err}")
     # ────────────────────────────────────────────────────────────────
 
     # Use simple filename for the FMU internal reader (we are already in bin_dir)
@@ -326,6 +324,7 @@ if __name__ == "__main__":
         # 新版FMU内部按 endtime/sampletime 写表头行数(endtime/5+1)，
         # 必须与实际仿真时长一致，否则表头行数与实际数据行数不符
         params_to_set.setdefault('endtime', float(stop_time))
+        params_to_set.setdefault('sampletime', float(output_interval))
 
         # 关键：必须按变量类型分发 set 调用。
         # 新版MWORKS(26.1.2+)FMU对 Integer 变量(Year/Mon/Day/Hour/Min)调 fmi2SetReal
@@ -378,7 +377,7 @@ if __name__ == "__main__":
         # ─── Simulation loop ───
         current_time = 0.0
         next_sample  = 0.0
-        data_rows    = []
+        sample_count = 0
         step_count   = 0
         
         # 1% 步进或每 1s 仿真时间输出一次日志
@@ -416,14 +415,15 @@ if __name__ == "__main__":
             # 补齐采样点 (处理采样频率 > 计算频率的情况)
             while next_sample <= current_time + 1e-9:
                 if next_sample > stop_time + 1e-9: break
-                vals = fmu_inst.getReal(output_vrs)
-                data_rows.append([next_sample] + [float(v) for v in vals])
+                if output_vrs:
+                    fmu_inst.getReal(output_vrs)
+                sample_count += 1
                 next_sample += output_interval
 
             now_wall = time.perf_counter()
             pct = min(100, int((current_time / stop_time) * 100)) if stop_time > 0 else 0
             if (now_wall - last_log_wall) >= 1.0 or pct != last_log_pct:
-                log(f"[Live] [{pct}%] Time: {current_time:6.2f}s | Collected {len(data_rows)} rows | Rate: {args.sim_rate:4.1f}x")
+                log(f"[Live] [{pct}%] Time: {current_time:6.2f}s | Collected {sample_count} rows | Rate: {args.sim_rate:4.1f}x")
                 last_log_wall = now_wall
                 last_log_pct = pct
 
@@ -433,35 +433,41 @@ if __name__ == "__main__":
                 if diff > 0.005:
                     time.sleep(diff)
 
-        log(f"[Live] [100%] Time: {stop_time:6.2f}s | Final: {len(data_rows)} rows collected.")
+        log(f"[Live] [100%] Time: {stop_time:6.2f}s | Final: {sample_count} rows collected.")
         
         fmu_inst.terminate()
         fmu_inst.freeInstance()
-        log(f"[OK] Done. {len(data_rows)} rows processed.")
+        log(f"[OK] Done. {sample_count} rows processed.")
 
         os.chdir(app_dir)
-        export_path = os.path.join(app_dir, "orbit_pre_result.json")
-        with open(export_path, 'w') as f:
-            json.dump(data_rows, f)
+        orbit_txt_active = os.path.join(bin_dir, "Orbit_Pre.txt")
+        canonical_orbit_txt = os.path.join(app_dir, "Orbit_Pre.txt")
+        exported_orbit_txt = None
 
-        # 核心修复：把生成的 Orbit_Pre.txt 从临时目录捞出来，放回主目录，供实时仿真使用
-        orbit_txt_source = os.path.join(bin_dir, "Orbit_Pre.txt")
-        if os.path.exists(orbit_txt_source):
+        # Keep the FMU-native Orbit_Pre.txt in the active runtime workspace.
+        if os.path.exists(orbit_txt_active):
             # 防止把 Worker 自己写的种子文件(2行×7列)误当成FMU结果导出
-            with open(orbit_txt_source) as fchk:
-                out_lines = fchk.readlines()
-            n_cols = len(out_lines[2].split()) if len(out_lines) > 2 else 0
-            if len(out_lines) > 2 and n_cols >= 22:
-                shutil.copy2(orbit_txt_source, os.path.join(app_dir, "Orbit_Pre.txt"))
-                log(f"[OK] Generated Orbit_Pre.txt exported ({len(out_lines) - 2} data rows, {n_cols} cols).")
+            with open(orbit_txt_active) as fchk:
+                header_1 = fchk.readline()
+                header_2 = fchk.readline()
+                first_data = fchk.readline()
+            n_cols = len(first_data.split()) if first_data else 0
+            if header_1 and header_2 and first_data and n_cols >= 22:
+                log(f"[OK] Generated Orbit_Pre.txt ready in active workspace ({sample_count} sampled rows, {n_cols} cols).")
+                shutil.copy2(orbit_txt_active, canonical_orbit_txt)
+                exported_orbit_txt = canonical_orbit_txt
+                log(f"[OK] Orbit_Pre.txt copied to package directory: {canonical_orbit_txt}")
             else:
                 log(f"[!] Warning: Orbit_Pre.txt in {bin_dir} is only the seed file "
-                    f"({len(out_lines)} lines, {n_cols} cols) — FMU did not write results. NOT exported.")
+                    f"({n_cols} cols) — FMU did not write results. NOT exported.")
         else:
             log(f"[!] Warning: Orbit_Pre.txt was not generated by the FMU in {bin_dir}.")
 
-        log(f"[SUCCESS] {len(data_rows)} rows exported.")
-        log(f"[EXPORT_READY] {export_path}")
+        log(f"[SUCCESS] {sample_count} rows exported.")
+        if exported_orbit_txt and os.path.exists(exported_orbit_txt):
+            log(f"[EXPORT_READY] {exported_orbit_txt}")
+        elif os.path.exists(orbit_txt_active):
+            log(f"[EXPORT_READY] {orbit_txt_active}")
 
     except Exception as e:
         import traceback
